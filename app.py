@@ -13,7 +13,7 @@ from models import (
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
 )
-from auth_helpers import get_gate_redirect
+from auth_helpers import get_gate_redirect, validate_password_strength
 import re
 import random
 import string
@@ -123,6 +123,37 @@ def change_password():
     db.session.commit()
 
     return jsonify({'success': True, 'message': 'Password changed successfully'})
+
+@app.route('/force-password-change', methods=['GET', 'POST'])
+@login_required
+def force_password_change():
+    if request.method == 'GET':
+        if not current_user.first_login:
+            return redirect(url_for(get_gate_redirect(current_user) or 'dashboard'))
+        return render_template('force_password_change.html')
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Invalid request'}), 400
+
+    new_pass = data.get('new', '').strip()
+    confirm = data.get('confirm', '').strip()
+
+    if not new_pass:
+        return jsonify({'success': False, 'message': 'New password is required'}), 400
+    if new_pass != confirm:
+        return jsonify({'success': False, 'message': 'Passwords do not match'}), 400
+
+    failed_rules = validate_password_strength(new_pass)
+    if failed_rules:
+        return jsonify({'success': False, 'message': 'Password must contain ' + ', '.join(failed_rules) + '.'}), 400
+
+    current_user.set_password(new_pass)
+    current_user.first_login = False
+    db.session.commit()
+
+    redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
+    return jsonify({'success': True, 'message': 'Password changed successfully.', 'redirect': url_for(redirect_endpoint)})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
