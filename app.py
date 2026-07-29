@@ -13,7 +13,11 @@ from models import (
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
 )
-from auth_helpers import get_gate_redirect, validate_password_strength
+from auth_helpers import get_gate_redirect, validate_password_strength, is_valid_email
+from onboarding_helpers import (
+    start_otp_session, register_failed_otp_attempt, otp_attempts_exceeded,
+    clear_otp_session, save_profile_picture, MAX_OTP_ATTEMPTS
+)
 import re
 import random
 import string
@@ -270,28 +274,21 @@ def send_email_code():
     new_email = data.get('new_email', '').strip()
     if not new_email:
         return jsonify({'success': False, 'message': 'Email is required'}), 400
-    if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', new_email):
+    if not is_valid_email(new_email):
         return jsonify({'success': False, 'message': 'Invalid email format'}), 400
 
-    # Check if email already used by another user
     existing = User.query.filter(User.email == new_email, User.id != current_user.id).first()
     if existing:
         return jsonify({'success': False, 'message': 'Email already in use'}), 400
 
-    # Generate 6-digit code
-    code = ''.join(random.choices(string.digits, k=6))
-    # Store in session with expiry (5 minutes)
-    session['email_verification_code'] = code
-    session['email_verification_expiry'] = time.time() + 300
-    session['pending_email'] = new_email
+    code = start_otp_session(session, new_email)
 
-    # Send email
     try:
         msg = Message('Email Verification Code', recipients=[new_email])
         msg.body = f'Your verification code is: {code}\nThis code expires in 5 minutes.'
         mail.send(msg)
-    except Exception as e:
-        # Log the error if needed: app.logger.error(str(e))
+    except Exception:
+        clear_otp_session(session)
         return jsonify({'success': False, 'message': 'Failed to send email. Please try again.'}), 500
 
     return jsonify({'success': True, 'message': 'Verification code sent to your email.'})
@@ -316,26 +313,29 @@ def verify_email_code():
         return jsonify({'success': False, 'message': 'No pending verification. Please request a new code.'}), 400
 
     if time.time() > expiry:
-        session.pop('email_verification_code', None)
-        session.pop('email_verification_expiry', None)
-        session.pop('pending_email', None)
+        clear_otp_session(session)
         return jsonify({'success': False, 'message': 'Verification code expired. Please request a new one.'}), 400
 
     if stored_code != code:
-        return jsonify({'success': False, 'message': 'Invalid verification code.'}), 400
+        attempts = register_failed_otp_attempt(session)
+        if attempts >= MAX_OTP_ATTEMPTS:
+            clear_otp_session(session)
+            return jsonify({
+                'success': False,
+                'message': 'Maximum attempts exceeded. Please request a new code.',
+                'max_attempts_reached': True
+            }), 400
+        remaining = MAX_OTP_ATTEMPTS - attempts
+        return jsonify({'success': False, 'message': f'Invalid verification code. {remaining} attempt(s) remaining.'}), 400
 
     if new_email and new_email != pending_email:
         return jsonify({'success': False, 'message': 'Email mismatch. Please request a new code.'}), 400
 
-    # Update email and mark as verified
     current_user.email = pending_email
-    current_user.email_verified = True   # <-- KEY CHANGE
+    current_user.email_verified = True
     db.session.commit()
 
-    # Clear session
-    session.pop('email_verification_code', None)
-    session.pop('email_verification_expiry', None)
-    session.pop('pending_email', None)
+    clear_otp_session(session)
 
     return jsonify({
         'success': True,
@@ -343,7 +343,7 @@ def verify_email_code():
         'email': current_user.email,
         'email_verified': current_user.email_verified
     })
-    
-    
-if __name__ == '__main__':    
+
+
+if __name__ == '__main__':
     app.run(debug=True, port=4050)
