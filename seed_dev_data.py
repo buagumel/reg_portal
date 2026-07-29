@@ -27,6 +27,7 @@ DEMO_STUDENTS = [
     ),
     dict(
         reg_no="2308-2301-0003", name="Chiamaka Okafor", first_login=False, onboarding_completed=True,
+        email_verified=True,
         student_type="International", state="Anambra", lga="Awka South", nationality="Nigeria",
         dob=date(2000, 7, 22), gender="Female", semester="2nd Semester",
         department="Information Technology", course="International Diploma",
@@ -34,6 +35,7 @@ DEMO_STUDENTS = [
     ),
     dict(
         reg_no="2308-2301-0004", name="David Adeyemi", first_login=True, onboarding_completed=True,
+        email_verified=True,
         student_type="National", state="Oyo", lga="Ibadan North", nationality="Nigeria",
         dob=date(1999, 5, 9), gender="Male", semester="2nd Semester",
         department="Information Technology", course="HND Information Technology",
