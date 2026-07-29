@@ -30,8 +30,14 @@ class User(db.Model, UserMixin):
     dob = db.Column(db.Date)
     email_verified = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False) # False = Student, True = Admin
-    
-    
+    first_login = db.Column(db.Boolean, default=True, nullable=False)
+    onboarding_completed = db.Column(db.Boolean, default=False, nullable=False)
+    semester = db.Column(db.String(50))
+    department = db.Column(db.String(150))
+    course = db.Column(db.String(150))
+    profile_picture = db.Column(db.String(300))
+
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
