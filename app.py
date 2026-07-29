@@ -207,6 +207,24 @@ def onboarding_save_info():
 
     return jsonify({'success': True, 'message': 'Information saved.'})
 
+@app.route('/onboarding/complete', methods=['POST'])
+@login_required
+def onboarding_complete():
+    if not current_user.email_verified:
+        return jsonify({'success': False, 'message': 'Please verify your email before completing onboarding.'}), 400
+
+    current_user.onboarding_completed = True
+    db.session.commit()
+
+    try:
+        msg = Message('Welcome to JSPICT Student Portal', recipients=[current_user.email])
+        msg.body = f'Hi {current_user.name},\n\nYour profile setup is complete. Welcome to the JSPICT Student Portal!'
+        mail.send(msg)
+    except Exception:
+        app.logger.warning('Failed to send welcome email to %s', current_user.email)
+
+    return jsonify({'success': True, 'message': 'Onboarding complete!', 'redirect': url_for('dashboard')})
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:

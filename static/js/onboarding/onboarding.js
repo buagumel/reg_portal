@@ -25,7 +25,10 @@ export const stepper = new Stepper({
 
 otpController = createOtpController({
     getEmail: () => collected.email,
-    onVerified: () => stepper.next(),
+    onVerified: () => {
+        renderReview();
+        stepper.next();
+    },
     onBack: () => stepper.back(),
 });
 
@@ -107,6 +110,36 @@ infoForm.addEventListener('submit', async (e) => {
     collected.pictureFile = pictureFile;
 
     stepper.next();
+});
+
+// ---- Step 3: Review & Confirm ----
+function renderReview() {
+    const grid = document.getElementById('reviewGrid');
+    grid.innerHTML = `
+        <div class="review-item"><label>Email</label><span>${collected.email}</span></div>
+        <div class="review-item"><label>Phone</label><span>${collected.phone}</span></div>
+        <div class="review-item"><label>Address</label><span>${collected.address}</span></div>
+        <div class="review-item"><label>Profile Picture</label><span>${collected.pictureFile ? collected.pictureFile.name : ''}</span></div>
+    `;
+}
+
+document.getElementById('reviewEditBtn').addEventListener('click', () => stepper.goTo('info'));
+
+document.getElementById('reviewConfirmBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('reviewConfirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    const result = await postJson('/onboarding/complete', {});
+
+    if (result.success) {
+        showToast('Welcome! Your profile is complete.', false);
+        window.location.href = result.redirect;
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Confirm & Save';
+        showToast(result.message, true);
+    }
 });
 
 stepper.init();
