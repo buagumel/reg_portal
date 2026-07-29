@@ -2,6 +2,7 @@ import { showToast } from '../shared/toast.js';
 import { postJson, postForm } from '../shared/api.js';
 import { isValidEmail } from '../shared/validation.js';
 import { Stepper } from '../shared/stepper.js';
+import { createOtpController } from './otp.js';
 
 export const collected = { email: '', phone: '', address: '', pictureFile: null };
 
@@ -12,9 +13,20 @@ const FIELD_ERROR_IDS = {
     profile_picture: 'infoPictureError',
 };
 
+let otpController;
+
 export const stepper = new Stepper({
     steps: ['info', 'otp', 'review'],
     container: document.querySelector('.onboarding-wrap'),
+    onStepChange: (step) => {
+        if (step === 'otp') otpController.onEnter();
+    },
+});
+
+otpController = createOtpController({
+    getEmail: () => collected.email,
+    onVerified: () => stepper.next(),
+    onBack: () => stepper.back(),
 });
 
 // ---- Step 1: Student Info ----
