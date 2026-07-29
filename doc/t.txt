@@ -1,0 +1,60 @@
+Student Registration Workflow
+
+Step 1: Student Login
+
+The student logs into the Registration Portal using their admission credentials.
+
+Step 2: Profile Update
+
+@ask - 
+    - u mean the user enters email and then verify?
+    - what would the email be used for? prolly on-the-go notifications
+    
+The student updates their profile information, uploads a passport photograph, and verifies their email address.
+
+Step 3: Dashboard Access
+
+After profile confirmation, the student is redirected to the Dashboard where they can see any ongoing registration for the current semester.
+
+@ask - 
+    - how would we identify if there's any ongoing registration? are there specific periods where registrations take place and we just hardcode that in, or does the admin toggle registrations on/off?
+
+Step 4: Start Registration
+
+The student clicks Continue Registration to begin the semester registration process.
+
+Step 5: Registration Summary
+
+The system displays a registration summary showing the registration details for the selected semester.
+
+Step 6: Payment
+
+The student proceeds to payment. A Remita payment reference is generated and the student completes the payment through the payment gateway.
+
+Step 7: Payment Verification
+
+Once payment is successful, the system verifies the transaction and automatically activates course registration for the student.
+
+Step 8: Add/Drop Courses
+
+The student is redirected to the Add/Drop Courses page where they can select and register their courses for the current semester.
+
+Step 9: Course Registration Submission
+
+The student submits the selected courses and the registration is successfully completed.
+
+Step 10: Registration Record
+
+The registered courses immediately appear on the student’s Registration Page for future reference.
+
+Step 11: Payment History
+
+The successful payment is automatically recorded in the student’s Payment History.
+
+Step 12: Print Documents
+
+The student can print or download their Course Registration Form, Course Selection Slip, and Payment Receipt at any time.
+
+Step 13: Registration Completion
+
+The registration process is completed and all records remain accessible through the student portal.

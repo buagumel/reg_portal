@@ -1,0 +1,211 @@
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+     
+        .payment-summary-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            margin-top: 20px;
+        }
+
+        /* Header */
+        .page-header {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .page-header h1 {
+            font-size: 1.8rem;
+            color: #0f3150;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 60px;
+            color: #0f3150;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid #c7dcf5;
+            transition: 0.2s;
+        }
+        .back-link:hover {
+            background: #e6f0ff;
+            border-color: #90b9e3;
+        }
+
+        /* Summary Card */
+        .summary-card {
+            background: white;
+            border-radius: 1.8rem;
+            box-shadow: 0 15px 35px -12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid #e4edf5;
+        }
+        .summary-header {
+            background: linear-gradient(135deg, #0f3150, #1a5a85);
+            padding: 1.5rem 2rem;
+            color: white;
+        }
+        .summary-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .summary-header p {
+            opacity: 0.9;
+            margin-top: 0.3rem;
+            font-size: 0.9rem;
+        }
+        .summary-body {
+            padding: 2rem;
+        }
+
+        /* Student Info Section */
+        .info-section {
+            background: #f8fafd;
+            border-radius: 1.2rem;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .section-title {
+            font-weight: 700;
+            color: #0f3150;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .info-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #5a7b99;
+            letter-spacing: 0.3px;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #1e4668;
+            font-size: 1rem;
+        }
+
+        /* Registration Details Table */
+        .courses-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        .courses-table th {
+            text-align: left;
+            padding: 0.8rem 0.5rem;
+            background: #f8fafd;
+            color: #2a4f73;
+            font-weight: 600;
+            font-size: 0.8rem;
+            border-bottom: 2px solid #e4edf5;
+        }
+        .courses-table td {
+            padding: 0.8rem 0.5rem;
+            border-bottom: 1px solid #eef3fc;
+            color: #1e4668;
+        }
+        .total-row {
+            background: #f0f5fc;
+            font-weight: 700;
+        }
+        .total-row td {
+            border-bottom: none;
+            padding-top: 1rem;
+        }
+
+        /* Fee Summary */
+        .fee-summary {
+            background: #e6f0ff;
+            border-radius: 1.2rem;
+            padding: 1.2rem 1.5rem;
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .fee-label {
+            font-weight: 600;
+            color: #0f3150;
+        }
+        .fee-amount {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0f7b4e;
+        }
+
+        /* Pay Now Button */
+        .pay-now-btn {
+            background: #0f7b4e;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 1rem;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            transition: 0.2s;
+            box-shadow: 0 8px 18px -8px rgba(15, 123, 78, 0.4);
+        }
+        .pay-now-btn:hover {
+            background: #0a5e3a;
+            transform: translateY(-2px);
+        }
+
+        /* Footer note */
+        .secure-note {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #5a7b99;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 700px) {
+            body { padding: 1rem; }
+            .page-header { flex-direction: column; align-items: stretch; }
+            .page-header h1 { font-size: 1.5rem; justify-content: center; }
+            .back-link { justify-content: center; width: 100%; }
+            .summary-body { padding: 1.2rem; }
+            .info-grid { grid-template-columns: 1fr; }
+            .courses-table { font-size: 0.85rem; }
+            .fee-amount { font-size: 1.5rem; }
+        }

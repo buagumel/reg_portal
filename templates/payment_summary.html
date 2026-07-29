@@ -1,0 +1,121 @@
+
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Payment Summary · Course Registration</title>
+    <!-- Google Font + Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pay_summary.css') }}">
+
+{% endblock %}
+
+{% block content %}
+
+<div class="payment-summary-container">
+    <!-- Header -->
+    <div class="page-header">
+        <a href="#" class="back-link" onclick="alert('Back to registration page (demo)'); return false;"><i class="fas fa-arrow-left"></i> Back to Registration</a>
+        <h1><i class="fas fa-receipt"></i> Payment Summary</h1>
+        <div></div>
+    </div>
+
+    <!-- Main Summary Card -->
+    <div class="summary-card">
+        <div class="summary-header">
+            <h2><i class="fas fa-credit-card"></i> Registration Fee Summary</h2>
+            <p>Please review your details before proceeding to payment</p>
+        </div>
+        <div class="summary-body">
+            <!-- Student Information -->
+            <div class="info-section">
+                <div class="section-title"><i class="fas fa-user-graduate"></i> Student Information</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Full Name</span>
+                        <span class="info-value">Ngozi Mary Okonkwo</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Registration Number</span>
+                        <span class="info-value">2024/NG/2371</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Programme</span>
+                        <span class="info-value">B.Sc. Computer Science</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Level / Year</span>
+                        <span class="info-value">300 Level / Year 3</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">ngozi.okonkwo@edugate.edu</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Phone</span>
+                        <span class="info-value">+234 803 456 7890</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration Details -->
+            <div class="section-title"><i class="fas fa-book-open"></i> Registered Courses (2024/2025 Second Semester)</div>
+            <table class="courses-table">
+                <thead>
+                    <tr>
+                        <th>Course Code</th>
+                        <th>Course Title</th>
+                        <th>Credits</th>
+                        <th>Fee (₦)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>CSC 310</td><td>Database Systems</td><td>3</td><td>75,000</td></tr>
+                    <tr><td>MAT 202</td><td>Calculus II</td><td>4</td><td>100,000</td></tr>
+                    <tr><td>CSC 212</td><td>Digital Logic</td><td>3</td><td>75,000</td></tr>
+                    <tr><td>GST 202</td><td>Entrepreneurship</td><td>1</td><td>25,000</td></tr>
+                    <tr class="total-row">
+                        <td colspan="2"><strong>Total Credits: 11</strong></td>
+                        <td><strong>Tuition Fee</strong></td>
+                        <td><strong>₦275,000</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Additional Fees -->
+            <div class="fee-summary">
+                <span class="fee-label"><i class="fas fa-plus-circle"></i> Additional Fees</span>
+                <span>Lab Fee: ₦25,500</span>
+                <span>Library Fee: ₦8,200</span>
+                <span>ICT Levy: ₦12,000</span>
+            </div>
+
+            <!-- Total Amount -->
+            <div class="fee-summary" style="background: #0f3150; color: white; margin-top: 0;">
+                <span class="fee-label" style="color: white;">Total Amount Due</span>
+                <span class="fee-amount" style="color: #ffd966;">₦320,700</span>
+            </div>
+
+            <!-- Pay Now Button -->
+            <button class="pay-now-btn" onclick="proceedToPayment()">
+                <i class="fas fa-credit-card"></i> Pay Now
+            </button>
+            <div class="secure-note">
+                <i class="fas fa-lock"></i> Secure payment via Remita
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function proceedToPayment() {
+        // Demo alert - in real app, redirect to payment gateway
+        alert('Redirecting to secure payment gateway...\n\nDemo: This would process ₦320,700 for 2024/2025 Second Semester registration.');
+        // window.location.href = "/payment/gateway";
+    }
+</script>
+
+{% block scripts %}
+
+{% endblock %}
+
+{% endblock %}

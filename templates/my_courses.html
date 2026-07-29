@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+
+{% block head %}
+
+
+    <title>My Courses · EduPortal</title>
+    <!-- Font Awesome 6 (free) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/my_courses.css') }}">
+  
+{% endblock %}
+
+{% block content %}
+
+    <div class="courses-page">
+        <!-- header with navigation and actions -->
+        <div class="page-header">
+            <a href="#" class="back-link"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <h1 class="page-title"><i class="fas fa-book-open" style="margin-right: 0.5rem;"></i>My Courses</h1>
+            <div class="header-actions">
+                <button class="btn-outline"><i class="fas fa-download"></i> Syllabus</button>
+                <button class="btn-outline"><i class="fas fa-calendar-plus"></i> Register</button>
+            </div>
+        </div>
+
+        <!-- term and academic info -->
+        <div class="term-chip">
+            <span><i class="fas fa-calendar-alt"></i> 2024/2025 Academic Year</span>
+            <span><i class="fas fa-clock"></i> Second Semester · <span class="badge">In Progress</span></span>
+            <span><i class="fas fa-user-graduate"></i> Computer Science · Year 3</span>
+        </div>
+
+        <!-- filter and search row -->
+        <div class="filter-bar">
+            <div class="filter-tabs">
+                <button class="filter-tab active">All courses</button>
+                <button class="filter-tab">Enrolled</button>
+                <button class="filter-tab">Available</button>
+                <button class="filter-tab">Completed</button>
+                <button class="filter-tab">Electives</button>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search by code or title" value="csc">
+                <button>Find</button>
+            </div>
+        </div>
+
+        <!-- quick stats about courses -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-content">
+                    <h4>Enrolled</h4>
+                    <div class="stat-number">6</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+                <div class="stat-content">
+                    <h4>In progress</h4>
+                    <div class="stat-number">4</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+                <div class="stat-content">
+                    <h4>Completed</h4>
+                    <div class="stat-number">12</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-star"></i></div>
+                <div class="stat-content">
+                    <h4>Credit total</h4>
+                    <div class="stat-number">78</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- main courses list section (only rows, no cards) -->
+        <div class="courses-list-section">
+            <div class="section-header">
+                <h2><i class="fas fa-list-ul"></i> Course list</h2>
+            </div>
+
+            <!-- LIST ROWS (table format) -->
+            <!-- Current Semester -->
+            <div class="semester-category">
+                <div class="semester-title"><i class="fas fa-play-circle" style="color: #0f7b4e;"></i> Current Semester (2025 Spring)</div>
+                <div class="courses-table-wrapper">
+                    <table class="courses-table">
+                        <thead>
+                            <tr><th>Course Code</th><th>Course Title</th><th>Credits</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>CSC 310</td><td>Database Systems</td><td><span class="credit-badge-list">3</span></td><td><button class="action-btn"><i class="fas fa-eye"></i> View</button></td></tr>
+                            <tr><td>MAT 202</td><td>Calculus II</td><td><span class="credit-badge-list">4</span></td><td><button class="action-btn"><i class="fas fa-eye"></i> View</button></td></tr>
+                            <tr><td>CSC 212</td><td>Digital Logic</td><td><span class="credit-badge-list">3</span></td><td><button class="action-btn"><i class="fas fa-eye"></i> View</button></td></tr>
+                            <tr><td>GST 202</td><td>Entrepreneurship</td><td><span class="credit-badge-list">1</span></td><td><button class="action-btn"><i class="fas fa-eye"></i> View</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Last Semester -->
+            <div class="semester-category">
+                <div class="semester-title"><i class="fas fa-clock" style="color: #286b9f;"></i> Last Semester (2024 Fall)</div>
+                <div class="courses-table-wrapper">
+                    <table class="courses-table">
+                        <thead><tr><th>Course Code</th><th>Course Title</th><th>Credits</th><th></th></tr></thead>
+                        <tbody>
+                            <tr><td>CSC 250</td><td>Data Structures</td><td><span class="credit-badge-list">3</span></td><td><button class="action-btn"><i class="fas fa-redo"></i> Review</button></td></tr>
+                            <tr><td>GST 101</td><td>Communication Skills</td><td><span class="credit-badge-list">2</span></td><td><button class="action-btn"><i class="fas fa-redo"></i> Review</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Past Semesters -->
+            <div class="semester-category">
+                <div class="semester-title"><i class="fas fa-history" style="color: #7f8fa4;"></i> Past Semesters (2024 Spring & earlier)</div>
+                <div class="courses-table-wrapper">
+                    <table class="courses-table">
+                        <thead><tr><th>Course Code</th><th>Course Title</th><th>Credits</th><th></th></tr></thead>
+                        <tbody>
+                            <tr><td>PHY 201</td><td>Waves & Optics</td><td><span class="credit-badge-list">3</span></td><td><button class="action-btn"><i class="fas fa-redo"></i> Review</button></td></tr>
+                            <tr><td>CSC 330</td><td>Artificial Intelligence</td><td><span class="credit-badge-list">3</span></td><td><button class="action-btn"><i class="fas fa-redo"></i> Review</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- legend -->
+            <div class="info-legend">
+                <span><i class="fas fa-circle" style="color: #0f7b4e;"></i> Current semester</span>
+                <span><i class="fas fa-circle" style="color: #286b9f;"></i> Last semester</span>
+                <span><i class="fas fa-circle" style="color: #7f8fa4;"></i> Past semesters</span>
+                <span><i class="fas fa-credit-card"></i> Credits shown</span>
+            </div>
+        </div>
+    </div>
+
+
+{% block scripts %}
+
+{% endblock %}
+
+{% endblock %}

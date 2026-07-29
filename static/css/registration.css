@@ -1,0 +1,342 @@
+
+
+        .registration-dashboard {
+            max-width: 95%;
+            margin: 0 auto;
+            margin-top: 20px;
+        }
+
+        /* Header */
+      .page-header {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h1 {
+        font-size: 1.8rem;
+        color: #0f3150;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin: 0;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: white;
+        padding: 0.6rem 1.5rem;
+        border-radius: 60px;
+        color: #0f3150;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 6px 14px -10px rgba(27, 75, 120, 0.2);
+        border: 1px solid #c7dcf5;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .back-link:hover {
+        background: #e6f0ff;
+        border-color: #90b9e3;
+    }
+
+
+
+    @media (max-width: 700px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.8rem;
+    }
+    
+    .page-header h1 {
+        font-size: 1.5rem;
+        justify-content: center;
+        order: 1;
+    }
+    
+    .back-link {
+        justify-content: center;
+        order: 0;
+        width: 100%;
+        text-align: center;
+    }
+    
+    /* Hide the empty div (third element) on mobile if present */
+    .page-header div:empty {
+        display: none;
+    }
+}
+
+/* For very small screens (optional) */
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .back-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+        /* Ongoing Registration Section Title (like past section) */
+        .ongoing-section h3 {
+            font-size: 1.4rem;
+            color: #0f3150;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Ongoing Registration Card */
+        .ongoing-card {
+            background: linear-gradient(135deg, #0f3150, #1a5a85);
+            border-radius: 1.8rem;
+            padding: 1.8rem;
+            color: white;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.25);
+        }
+
+        /* Flex layout for card content - improved responsiveness */
+        .card-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+        .ongoing-info {
+            flex: 2;
+            min-width: 200px;
+        }
+        .ongoing-badge {
+            background: #ffd966;
+            color: #0f3150;
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 60px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+        }
+        .ongoing-info h2 {
+            font-size: 1.6rem;
+            margin-bottom: 0.5rem;
+        }
+        .reg-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 0 1.2rem;
+        }
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.15);
+            padding: 0.4rem 1rem;
+            border-radius: 60px;
+        }
+        .deadline {
+            color: #ffd966;
+            font-weight: 600;
+        }
+        .progress-area {
+            margin-top: 0.5rem;
+        }
+        .progress-label {
+            font-size: 0.8rem;
+            margin-bottom: 0.3rem;
+        }
+        .progress-bar-bg {
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            width: 100%;
+            max-width: 280px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            width: 65%;
+            height: 100%;
+            background: #4caf50;
+            border-radius: 10px;
+        }
+
+        /* Action buttons - fixed alignment and responsive */
+        .ongoing-action {
+            flex: 1;
+            min-width: 220px;
+            height: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            justify-content: last baseline;
+            align-items: center;
+        }
+        .btn-primary {
+            background: white;
+            color: #0f3150;
+            border: none;
+            padding: 0.8rem 1.6rem;
+            border-radius: 60px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: 0.2s;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            background: #f0f5fc;
+        }
+        .btn-outline-light {
+            background: transparent;
+            border: 1px solid white;
+            color: white;
+            padding: 0.8rem 1.6rem;
+            border-radius: 60px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: 0.2s;
+        }
+        .btn-outline-light:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Past Registrations Section */
+        .past-section h3 {
+            font-size: 1.4rem;
+            color: #0f3150;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .registrations-list {
+            background: white;
+            border-radius: 1.5rem;
+            border: 1px solid #e4edf5;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .reg-item {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid #eef3fc;
+            transition: background 0.2s;
+        }
+        .reg-item:last-child {
+            border-bottom: none;
+        }
+        .reg-item:hover {
+            background: #fafcff;
+        }
+        .reg-info {
+            flex: 2;
+        }
+        .reg-semester {
+            font-weight: 700;
+            color: #0f3150;
+            font-size: 1.1rem;
+        }
+        .reg-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.3rem;
+            font-size: 0.8rem;
+            color: #5a7b99;
+        }
+        .reg-status {
+            flex: 0 0 auto;
+            text-align: right;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 60px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-approved {
+            background: #e0f5ea;
+            color: #0f7b4e;
+        }
+        .status-pending {
+            background: #fff0d9;
+            color: #b45b1c;
+        }
+        .status-closed {
+            background: #e4edf5;
+            color: #5a7b99;
+        }
+        .view-link {
+            color: #1b4e7a;
+            margin-left: 1rem;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .view-link i {
+            font-size: 0.75rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #5a7b99;
+        }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1f4d6e;
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            z-index: 1100;
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 800px) {
+            .card-content {
+                flex-direction: column;
+            }
+            .ongoing-action {
+                justify-content: flex-start;
+                width: 100%;
+            }
+            .btn-primary, .btn-outline-light {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+        @media (max-width: 550px) {
+            body { padding: 1rem; }
+            .reg-item { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+            .reg-status { text-align: left; }
+            .ongoing-info h2 { font-size: 1.3rem; }
+            .detail-item { font-size: 0.8rem; }
+        }

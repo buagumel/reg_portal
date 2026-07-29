@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Course Registration · EduPortal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/add_drop.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="registration-page">
+    <!-- Header -->
+      <!-- <div class="page-header">
+
+        <a href="#" class="back-link" onclick="alert('Dashboard navigation demo'); return false;"><i class="fas fa-arrow-left"></i> Dashboard</a>
+
+        <h1><i class="fas fa-edit"></i> Course Registration</h1>
+        <div></div>
+    </div> -->
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-content"><h4>Deadline</h4><div class="stat-value">Mar 15</div><div class="stat-warning">12 days left</div></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-layer-group"></i></div><div class="stat-content"><h4>Min Credits</h4><div class="stat-value">15</div></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-content"><h4>Max Credits</h4><div class="stat-value">24</div></div></div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="registration-grid">
+        <!-- LEFT: Available Courses - TABLE/LIST VIEW -->
+        <div class="available-courses">
+            <div class="section-header">
+                <h3><i class="fas fa-book-open"></i> Available Courses</h3>
+                <div class="search-bar">
+                    <input type="text" id="searchCourse" placeholder="Search by code or title...">
+                </div>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="core">Core</button>
+                <button class="filter-btn" data-filter="elective">Electives</button>
+                <button class="filter-btn" data-filter="lab">Lab</button>
+            </div>
+            <div class="courses-table-wrapper">
+                <table class="courses-table">
+                    <thead>
+                        <tr><th>Code</th><th>Course Title</th><th>Credits</th><th>Type</th><th></th></tr>
+                    </thead>
+                    <tbody id="coursesTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- RIGHT: Registered Courses -->
+        <div class="registered-courses">
+            <div class="credit-summary">
+                <strong><i class="fas fa-calculator"></i> Credit Summary</strong>
+                <div class="credit-progress"><div class="progress-bar" id="creditProgressBar"></div></div>
+                <div><span id="totalCredits">0</span> / 24 credits</div>
+                <div id="creditWarning" style="font-size:0.7rem; margin-top:0.3rem;"></div>
+            </div>
+            <h4><i class="fas fa-check-circle"></i> Registered (<span id="registeredCount">0</span>)</h4>
+            <div class="registered-table-wrapper">
+                <table class="registered-table">
+                    <thead>
+                        <tr><th>Code</th><th>Course</th><th>Credits</th><th></th></tr>
+                    </thead>
+                    <tbody id="registeredTableBody">
+                        <tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#5a7b99;">No courses registered yet</td><tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-secondary" onclick="resetRegistration()"><i class="fas fa-undo-alt"></i> Reset</button>
+                <button class="btn-primary" onclick="submitRegistration()"><i class="fas fa-save"></i> Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="toastMsg" class="toast-msg"></div>
+
+
+<script>
+    // Available Courses Data
+    const allCourses = [
+        { id: 1, code: "CSC 310", title: "Database Systems", credits: 3, type: "core" },
+        { id: 2, code: "MAT 202", title: "Calculus II", credits: 4, type: "core" },
+        { id: 3, code: "CSC 212", title: "Digital Logic", credits: 3, type: "core" },
+        { id: 4, code: "GST 202", title: "Entrepreneurship", credits: 1, type: "elective" },
+        { id: 5, code: "CSC 330", title: "Artificial Intelligence", credits: 3, type: "elective" },
+        { id: 6, code: "PHY 201", title: "Waves & Optics", credits: 3, type: "lab" },
+        { id: 7, code: "CSC 410", title: "Machine Learning", credits: 3, type: "elective" },
+        { id: 8, code: "CSC 250", title: "Data Structures", credits: 3, type: "core" }
+    ];
+
+    let registeredCourses = [];
+    let currentFilter = "all";
+    let searchTerm = "";
+
+    const MIN_CREDITS = 15;
+    const MAX_CREDITS = 24;
+
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toastMsg');
+        toast.textContent = msg;
+        toast.style.backgroundColor = isError ? '#b13e3e' : '#1f4d6e';
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 2500);
+    }
+
+    function getTotalCredits() {
+        return registeredCourses.reduce((sum, c) => sum + c.credits, 0);
+    }
+
+    function updateUI() {
+        const total = getTotalCredits();
+        document.getElementById('totalCredits').innerText = total;
+        const percentage = (total / MAX_CREDITS) * 100;
+        document.getElementById('creditProgressBar').style.width = Math.min(percentage, 100) + '%';
+        document.getElementById('registeredCount').innerText = registeredCourses.length;
+        
+        const warningDiv = document.getElementById('creditWarning');
+        if (total < MIN_CREDITS) {
+            warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Need ${MIN_CREDITS - total} more credits (min ${MIN_CREDITS})`;
+            warningDiv.style.color = '#b45b1c';
+        } else if (total > MAX_CREDITS) {
+            warningDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> Exceeds max by ${total - MAX_CREDITS}`;
+            warningDiv.style.color = '#b13e3e';
+        } else {
+            warningDiv.innerHTML = `<i class="fas fa-check-circle"></i> Within credit limits`;
+            warningDiv.style.color = '#0f7b4e';
+        }
+
+        // Render registered courses table
+        const registeredBody = document.getElementById('registeredTableBody');
+        if (registeredCourses.length === 0) {
+            registeredBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#5a7b99;">No courses registered yet</td></tr>';
+        } else {
+            registeredBody.innerHTML = registeredCourses.map(c => `
+                <tr>
+                    <td><strong>${c.code}</strong></td>
+                    <td>${c.title}</td>
+                    <td><span class="credit-badge">${c.credits} cr</span></td>
+                    <td><button class="remove-btn" onclick="dropCourse(${c.id})" title="Drop"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        renderAvailableCourses();
+    }
+
+    function renderAvailableCourses() {
+        const filtered = allCourses.filter(course => {
+            const matchesFilter = currentFilter === 'all' || course.type === currentFilter;
+            const matchesSearch = course.code.toLowerCase().includes(searchTerm) || 
+                                  course.title.toLowerCase().includes(searchTerm);
+            const notRegistered = !registeredCourses.some(reg => reg.id === course.id);
+            return matchesFilter && matchesSearch && notRegistered;
+        });
+        
+        const tbody = document.getElementById('coursesTableBody');
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#5a7b99;">No courses available</td></tr>';
+            return;
+        }
+        
+        const getTypeClass = (type) => {
+            if (type === 'core') return 'type-core';
+            if (type === 'elective') return 'type-elective';
+            return 'type-lab';
+        };
+        const getTypeLabel = (type) => {
+            if (type === 'core') return 'Core';
+            if (type === 'elective') return 'Elective';
+            return 'Lab';
+        };
+        
+        tbody.innerHTML = filtered.map(course => `
+            <tr>
+                <td><strong>${course.code}</strong></td>
+                <td>${course.title}</td>
+                <td><span class="credit-badge">${course.credits} cr</span></td>
+                <td><span class="type-badge ${getTypeClass(course.type)}">${getTypeLabel(course.type)}</span></td>
+                <td><button class="add-btn" onclick="addCourse(${course.id})"><i class="fas fa-plus-circle"></i> Add</button></td>
+            </tr>
+        `).join('');
+    }
+
+    function addCourse(courseId) {
+        const course = allCourses.find(c => c.id === courseId);
+        if (!course) return;
+        
+        const currentTotal = getTotalCredits();
+        if (currentTotal + course.credits > MAX_CREDITS) {
+            showToast(`Cannot add ${course.code}. Exceeds ${MAX_CREDITS} credit limit!`, true);
+            return;
+        }
+        
+        if (registeredCourses.some(c => c.id === courseId)) {
+            showToast(`${course.code} is already registered`, true);
+            return;
+        }
+        
+        registeredCourses.push({ ...course });
+        updateUI();
+        showToast(`${course.code} added`);
+    }
+
+    function dropCourse(courseId) {
+        const course = registeredCourses.find(c => c.id === courseId);
+        if (course) {
+            registeredCourses = registeredCourses.filter(c => c.id !== courseId);
+            updateUI();
+            showToast(`${course.code} removed`);
+        }
+    }
+
+    function resetRegistration() {
+        if (registeredCourses.length > 0 && confirm('Clear all registered courses?')) {
+            registeredCourses = [];
+            updateUI();
+            showToast('Registration reset');
+        }
+    }
+
+    function submitRegistration() {
+        const total = getTotalCredits();
+        if (total < MIN_CREDITS) {
+            showToast(`Minimum ${MIN_CREDITS} credits required. You have ${total}.`, true);
+            return;
+        }
+        if (total > MAX_CREDITS) {
+            showToast(`Maximum ${MAX_CREDITS} credits allowed. You have ${total}.`, true);
+            return;
+        }
+        if (registeredCourses.length === 0) {
+            showToast('Please register at least one course', true);
+            return;
+        }
+        
+        showToast(`✓ Registration submitted! ${registeredCourses.length} courses (${total} credits)`);
+    }
+
+    // Filter and search handlers
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            renderAvailableCourses();
+        });
+    });
+
+    document.getElementById('searchCourse').addEventListener('input', (e) => {
+        searchTerm = e.target.value.toLowerCase();
+        renderAvailableCourses();
+    });
+
+    // Initial load
+    updateUI();
+
+
+</script>
+    
+
+{% block scripts %}
+
+{% endblock %}
+
+{% endblock %}

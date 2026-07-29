@@ -1,0 +1,508 @@
+
+        :root {
+            --bg-body: #f4f9ff;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --primary-dark: #123b5e;
+            --primary: #1e4f7a;
+            --primary-light: #e5effa;
+            --accent: #286b9f;
+            --success: #0f7b4e;
+            --warning: #b45b0f;
+            --text-main: #13294b;
+            --text-secondary: #2f5579;
+            --text-muted: #55799b;
+            --border-light: #d0e1f2;
+            --shadow-card: 0 20px 35px -10px rgba(0, 40, 70, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+            --shadow-hover: 0 25px 40px -15px #0f3f63;
+            --radius-lg: 2.2rem;
+            --radius-md: 1.5rem;
+            --radius-sm: 1rem;
+        }
+
+
+        .dashboard {
+            max-width: 1440px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-top: 25px;
+        }
+
+        /* ----- TOP ROW: LEFT SUMMARY + RIGHT CARDS (flex, responsive) ----- */
+        .top-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        /* LEFT PANEL: student summary (profile card) */
+        .student-summary {
+            flex: 1 1 340px;          /* base layout behavior framework */
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            padding: 2rem 1.8rem;
+            border: 1px solid var(--glass-border);
+            transition: 0.2s;
+        }
+
+        .profile-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .profile-pic {
+            width: 130px;
+            height: 130px;
+            background: linear-gradient(145deg, #b3d6ff, #7fb0da);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            color: #1a4b74;
+            box-shadow: 0 20px 25px -10px #1a4b7850, 0 0 0 5px white;
+            margin-bottom: 1rem;
+        }
+
+        
+            .profile-pic img {
+                width: 120px;
+                height: 120px;
+                object-fit: cover;
+                border-radius: 50%;
+            }
+
+            
+        .student-name {
+            font-size: 1.9rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--primary-dark);
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        .student-id {
+            background: #cde2fc;
+            padding: 0.4rem 1.2rem;
+            border-radius: 60px;
+            font-weight: 600;
+            color: #0a3857;
+            margin: 0.8rem 0 1rem 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem 1.2rem;
+            margin: 1.5rem 0 0.8rem 0;
+            background: rgba(255,255,255,0.5);
+            padding: 1.3rem 1rem;
+            border-radius: var(--radius-md);
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Prevents text overflow grid blowout */
+        }
+        .info-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .info-value {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--text-main);
+            word-break: break-word;
+        }
+
+        .address-badge {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: 0.6rem 1.2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            border: 1px solid #c1daf5;
+            margin-top: 0.5rem;
+            word-break: break-word;
+        }
+        .address-badge i {
+            margin-top: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        /* RIGHT PANEL: enrolled courses + announcement (flex column) */
+        .right-stack {
+            flex: 3 1 550px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 0;
+        }
+
+        /* announcement banner (full width inside right stack) */
+        .announcement-banner {
+            background: linear-gradient(115deg, #102c44, #214e78);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem 2rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            border: 1px solid #ffffff30;
+        }
+        .announcement-content {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .announcement-icon {
+            background: #ffd966;
+            color: #1f4a72;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            flex-shrink: 0;
+        }
+        .announcement-text h3 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .announcement-text p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+        .announcement-btn {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 0.7rem 1.6rem;
+            border-radius: 60px;
+            color: white;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid #ffffff70;
+            transition: 0.2s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .announcement-btn:hover {
+            background: white;
+            color: #1a4972;
+        }
+
+        /* enrolled courses cards row (responsive grid inside) */
+        .section-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+        .section-label i {
+            font-size: 1.3rem;
+            color: var(--primary);
+            background: white;
+            padding: 0.5rem;
+            border-radius: 14px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.02);
+        }
+        .section-label h3 {
+            font-size: 1.4rem;
+            font-weight: 650;
+            color: var(--primary-dark);
+        }
+
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.2rem;
+        }
+        .course-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: var(--radius-md);
+            padding: 1.4rem 1.2rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 20px -8px #b5cae0;
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .course-card:hover {
+            transform: translateY(-4px);
+            background: white;
+        }
+        .course-code {
+            font-weight: 700;
+            color: var(--primary-dark);
+            font-size: 1.2rem;
+        }
+        .course-title {
+            font-weight: 600;
+            margin: 0.3rem 0 0.8rem;
+            color: #10273d;
+            font-size: 1.05rem;
+            line-height: 1.3;
+        }
+        .course-lecturer {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.2rem;
+        }
+        .course-badge {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border-radius: 60px;
+            padding: 0.25rem 0.9rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 0.6rem;
+            align-self: flex-start;
+        }
+
+        /* ----- BOTTOM SECTION: recent payment history table ----- */
+        .payment-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: var(--radius-lg);
+            padding: 1.8rem 2rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-card);
+            width: 100%;
+        }
+
+        .payment-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        .payment-header h3 {
+            font-size: 1.5rem;
+            font-weight: 650;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            -webkit-overflow-scrolling: touch; /* Crisp mobile list swipe dynamics */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 750px; /* Safeguards absolute structure metrics */
+        }
+        th {
+            text-align: left;
+            padding: 1.1rem 1rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-bottom: 2px solid #d5e4f5;
+            background: #cde2fc;
+        }
+        td {
+            padding: 1.1rem 1rem;
+            border-bottom: 1px solid #d0e2f2;
+            color: var(--text-main);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .status {
+            background: #fef2d6;
+            color: #975013;
+            font-weight: 700;
+            padding: 0.3rem 0.9rem;
+            border-radius: 60px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            text-transform: capitalize;
+        }
+        .status.paid {
+            background: #daf4e4;
+            color: #0a6b3e;
+        }
+        .status.overdue {
+            background: #fce8e6;
+            color: #a82316;
+        }
+        .view-link {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 2px dotted #92b9e3;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .view-link:hover {
+            color: var(--accent);
+        }
+
+        .payment-footer {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            font-weight: 500;
+        }
+        .payment-footer span {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255,255,255,0.4);
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        /* ==========================================================================
+           RESPONSIVE REVISIONS & VIEWPORT BREAKPOINTS
+           ========================================================================== */
+        
+        /* Tablet & Medium Displays */
+        @media (max-width: 991px) {
+            .announcement-banner {
+                padding: 1.5rem;
+            }
+            .courses-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        /* Drop Side Panels to Block Column Order (<= 768px) */
+        @media (max-width: 768px) {
+            .top-row {
+                flex-direction: column;
+            }
+            .student-summary {
+                flex: auto;
+                width: 100%;
+            }
+            .announcement-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.2rem;
+            }
+            .announcement-btn {
+                align-self: flex-start;
+                width: auto;
+            }
+            .payment-section {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Mini Mobile Displays (<= 480px) */
+        @media (max-width: 480px) {
+            :root {
+                --radius-lg: 1.6rem;
+                --radius-md: 1.2rem;
+            }
+            body {
+                padding: 1rem 0.6rem;
+            }
+            .student-summary {
+                padding: 1.8rem 1.2rem;
+            }
+            .profile-pic {
+                width: 110px;
+                height: 110px;
+                font-size: 4rem;
+            }
+
+
+
+            .student-name {
+                font-size: 1.6rem;
+            }
+            .info-grid {
+                grid-template-columns: 1fr; /* Switch student meta fields down to vertical stacking */
+                gap: 0.9rem;
+                padding: 1.2rem 1rem;
+            }
+            .announcement-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .announcement-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.5rem;
+            }
+            .announcement-text h3 {
+                font-size: 1.2rem;
+            }
+            .announcement-text p {
+                font-size: 0.9rem;
+            }
+            .payment-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            .payment-header h3 {
+                font-size: 1.3rem;
+            }
+            .payment-footer {
+                flex-direction: column;
+                gap: 0.6rem;
+            }
+            .payment-footer span {
+                width: 100%;
+            }
+        }
+
+        /* Utility Micro Rules */
+        a { text-decoration: none; }
+        .fa-chevron-right { font-size: 0.8rem; }

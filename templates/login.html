@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Student Login | JSPICT</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}" />
+
+    <style>
+        /* ── layout changes ── */
+        .flex-options {
+            flex-direction: column !important;
+            gap: 0.6rem 0;
+            align-items: stretch !important;
+        }
+
+        .checkbox-row {
+            display: flex !important;
+            width: 100% !important;
+            justify-content: space-between !important;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-row .remember {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex: 0 1 auto;
+            white-space: nowrap;
+        }
+
+        .forgot-link-wrap {
+            margin-top: 20px;
+            text-align: right;
+            width: 100%;
+        }
+
+        @media (max-width: 767px) {
+            .login-left {
+                display: none;
+            }
+            .login-right {
+                position: relative;
+            }
+            .watermark-logo {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                opacity: 0.08;
+                pointer-events: none;
+                z-index: 0;
+                max-width: 70%;
+                max-height: 70%;
+                object-fit: contain;
+            }
+            .login-right .form-header,
+            .login-right form {
+                position: relative;
+                z-index: 1;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .watermark-logo {
+                display: none;
+            }
+        }
+
+        .toggle-password {
+            cursor: pointer;
+            margin-left: -2rem;
+            color: #7a8a9e;
+            font-size: 1.1rem;
+            z-index: 2;
+        }
+
+        /* Disabled button style (optional) */
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="giant-bg"></div>
+
+    <div class="login-container">
+
+        <!-- LEFT PANEL -->
+        <div class="login-left">
+            <div class="school-logo">
+                <img class="school-logo-img" src="{{ url_for('static', filename='img/jspict-logo.png') }}" alt="JSPICT Logo" />
+            </div>
+            <div class="school-name">JSPICT</div>
+            <div class="school-tagline">Jigawa State Polytechnic for Information Communication Technology, Kazaure</div>
+            <div class="school-tagline">
+                <i class="fas fa-shield-alt"></i> A pinnacle in ICT <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="welcome-text">
+                <p><i class="fas fa-quote-left"></i> Access your registrations, payments, and announcements — all in one place.</p>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="login-right">
+
+            <img class="watermark-logo" src="{{ url_for('static', filename='img/jspict-logo.png') }}" alt="" />
+
+            <div class="form-header">
+                <h2>Student sign in</h2>
+                <p>Enter your registration number and password</p>
+            </div>
+
+            {% if error %}
+            <input type="hidden" id="error-msg" value="{{ error }}" />
+            {% else %}
+            <input type="hidden" id="error-msg" value="" />
+            {% endif %}
+
+            <form id="studentLoginForm" method="POST" action="{{ url_for('login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+                <!-- Registration Number -->
+                <div class="input-group">
+                    <label>Registration Number</label>
+                    <div class="input-icon">
+                        <i class="fas fa-user-graduate"></i>
+                        <input type="text" id="studentId" name="studentId"
+                               placeholder="2024/NG/2371"
+                               value="{{ studentId if studentId else '' }}" required />
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="input-group">
+                    <label>Password</label>
+                    <div class="input-icon">
+                        <i class="fas fa-key"></i>
+                        <input type="{{ 'text' if show_password else 'password' }}"
+                               id="password" name="password"
+                               placeholder="••••••••"
+                               value="{{ password if password else '' }}" required />
+                    </div>
+                </div>
+
+                <!-- Checkboxes & forgot password -->
+                <div class="flex-options">
+                    <div class="checkbox-row">
+                        <label class="remember">
+                            <input type="checkbox" name="rememberCheck" id="rememberCheck"
+                                   {% if remember %}checked{% endif %} />
+                            <span>Remember me</span>
+                        </label>
+                        <label class="remember">
+                            <input type="checkbox" id="togglePassword" name="show_password"
+                                   {% if show_password %}checked{% endif %} />
+                            <span>Show password</span>
+                        </label>
+                    </div>
+                    <div class="forgot-link-wrap">
+                        <a href="#" class="forgot-link" id="forgotPwdLink">Forgot password?</a>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn">
+                    <i class="fas fa-arrow-right-to-bracket"></i> Login
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <div id="toastMsg" class="alert-toast"></div>
+
+    <script>
+        (function() {
+
+            // DOM elements
+            const togglePwd = document.getElementById('togglePassword');
+            const pwdInput = document.getElementById('password');
+            const form = document.getElementById('studentLoginForm');
+            const studentIdInput = document.getElementById('studentId');
+            const loginBtn = document.getElementById('loginBtn');
+            const toast = document.getElementById('toastMsg');
+
+            // Toggle password visibility
+            togglePwd.addEventListener('change', function() {
+                pwdInput.type = this.checked ? 'text' : 'password';
+            });
+
+            // Toast message helper
+            function showMessage(text, isError) {
+                toast.textContent = text;
+                toast.style.backgroundColor = isError ? '#b13e3e' : '#1f4d6e';
+                toast.style.display = 'block';
+                setTimeout(function() {
+                    toast.style.display = 'none';
+                }, 3000);
+            }
+
+            // Form submit handler
+            form.addEventListener('submit', function(e) {
+                const identifier = studentIdInput.value.trim();
+                const password = pwdInput.value.trim();
+
+                if (!identifier || !password) {
+                    e.preventDefault();
+                    showMessage('Please enter registration number and password', true);
+                    // Re-enable button (in case it was disabled earlier)
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Login';
+                } else {
+                    // Disable button and show loading state
+                    loginBtn.disabled = true;
+                    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                    // Allow form submission
+                }
+            });
+
+            // Forgot password demo
+            const forgotLink = document.getElementById('forgotPwdLink');
+            forgotLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                showMessage('A password reset link has been sent (demo).', false);
+            });
+
+            // Show server-side error if any
+            const errorInput = document.getElementById('error-msg');
+            if (errorInput && errorInput.value) {
+                setTimeout(function() {
+                    showMessage(errorInput.value, true);
+                }, 100);
+            }
+
+        })();
+    </script>
+
+</body>
+</html>

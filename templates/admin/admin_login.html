@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Student Login | JSPICT</title>
+   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+
+<!-- GIANT BACKGROUND IMAGE (full screen behind all content) -->
+<div class="giant-bg"></div>
+
+<div class="login-container">
+  <!-- LEFT PANEL: logo, school identity & inspiring content -->
+  <div class="login-left">
+    <div class="school-logo">
+      <img  class="school-logo-img"  src="{{ url_for('static', filename='img/jspict-logo.png') }}" alt="JSPICT Logo">
+    </div>
+    <div class="school-name">JSPICT</div>
+    <div class="school-tagline">Jigawa State Polytechnic for Information Communication Technology, Kazaure</div>
+    <div class="school-tagline">
+        
+        <i class="fas fa-shield-alt"></i> A pinnicle in ICT <i class="fas fa-shield-alt"></i>
+            
+    </div>
+    
+
+
+
+    <div class="welcome-text">
+      <p><i class="fas fa-quote-left"></i> Access your registrations, payments, and announcements — all in one place.</p>
+    </div>
+    
+  </div>
+
+  <!-- RIGHT PANEL: Student login form -->
+  <div class="login-right">
+    <div class="form-header">
+      <h2>Admin Login</h2>
+      <p>Enter your username and password
+      </p>
+    </div>
+
+    <form id="studentLoginForm">
+      <div class="input-group">
+        <label> Username</label>
+        <div class="input-icon">
+          <i class="fas fa-user-graduate"></i>
+          <input type="text" id="studentId" placeholder="Enter your username" required>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label> Password</label>
+        <div class="input-icon">
+          <i class="fas fa-key"></i>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+      </div>
+
+      <div class="flex-options">
+        <label class="remember">
+          <input type="checkbox" id="rememberCheck"> <span>Remember me</span>
+        </label>
+        <a href="#" class="forgot-link" id="forgotPwdLink">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="login-btn">
+        <i class="fas fa-arrow-right-to-bracket"></i> Login
+      </button>
+    </form>
+
+
+  </div>
+</div>
+
+<div id="toastMsg" class="alert-toast"></div>
+
+<script>
+  (function() {
+    const form = document.getElementById('studentLoginForm');
+    const studentIdInput = document.getElementById('studentId');
+    const passwordInput = document.getElementById('password');
+    const rememberCheck = document.getElementById('rememberCheck');
+    const toast = document.getElementById('toastMsg');
+
+    function showMessage(text, isError = false) {
+      toast.textContent = text;
+      toast.style.backgroundColor = isError ? '#b13e3e' : '#1f4d6e';
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3000);
+    }
+
+    // load stored credentials if "remember me" was previously enabled
+    function loadStoredCredentials() {
+      const storedId = localStorage.getItem('student_login_id');
+      const storedPass = localStorage.getItem('student_login_pass');
+      const rememberFlag = localStorage.getItem('student_remember_flag');
+      if (rememberFlag === 'true' && storedId && storedPass) {
+        studentIdInput.value = storedId;
+        passwordInput.value = storedPass;
+        rememberCheck.checked = true;
+      } else {
+        rememberCheck.checked = false;
+      }
+    }
+
+    // simulate student login validation + redirect
+    function handleStudentLogin(e) {
+      e.preventDefault();
+      const identifier = studentIdInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!identifier || !password) {
+        showMessage('❌ Please enter Registration number/email and password', true);
+        return;
+      }
+
+      // demo validation: any format that looks like registration number OR contains @ plus correct password
+      const isValidDemo = (identifier.includes('@') || identifier.startsWith('2024/')) && password === 'Student@123';
+
+      if (isValidDemo) {
+        // handle "remember me"
+        if (rememberCheck.checked) {
+          localStorage.setItem('student_login_id', identifier);
+          localStorage.setItem('student_login_pass', password);
+          localStorage.setItem('student_remember_flag', 'true');
+        } else {
+          localStorage.removeItem('student_login_id');
+          localStorage.removeItem('student_login_pass');
+          localStorage.setItem('student_remember_flag', 'false');
+        }
+
+        showMessage('✅ Login successful! Redirecting to dashboard...');
+        setTimeout(() => {
+          // demo redirect simulation
+          alert("Welcome to Student Dashboard!\n(Production: redirect to dashboard)");
+          // window.location.href = "/student/dashboard";
+        }, 1300);
+      } else {
+        showMessage('❌ Invalid credentials. Use demo: 2024/NG/2371 / Student@123', true);
+      }
+    }
+
+    // forgot password mock interaction
+    const forgotLink = document.getElementById('forgotPwdLink');
+    if (forgotLink) {
+      forgotLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showMessage('📧 A password reset link has been sent to your registered email (demo).', false);
+      });
+    }
+
+    form.addEventListener('submit', handleStudentLogin);
+    loadStoredCredentials();
+
+    // interactive input border effects
+    const inputs = document.querySelectorAll('.input-group input');
+    inputs.forEach(inp => {
+      inp.addEventListener('focus', () => {
+        inp.style.borderColor = '#1f6392';
+      });
+      inp.addEventListener('blur', () => {
+        inp.style.borderColor = '#dce5f0';
+      });
+    });
+  })();
+</script>
+</body>
+</html>

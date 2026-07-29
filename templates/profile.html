@@ -1,0 +1,736 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <title>Profile & Settings</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+    <style>
+        /* Additional styles for display-only fields */
+        .field-display {
+            display: inline-block;
+            padding: 0.5rem 0.75rem;
+            background: #f1f3f5;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            color: #2d3748;
+            font-size: 0.95rem;
+            width: 100%;
+            box-sizing: border-box;
+            font-weight: 500;
+            cursor: default;
+        }
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+        }
+        .info-group label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #4a5568;
+        }
+        .double-field .info-group:not(:last-child) {
+            margin-right: 0.75rem;
+        }
+        .settings-group .double-field {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .settings-group .double-field .input-group,
+        .settings-group .double-field .info-group {
+            flex: 1 1 45%;
+            min-width: 180px;
+        }
+        .save-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-wrapper input {
+            width: 100%;
+            padding-right: 2.5rem;
+            box-sizing: border-box;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 0.75rem;
+            cursor: pointer;
+            color: #6c7a8e;
+            font-size: 1.1rem;
+            user-select: none;
+            z-index: 2;
+        }
+        .toggle-password:hover {
+            color: #2d3748;
+        }
+        .password-wrapper input.masked {
+            -webkit-text-security: disc;
+            text-security: disc;
+        }
+
+        /* ----- Modal styles ----- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h3 {
+            margin: 0;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #6c7a8e;
+        }
+        .modal-close:hover {
+            color: #2d3748;
+        }
+        .modal-body .input-group {
+            margin-bottom: 1rem;
+        }
+        .btn-outline-sm {
+            background: transparent;
+            border: 1px solid #ced4da;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #495057;
+            white-space: nowrap;
+        }
+        .btn-outline-sm:hover {
+            background: #f1f3f5;
+        }
+        #sendCodeMessage, #verifyMessage {
+            display: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .inline-flex {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .message-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ----- Verification badge styles ----- */
+        .verify-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.15rem 0.6rem;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .verify-badge.verified {
+            background: #d4edda;
+            color: #155724;
+        }
+        .verify-badge.unverified {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .verify-badge i {
+            font-size: 0.65rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="page-header">
+        <div class="title-section">
+            <h1><i class="fas fa-sliders-h"></i> Profile & Settings</h1>
+            <p>Manage your personal info, academics & preferences</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
+        </div>
+    </div>
+
+    <div class="settings-grid">
+        <!-- LEFT CARD: modern student bio with full details -->
+        <div class="profile-card">
+            <div class="avatar-section">
+                <div class="avatar-wrapper">
+                    <div class="avatar-placeholder" id="avatarDisplay">
+                        <i class="fas fa-user-graduate fa-3x"></i>
+                    </div>
+                    <div class="edit-avatar-btn" id="editAvatarBtn">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
+                <h2 class="profile-name" id="profileFullName">{{ current_user.name }}</h2>
+                <div class="student-badge"><i class="fas fa-id-card"></i> <span id="profileMatric">{{ current_user.reg_no }}</span> · <span id="profileProgram">Computer Science</span></div>
+            </div>
+            <!-- All student details grid -->
+            <div class="profile-details-grid">
+                <div class="detail-item"><i class="fas fa-graduation-cap"></i> <span><strong>Program:</strong> <span id="displayProgram">B.Sc. Computer Science</span></span></div>
+                <div class="detail-item"><i class="fas fa-calendar-week"></i> <span><strong>Semester:</strong> <span id="displaySemester">Year 3 · Semester 2</span></span></div>
+                <div class="detail-item"><i class="fas fa-id-card"></i> <span><strong>Matric No:</strong> <span id="displayMatric">{{ current_user.reg_no }}</span></span></div>
+                <div class="detail-item"><i class="fas fa-chalkboard"></i> <span><strong>Session:</strong> <span id="displaySession">2024/2025</span></span></div>
+                <div class="detail-item">
+                    <i class="fas fa-envelope"></i>
+                    <span>
+                        <strong>Email:</strong>
+                        <span id="displayEmail">{{ current_user.email }}</span>
+                        {% if current_user.email_verified %}
+                            <span class="verify-badge verified" id="leftBadge"><i class="fas fa-check-circle"></i> Verified</span>
+                        {% else %}
+                            <span class="verify-badge unverified" id="leftBadge"><i class="fas fa-exclamation-triangle"></i> Not Verified</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-item"><i class="fas fa-phone-alt"></i> <span><strong>Phone:</strong> <span id="displayPhone">{{ current_user.formatted_phone }}</span></span></div>
+                <div class="detail-item"><i class="fas fa-map-marker-alt"></i> <span><strong>Address:</strong> <span id="displayAddress">{{ current_user.address }}</span></span></div>
+                <div class="detail-item"><i class="fas fa-calendar-alt"></i> <span><strong>DOB:</strong> <span id="displayDob">{{ current_user.formatted_dob }}</span></span></div>
+                <div class="detail-item"><i class="fas fa-flag"></i> <span><strong>Nationality:</strong> <span id="displayNationality">{{ current_user.nationality }}</span></span></div>
+                <div class="detail-item"><i class="fas fa-venus-mars"></i> <span><strong>Gender:</strong> <span id="displayGender">{{ current_user.gender }}</span></span></div>
+            </div>
+        </div>
+
+        <!-- RIGHT CARD: SETTINGS (Edit, Security) -->
+        <div class="settings-card">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="editProfileTab"><i class="fas fa-user-edit"></i> Edit Profile</button>
+                <button class="tab-btn" data-tab="securityTab"><i class="fas fa-lock"></i> Security</button>
+            </div>
+
+            <!-- Tab 1: Edit Profile – only phone editable (email via modal) -->
+            <div class="tab-pane active-pane" id="editProfileTab">
+                <div class="settings-group">
+
+                    <!-- CSRF token for AJAX requests -->
+                    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="double-field">
+                        <div class="info-group">
+                            <label><i class="fas fa-user"></i> Full name</label>
+                            <span class="field-display" id="displayNameField">{{ current_user.name }}</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="fas fa-venus-mars"></i> Gender</label>
+                            <span class="field-display" id="displayGenderField">{{ current_user.gender }}</span>
+                        </div>
+                    </div>
+
+                    <div class="double-field">
+                        <div class="info-group">
+                            <label><i class="fas fa-calendar"></i> Date of birth</label>
+                            <span class="field-display" id="displayDobField">{{ current_user.formatted_dob }}</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="fas fa-flag"></i> Nationality</label>
+                            <span class="field-display" id="displayNationalityField">{{ current_user.nationality }}</span>
+                        </div>
+                    </div>
+
+                    <div class="info-group">
+                        <label><i class="fas fa-map-marker-alt"></i> Address</label>
+                        <span class="field-display" id="displayAddressField">{{ current_user.address }}</span>
+                    </div>
+
+                    <div class="double-field">
+                        <div class="info-group">
+                            <label><i class="fas fa-graduation-cap"></i> Program</label>
+                            <span class="field-display" id="displayProgramField">B.Sc. Computer Science</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="fas fa-layer-group"></i> Semester/Year</label>
+                            <span class="field-display" id="displaySemesterField">Year 3 · Semester 2</span>
+                        </div>
+                    </div>
+
+                    <div class="double-field">
+                        <div class="info-group">
+                            <label><i class="fas fa-id-card"></i> Matric Number</label>
+                            <span class="field-display" id="displayMatricField">{{ current_user.reg_no }}</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="fas fa-chalkboard"></i> Current Session</label>
+                            <span class="field-display" id="displaySessionField">2024/2025</span>
+                        </div>
+                    </div>
+
+                    <!-- Editable fields: Phone (input) & Email (display + button + badge) -->
+                    <div class="double-field">
+                        <div class="input-group">
+                            <label><i class="fas fa-phone"></i> Phone</label>
+                            <input type="tel" id="editPhone" value="{{ current_user.formatted_phone }}">
+                        </div>
+                        <div class="info-group">
+                            <label><i class="fas fa-envelope"></i> Email</label>
+                            <div class="inline-flex">
+                                <span class="field-display" id="displayEmailFieldEdit" style="flex:1;">{{ current_user.email }}</span>
+                                {% if current_user.email_verified %}
+                                    <span class="verify-badge verified" id="editBadge"><i class="fas fa-check-circle"></i> Verified</span>
+                                {% else %}
+                                    <span class="verify-badge unverified" id="editBadge"><i class="fas fa-exclamation-triangle"></i> Not Verified</span>
+                                {% endif %}
+                                <button type="button" class="btn-outline-sm" id="changeEmailBtn">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="save-btn" id="updateProfileBtn"><i class="fas fa-save"></i> Update Phone</button>
+                </div>
+            </div>
+
+            <!-- Tab 2: Security + Change password -->
+            <div class="tab-pane" id="securityTab">
+                <div class="settings-group">
+                    <!-- Current password -->
+                    <div class="input-group">
+                        <label><i class="fas fa-key"></i> Current password</label>
+                        <div class="password-wrapper">
+                            <input type="text" id="currentPass" placeholder="Enter current password" class="masked">
+                            <span class="toggle-password" data-target="currentPass"><i class="fas fa-eye"></i></span>
+                        </div>
+                    </div>
+                    <!-- New password -->
+                    <div class="input-group">
+                        <label><i class="fas fa-lock"></i> New password</label>
+                        <div class="password-wrapper">
+                            <input type="text" id="newPass" placeholder="Minimum 6 characters" class="masked">
+                            <span class="toggle-password" data-target="newPass"><i class="fas fa-eye"></i></span>
+                        </div>
+                    </div>
+                    <!-- Confirm new password -->
+                    <div class="input-group">
+                        <label><i class="fas fa-check-circle"></i> Confirm new password</label>
+                        <div class="password-wrapper">
+                            <input type="text" id="confirmPass" placeholder="Confirm new password" class="masked">
+                            <span class="toggle-password" data-target="confirmPass"><i class="fas fa-eye"></i></span>
+                        </div>
+                    </div>
+                    <button class="save-btn" id="changePwdBtn"><i class="fas fa-shield-alt"></i> Change Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== EMAIL UPDATE MODAL ========== -->
+<div class="modal-overlay" id="emailModal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-envelope"></i> Update Email Address</h3>
+            <button class="modal-close" id="closeEmailModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="emailStep1">
+                <div class="input-group">
+                    <label>New Email Address</label>
+                    <input type="email" id="newEmailInput" placeholder="Enter new email" value="{{ current_user.email }}">
+                </div>
+                <button class="save-btn" id="sendCodeBtn"><i class="fas fa-paper-plane"></i> Send Verification Code</button>
+                <div id="sendCodeMessage" style="display:none;"></div>
+            </div>
+            <div id="emailStep2" style="display:none;">
+                <div class="input-group">
+                    <label>Verification Code</label>
+                    <input type="text" id="verificationCodeInput" placeholder="Enter 6-digit code" maxlength="6">
+                </div>
+                <button class="save-btn" id="verifyCodeBtn"><i class="fas fa-check"></i> Verify & Update</button>
+                <button class="btn-outline-sm" id="resendCodeLink" style="margin-top:0.5rem;">Resend Code</button>
+                <div id="verifyMessage" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function() {
+        // ---------- DOM refs ----------
+        const displayPhoneSpan = document.getElementById('displayPhone');
+        const displayEmailSpan = document.getElementById('displayEmail');
+        const editPhone = document.getElementById('editPhone');
+        const updateBtn = document.getElementById('updateProfileBtn');
+        const originalBtnHtml = updateBtn.innerHTML;
+        const changePwdBtn = document.getElementById('changePwdBtn');
+        const originalPwdBtnHtml = changePwdBtn.innerHTML;
+
+        // Badges
+        const leftBadge = document.getElementById('leftBadge');
+        const editBadge = document.getElementById('editBadge');
+
+        // ---------- Helpers ----------
+        function showToast(msg, isErr = false) {
+            const old = document.querySelector('.message-toast');
+            if (old) old.remove();
+            const toast = document.createElement('div');
+            toast.className = 'message-toast';
+            toast.style.background = isErr ? '#c23d3d' : '#1f7840';
+            toast.innerHTML = `<i class="fas fa-${isErr ? 'exclamation-circle' : 'check-circle'}"></i> ${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2600);
+        }
+
+        function showMessage(element, text, isError) {
+            element.style.display = 'block';
+            element.innerText = text;
+            element.style.background = isError ? '#c23d3d' : '#1f7840';
+            element.style.color = '#fff';
+            element.style.padding = '0.5rem 1rem';
+            element.style.borderRadius = '6px';
+            element.style.fontSize = '0.9rem';
+        }
+
+        // Helper to update badges to "Verified"
+        function updateBadgesToVerified() {
+            const badges = [leftBadge, editBadge];
+            badges.forEach(badge => {
+                if (badge) {
+                    badge.className = 'verify-badge verified';
+                    badge.innerHTML = '<i class="fas fa-check-circle"></i> Verified';
+                }
+            });
+        }
+
+        // ---------- Toggle password visibility ----------
+        document.querySelectorAll('.toggle-password').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const inputId = this.getAttribute('data-target');
+                const input = document.getElementById(inputId);
+                if (!input) return;
+                input.classList.toggle('masked');
+                const icon = this.querySelector('i');
+                if (icon) {
+                    if (input.classList.contains('masked')) {
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    } else {
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    }
+                }
+            });
+        });
+
+        // ---------- Update Phone ----------
+        updateBtn.addEventListener('click', function() {
+            const phone = editPhone.value.trim();
+            if (!phone) { showToast('Phone number is required', true); return; }
+
+            updateBtn.disabled = true;
+            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+            const csrfToken = document.getElementById('csrf_token').value;
+
+            fetch('/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ phone: phone })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = originalBtnHtml;
+                if (data.success) {
+                    displayPhoneSpan.innerText = data.phone;
+                    editPhone.value = data.phone;
+                    showToast(data.message, false);
+                } else {
+                    showToast(data.message, true);
+                }
+            })
+            .catch(() => {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = originalBtnHtml;
+                showToast('An error occurred', true);
+            });
+        });
+
+        // ---------- Change password ----------
+        changePwdBtn.addEventListener('click', function() {
+            const cur = document.getElementById('currentPass').value.trim();
+            const newP = document.getElementById('newPass').value.trim();
+            const conf = document.getElementById('confirmPass').value.trim();
+
+            if (!cur) { showToast('Current password required', true); return; }
+            if (newP.length < 6) { showToast('Password must be at least 6 characters', true); return; }
+            if (newP !== conf) { showToast('Passwords do not match', true); return; }
+
+            changePwdBtn.disabled = true;
+            changePwdBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Changing...';
+
+            const csrfToken = document.getElementById('csrf_token').value;
+
+            fetch('/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ current: cur, new: newP, confirm: conf })
+            })
+            .then(response => response.json())
+            .then(data => {
+                changePwdBtn.disabled = false;
+                changePwdBtn.innerHTML = originalPwdBtnHtml;
+                if (data.success) {
+                    showToast(data.message, false);
+                    document.getElementById('currentPass').value = '';
+                    document.getElementById('newPass').value = '';
+                    document.getElementById('confirmPass').value = '';
+                    document.getElementById('currentPass').classList.add('masked');
+                    document.getElementById('newPass').classList.add('masked');
+                    document.getElementById('confirmPass').classList.add('masked');
+                    document.querySelectorAll('.toggle-password i').forEach(icon => {
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    });
+                } else {
+                    showToast(data.message, true);
+                }
+            })
+            .catch(() => {
+                changePwdBtn.disabled = false;
+                changePwdBtn.innerHTML = originalPwdBtnHtml;
+                showToast('An error occurred', true);
+            });
+        });
+
+        // ---------- Print ----------
+        document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+        // ---------- Avatar edit ----------
+        const avatarDiv = document.getElementById('avatarDisplay');
+        document.getElementById('editAvatarBtn').addEventListener('click', () => {
+            const icon = prompt('Enter icon name (e.g., user-graduate, book, user-astronaut)', 'user-graduate');
+            if (icon && icon.trim()) {
+                avatarDiv.innerHTML = `<i class="fas fa-${icon} fa-3x"></i>`;
+            } else {
+                avatarDiv.innerHTML = `<i class="fas fa-user-graduate fa-3x"></i>`;
+            }
+            showToast('Avatar updated', false);
+        });
+
+        // ---------- Tabs ----------
+        const tabs = document.querySelectorAll('.tab-btn');
+        const panes = document.querySelectorAll('.tab-pane');
+
+        function switchTab(tabId) {
+            panes.forEach(p => p.classList.remove('active-pane'));
+            document.getElementById(tabId).classList.add('active-pane');
+            tabs.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        }
+
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-tab');
+                if (id) switchTab(id);
+            });
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam === 'security') {
+            switchTab('securityTab');
+        } else {
+            switchTab('editProfileTab');
+        }
+
+        // ========== EMAIL UPDATE MODAL ==========
+        const emailModal = document.getElementById('emailModal');
+        const changeEmailBtn = document.getElementById('changeEmailBtn');
+        const closeEmailModal = document.getElementById('closeEmailModal');
+
+        const newEmailInput = document.getElementById('newEmailInput');
+        const sendCodeBtn = document.getElementById('sendCodeBtn');
+        const sendCodeMessage = document.getElementById('sendCodeMessage');
+        const step1 = document.getElementById('emailStep1');
+        const step2 = document.getElementById('emailStep2');
+        const verificationCodeInput = document.getElementById('verificationCodeInput');
+        const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+        const verifyMessage = document.getElementById('verifyMessage');
+        const resendCodeLink = document.getElementById('resendCodeLink');
+
+        let pendingNewEmail = '';
+
+        function showModal() {
+            step1.style.display = 'block';
+            step2.style.display = 'none';
+            newEmailInput.value = document.getElementById('displayEmailFieldEdit').innerText.trim();
+            verificationCodeInput.value = '';
+            sendCodeMessage.style.display = 'none';
+            verifyMessage.style.display = 'none';
+            sendCodeBtn.disabled = false;
+            sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Verification Code';
+            verifyCodeBtn.disabled = false;
+            verifyCodeBtn.innerHTML = '<i class="fas fa-check"></i> Verify & Update';
+            emailModal.style.display = 'flex';
+        }
+
+        function hideModal() {
+            emailModal.style.display = 'none';
+        }
+
+        changeEmailBtn.addEventListener('click', showModal);
+        closeEmailModal.addEventListener('click', hideModal);
+        emailModal.addEventListener('click', function(e) {
+            if (e.target === this) hideModal();
+        });
+
+        // --- sendCodeBtn: clear messages on click ---
+        sendCodeBtn.addEventListener('click', function() {
+            sendCodeMessage.style.display = 'none';
+            verifyMessage.style.display = 'none';
+
+            const newEmail = newEmailInput.value.trim();
+            if (!newEmail) {
+                showMessage(sendCodeMessage, 'Please enter an email address.', true);
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+                showMessage(sendCodeMessage, 'Invalid email format.', true);
+                return;
+            }
+            pendingNewEmail = newEmail;
+            sendCodeBtn.disabled = true;
+            sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+            fetch('/send-email-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.getElementById('csrf_token').value
+                },
+                body: JSON.stringify({ new_email: newEmail })
+            })
+            .then(response => response.json())
+            .then(data => {
+                sendCodeBtn.disabled = false;
+                sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Verification Code';
+                if (data.success) {
+                    showMessage(sendCodeMessage, data.message, false);
+                    step1.style.display = 'none';
+                    step2.style.display = 'block';
+                    verificationCodeInput.focus();
+                } else {
+                    showMessage(sendCodeMessage, data.message, true);
+                }
+            })
+            .catch(() => {
+                sendCodeBtn.disabled = false;
+                sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Verification Code';
+                showMessage(sendCodeMessage, 'An error occurred. Please try again.', true);
+            });
+        });
+
+        // --- verifyCodeBtn: clear message and update badges on success ---
+        verifyCodeBtn.addEventListener('click', function() {
+            verifyMessage.style.display = 'none';
+
+            const code = verificationCodeInput.value.trim();
+            if (!code) {
+                showMessage(verifyMessage, 'Please enter the verification code.', true);
+                return;
+            }
+            verifyCodeBtn.disabled = true;
+            verifyCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+            fetch('/verify-email-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.getElementById('csrf_token').value
+                },
+                body: JSON.stringify({ code: code, new_email: pendingNewEmail })
+            })
+            .then(response => response.json())
+            .then(data => {
+                verifyCodeBtn.disabled = false;
+                verifyCodeBtn.innerHTML = '<i class="fas fa-check"></i> Verify & Update';
+                if (data.success) {
+                    showMessage(verifyMessage, data.message, false);
+                    // Update email displays
+                    const newEmail = data.email;
+                    document.getElementById('displayEmail').innerText = newEmail;
+                    document.getElementById('displayEmailFieldEdit').innerText = newEmail;
+                    // Update badges to verified
+                    updateBadgesToVerified();
+                    // Close modal after brief delay
+                    setTimeout(hideModal, 1500);
+                } else {
+                    showMessage(verifyMessage, data.message, true);
+                }
+            })
+            .catch(() => {
+                verifyCodeBtn.disabled = false;
+                verifyCodeBtn.innerHTML = '<i class="fas fa-check"></i> Verify & Update';
+                showMessage(verifyMessage, 'An error occurred. Please try again.', true);
+            });
+        });
+
+        resendCodeLink.addEventListener('click', function() {
+            step2.style.display = 'none';
+            step1.style.display = 'block';
+            sendCodeMessage.style.display = 'none';
+            verifyMessage.style.display = 'none';
+        });
+    })();
+</script>
+{% endblock %}

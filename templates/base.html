@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    {% block head %}
+
+    {% endblock %}
+    
+</head>
+<body>
+
+    <div class="main">
+        <div class="navbar" id="navbarContainer">
+            <div class="logo-area">
+                <img src="{{ url_for('static', filename='img/jspict-logo.png') }}" alt="JSPICT Logo" class="small-logo" width="30px" height="30px" style="border-radius: 50%; object-fit: cover;">
+
+                <!-- <i class="fas fa-graduation-cap"></i>  -->
+                <span>JSPICT Portal</span>
+            </div>
+
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle Navigation Menu">
+                <div></div>
+                <div></div>
+                <div></div>
+            </button>
+
+            <div class="nav-links" id="navLinks">
+                <a href="{{ url_for('registration') }}"><i class="fas fa-edit"></i> Registrations</a>
+                <a href="{{ url_for('my_courses') }}"><i class="fas fa-book-open"></i> My Courses</a>
+                <a href="{{ url_for('announcements') }}"><i class="fas fa-bell"></i> Notifications <span class="notif-badge">3</span></a>
+                <a href="{{ url_for('payments_history') }}"><i class="fas fa-credit-card"></i> Payments</a>
+                <a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> Profile</a>
+
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('login') }}" class="login-logout"><i class="fas fa-sign-out-alt"></i> Login</a>
+                {% else %}
+                    <a href="{{ url_for('logout') }}" class="login-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                {% endif %}
+            </div>
+        </div>
+
+
+{% block content %}
+
+{% endblock %}
+
+    </div>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+
+
+
+
+
+
+    <script>
+        (function() {
+            const hamburger = document.getElementById('hamburgerBtn');
+            const navLinks = document.getElementById('navLinks');
+            const overlay = document.getElementById('menuOverlay');
+            const navbarContainer = document.getElementById('navbarContainer');
+
+            // Matches the exactly modified tablet/mobile transition threshold breakpoint
+            function isMobile() {
+                return window.matchMedia('(max-width: 820px)').matches;
+            }
+
+            function openMenu() {
+                if (!isMobile()) return; 
+                navLinks.classList.add('active');
+                overlay.classList.add('active');
+                hamburger.classList.add('active');
+                navbarContainer.classList.add('menu-is-open');
+            }
+
+            function closeMenu() {
+                navLinks.classList.remove('active');
+                overlay.classList.remove('active');
+                hamburger.classList.remove('active');
+                navbarContainer.classList.remove('menu-is-open');
+            }
+
+            hamburger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (!isMobile()) return; 
+                if (navLinks.classList.contains('active')) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            });
+
+            overlay.addEventListener('click', closeMenu);
+
+            document.addEventListener('click', function(event) {
+                if (!navLinks.classList.contains('active')) return;
+                if (hamburger.contains(event.target) || navLinks.contains(event.target)) return;
+                closeMenu();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && navLinks.classList.contains('active')) {
+                    closeMenu();
+                }
+            });
+
+            // Automatically clean state variables if an orientations/screen changes occur 
+            window.addEventListener('resize', function() {
+                if (!isMobile()) {
+                    closeMenu();
+                }
+            });
+        })();
+
+
+
+   
+   
+</script>
+
+ {% block scripts %}
+
+    {% endblock %}
+</body>
+</html>

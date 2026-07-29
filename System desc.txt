@@ -1,0 +1,34 @@
+This is the description of the entire system.
+
+
+1. Student will login using their provided REGISTRATION NUMBER and a general default password.
+2. Upon first login, student would be prompted with update profile page or a stepper form modal. The student would find their basic details pre-filled and uneditable, like Name, Nationality, State, LGA, DOB, REG. NUMBER, CURRENT SEMESTER, COURSE, DEPARTMENT, and other editable or empty but required fields like email, phone number, address, profile picture, new password etc all on a stepper feature but stacked for the common fields
+ 2.1 Email Verification; to ensure a valid email is provided an otp would be sent to the email and use for verification on the stepper form, one feature at a time.
+ 2.2 seamless onboarding and displayed student summary for confirmation and save/update profile button.
+3. Upon successful onboarding, they will find a minimal student dashboard and other navigations
+	3.1 A student summary card by side showing the students profile picture and other few but important details like name, reg no. course enrolled
+	3.2 Annoucement banner sliding with 3 recent announcements
+	3.3 call to action banner for registration if the student has no active semester registration
+	3.4 Current semester summary card with current courses list
+	3.4 then recent activity history card, like payments, registrations with action button to view all or view the full details
+4. Registration page:
+	4.1 Ongoing/current registration card with details like session, semester (first or second), duration timer, open and closing date, min and max credit required.
+	4.2 Past registration history section with the list of the registrations and there status and view details button.
+	4.3 if the user click on register now, they would be taken to complete the payment.
+	4.4 After a successful payment, they would print the receipt, and continue with the registration. They would be redirected to add/drop courses page
+5. Add/Drop page: displays current registration summary like deadline, semester, min and max credits of the respective student's department and course.
+	5.1 two containers, first with the list of the available courses and add btn and when selected would be taken to the second container.
+	5.2 A progress bar and short summary of the current credits selection
+	5.3 a remove btn to remove from the selected list if the user wants
+	5.4 reset selection or submit btn and after summary a student will confirm the registration and can be able to print the course registration details.
+	5.5 After a successful course registration they would be redirected to the my courses page.
+6. My courses page contains current semester list, past semester courses list, and previous semester list, with summary and view btn
+7. Notification page with all notifications read, unread, payments, school announcements, and other notifications sent to the student with summary card for total, unreads, etc.
+8. Profile page: the use find all their respective details, summary of their profile with their full details and everything like profile pics, course, department and whole detail about them, and an update profile button for them to make allowed changes like change image, update email, phone, update password.
+	8.1 When changing email they need to verify it with otp before it gets approved.
+9. Payments page
+	9.1 student find everything related to their payments, payment history with pending, paid, cancelled and can be a able to view receipt and print pdf.
+	9.2 summary cards at the very top
+	9.3 a separate button to create new independent payment other than registration or other registrations
+10. Create payment page/modal: the user find a list of available payments they can make, and cann filter search and customize single or multiple after confirmation would be taken to remita and complete payment.
+	10.1 After successful payment they can be able to print slip and the receipt pdf for reference and verification. 

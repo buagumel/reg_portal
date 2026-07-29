@@ -1,0 +1,336 @@
+ body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      background: #0a2a3b; /* fallback */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+    } 
+   
+
+    /* ========= GIANT BACKGROUND IMAGE (full screen behind everything) ========= */
+    .giant-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      /* High-quality university / campus background image */
+      background-image: url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+    }
+
+    /* Dark overlay for readability and depth */
+    .giant-bg::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(8, 28, 45, 0.72);
+      backdrop-filter: brightness(0.85) blur(2px);
+      z-index: -1;
+    }
+
+    /* MAIN CARD: bi-boxed glassmorphic container */
+    .login-container {
+      max-width: 1280px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 2.5rem;
+      box-shadow: 0 30px 55px -20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.4);
+      display: flex;
+      flex-wrap: wrap;
+      overflow: hidden;
+      backdrop-filter: blur(1px);
+      transition: transform 0.2s;
+    }
+
+    /* LEFT SIDE: branding / illustration (semi-transparent for elegance) */
+    .login-left {
+      flex: 1.2;
+      background: linear-gradient(135deg, rgba(12, 45, 70, 0.85), rgba(28, 78, 110, 0.85));
+      backdrop-filter: blur(3px);
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: white;
+    }
+
+    .school-logo {
+      margin-bottom: 1.8rem;
+      max-width: 180px;
+      max-height: 180px;
+    }
+
+    .school-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.3));
+      background: white;
+      padding: 3px;
+      border-radius: 50%;
+      backdrop-filter: blur(5px);
+    }
+
+    .school-logo i {
+      font-size: 5.2rem;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.3));
+      background: rgba(255,255,255,0.2);
+      padding: 1rem;
+      border-radius: 3rem;
+      backdrop-filter: blur(5px);
+    }
+
+    .school-name {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: 0.5rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .school-tagline {
+      font-size: 1rem;
+      opacity: 0.95;
+      margin-bottom: 2rem;
+      font-weight: 500;
+      font-style: italic;
+    }
+
+    .welcome-text {
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 2rem;
+      padding: 1.2rem 1.5rem;
+      backdrop-filter: blur(6px);
+      margin-top: 0.8rem;
+    }
+
+    .welcome-text p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .welcome-text i {
+      margin-right: 6px;
+      color: #ffdd99;
+    }
+
+    .secure-badge {
+      margin-top: 1.8rem;
+      font-size: 0.8rem;
+      opacity: 0.85;
+    }
+
+    /* RIGHT SIDE: login form */
+    .login-right {
+      flex: 1;
+      background: white;
+      padding: 2.5rem 2.2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .form-header {
+      margin-bottom: 2rem;
+    }
+
+    .form-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #0f3150;
+      letter-spacing: -0.3px;
+    }
+
+    .form-header p {
+      color: #5a7b99;
+      margin-top: 0.3rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+      color: #1e4668;
+    }
+
+    .input-icon {
+      position: relative;
+    }
+
+    .input-icon i {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #8aa9c9;
+      font-size: 1rem;
+      pointer-events: none;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 0.9rem 1rem 0.9rem 2.8rem;
+      border: 1.5px solid #dce5f0;
+      border-radius: 60px;
+      font-size: 1rem;
+      transition: all 0.2s;
+      background: #ffffff;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #1f6392;
+      box-shadow: 0 0 0 3px rgba(31, 99, 146, 0.2);
+    }
+
+    .flex-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 1.2rem 0 1.8rem;
+      font-size: 0.85rem;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #2f5b82;
+      cursor: pointer;
+    }
+
+    .forgot-link {
+      color: #1b5e8c;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .forgot-link:hover {
+      text-decoration: underline;
+    }
+
+    .login-btn {
+      background: #0f3a5f;
+      color: white;
+      border: none;
+      width: 100%;
+      padding: 0.9rem;
+      border-radius: 60px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 8px 18px -8px rgba(15, 58, 95, 0.4);
+    }
+
+    .login-btn:hover {
+      background: #0c2d48;
+    }
+
+    .demo-note {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: #7f9cbb;
+      border-top: 1px solid #e4edf5;
+      padding-top: 1.5rem;
+    }
+
+    /* ========= RESPONSIVE ========= */
+    @media (max-width: 800px) {
+      .login-container {
+        flex-direction: column;
+        max-width: 520px;
+      }
+      .login-left {
+        border-radius: 2rem 2rem 0 0;
+        padding: 2rem 1.5rem;
+      }
+      .login-right {
+        padding: 2rem 1.8rem;
+      }
+      .school-name {
+        font-size: 2rem;
+        letter-spacing: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 1rem;
+      }
+      .login-right {
+        padding: 1.5rem;
+      }
+      .form-header h2 {
+        font-size: 1.6rem;
+      }
+      .school-logo i {
+        font-size: 4rem;
+      }
+    }
+
+    /* toast message */
+    .alert-toast {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f4d6e;
+      color: white;
+      padding: 0.7rem 1.5rem;
+      border-radius: 60px;
+      font-size: 0.85rem;
+      z-index: 999;
+      display: none;
+      white-space: nowrap;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      font-weight: 500;
+    }
+
+
+
+  /* Only affect the input wrapper and the input itself */
+  .input-group {
+    max-width: 420px;      /* limits the width on large screens */
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+  .input-icon input {
+    width: 100%;           /* fills the wrapper */
+    min-width: 0;          /* prevents overflow */
+    box-sizing: border-box;
+  }
+  /* On small screens, let it go full width */
+  @media (max-width: 600px) {
+    .input-group {
+      max-width: 100%;
+    }
+  }
+
+
+
+
+  
