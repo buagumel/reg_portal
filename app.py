@@ -13,6 +13,7 @@ from models import (
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
 )
+from auth_helpers import get_gate_redirect
 import re
 import random
 import string
@@ -45,64 +46,28 @@ def load_user(idn):
     return db.get_or_404(User, idn)
 
 @app.before_request
-def check_email_verification():
-    # Endpoints that are exempt from the verification check
-    exempt_endpoints = [
-        'login', 'logout', 'reg', 'profile', 'static', 
-        'send_email_code', 'verify_email_code', 
-        'admin', 'verify_email'   # add your email verification route here
-    ]
+def enforce_onboarding_gate():
+    if not current_user.is_authenticated:
+        return None
 
-    # If user is authenticated and email is not verified
-    if current_user.is_authenticated and not current_user.email_verified:
-        # Allow access to exempt endpoints
-        if request.endpoint in exempt_endpoints:
-            return None
+    exempt_endpoints = {
+        'login', 'logout', 'static', 'admin',
+        'force_password_change',
+        'onboarding', 'onboarding_save_info', 'onboarding_complete',
+        'send_email_code', 'verify_email_code',
+        'profile',
+    }
+    if request.endpoint in exempt_endpoints:
+        return None
 
-        # GET requests -> redirect to profile page
-        if request.method == 'GET':
-            return redirect(url_for('profile'))
+    redirect_endpoint = get_gate_redirect(current_user)
+    if redirect_endpoint is None:
+        return None
 
-        # Non-GET requests -> JSON error
-        return jsonify({
-            'success': False,
-            'message': 'Verify email to perform action.'
-        }), 403
+    if request.method == 'GET':
+        return redirect(url_for(redirect_endpoint))
 
-@app.route('/reg', methods=['GET', 'POST'])
-def register():
-    """Dev mode only"""
-    reg_no = "2308-2301-0032"
-    password = "123456"
-    phone = "08083404159"
-    email = "abaa69640@gmail.com"
-    name = "Muhammad Lawal Sabon-Kudi"
-    student_type = "International"
-    state = "Jigawa"
-    lga = "Ringim"
-    address = "13 Bakin Kura"
-    nationality = "Nigeria"
-    dob = datetime(2001, 1, 24)
-    gender = "Male"
-    
-    new_user = User(reg_no=reg_no, 
-                    phone=phone, 
-                    email=email, 
-                    name=name,
-                    student_type=student_type,
-                    state=state, lga=lga,
-                    address=address,
-                    nationality=nationality,
-                    dob=dob,
-                    gender=gender
-                )
-    
-    new_user.set_password(password=password)
-    db.session.add(new_user)
-    db.session.commit()
-
-    return render_template('dashboard')
-    
+    return jsonify({'success': False, 'message': 'Please complete the required step before continuing.'}), 403
 
 @app.route('/update-profile', methods=['POST'])
 @login_required
@@ -162,7 +127,8 @@ def change_password():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
+        return redirect(url_for(redirect_endpoint))
 
     if request.method == 'POST':
         identifier = request.form.get('studentId', '').strip()
@@ -177,8 +143,8 @@ def login():
         if user and user.check_password(password):
             login_user(user, remember=remember)
             next_page = request.args.get('next')
-            page_to_go = url_for('dashboard') if current_user.email_verified else url_for('profile')
-            return redirect(next_page or page_to_go)
+            redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
+            return redirect(next_page or url_for(redirect_endpoint))
         else:
             # Render again with the submitted values
             return render_template(
