@@ -158,6 +158,55 @@ def force_password_change():
     redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
     return jsonify({'success': True, 'message': 'Password changed successfully.', 'redirect': url_for(redirect_endpoint)})
 
+@app.route('/onboarding')
+@login_required
+def onboarding():
+    target = get_gate_redirect(current_user)
+    if target != 'onboarding':
+        return redirect(url_for(target or 'dashboard'))
+    return render_template('onboarding.html')
+
+@app.route('/onboarding/save-info', methods=['POST'])
+@login_required
+def onboarding_save_info():
+    email = request.form.get('email', '').strip()
+    phone = request.form.get('phone', '').strip()
+    address = request.form.get('address', '').strip()
+    picture = request.files.get('profile_picture')
+
+    errors = {}
+    if not email:
+        errors['email'] = 'Email is required'
+    elif not is_valid_email(email):
+        errors['email'] = 'Invalid email format'
+    else:
+        existing = User.query.filter(User.email == email, User.id != current_user.id).first()
+        if existing:
+            errors['email'] = 'Email already in use'
+
+    if not phone:
+        errors['phone'] = 'Phone number is required'
+    if not address:
+        errors['address'] = 'Address is required'
+
+    picture_path, picture_error = save_profile_picture(
+        picture, current_user.reg_no,
+        os.path.join(app.static_folder, 'uploads')
+    )
+    if picture_error:
+        errors['profile_picture'] = picture_error
+
+    if errors:
+        return jsonify({'success': False, 'message': 'Please correct the highlighted fields.', 'errors': errors}), 400
+
+    current_user.email = email
+    current_user.phone = phone
+    current_user.address = address
+    current_user.profile_picture = picture_path
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Information saved.'})
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:

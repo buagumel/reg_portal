@@ -1,0 +1,335 @@
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: #f0f5fc;
+    min-height: 100vh;
+}
+
+.onboarding-topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: #0f3150;
+    color: white;
+    font-weight: 600;
+}
+
+.onboarding-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.onboarding-logout {
+    margin-left: auto;
+    color: #cfe0f0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.onboarding-logout:hover {
+    color: white;
+}
+
+.onboarding-wrap {
+    max-width: 760px;
+    margin: 2.5rem auto;
+    padding: 0 1.25rem 3rem;
+}
+
+.progress-bar {
+    display: flex;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+}
+
+.progress-bar li {
+    flex: 1;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #8a97a8;
+    font-weight: 600;
+    position: relative;
+}
+
+.progress-bar li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: 55%;
+    width: 90%;
+    height: 2px;
+    background: #dce5f0;
+    z-index: 0;
+}
+
+.progress-bar li.completed:not(:last-child)::after {
+    background: #1f7840;
+}
+
+.progress-dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #dce5f0;
+    color: #5a7b99;
+    margin: 0 auto 0.4rem;
+    position: relative;
+    z-index: 1;
+    font-weight: 700;
+}
+
+.progress-bar li.active .progress-dot {
+    background: #1f6392;
+    color: white;
+}
+
+.progress-bar li.completed .progress-dot {
+    background: #1f7840;
+    color: white;
+}
+
+.onboarding-card {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 2rem 2.25rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.step-panel h2 {
+    margin: 0 0 0.25rem;
+    color: #0f3150;
+    font-size: 1.5rem;
+}
+
+.step-subtitle {
+    color: #5a7b99;
+    margin: 0 0 1.5rem;
+    font-size: 0.95rem;
+}
+
+.readonly-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.75rem;
+}
+
+.readonly-field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #8a97a8;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.2rem;
+}
+
+.readonly-field span {
+    display: block;
+    background: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    color: #2d3748;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.step-panel h3 {
+    color: #0f3150;
+    font-size: 1.1rem;
+    margin: 0 0 1rem;
+}
+
+.input-group {
+    margin-bottom: 1.25rem;
+}
+
+.input-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    color: #1e4668;
+}
+
+.input-group input[type="text"],
+.input-group input[type="email"],
+.input-group input[type="tel"],
+.input-group input[type="file"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #dce5f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #1f6392;
+    box-shadow: 0 0 0 3px rgba(31, 99, 146, 0.15);
+}
+
+.field-error {
+    display: block;
+    color: #c23d3d;
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    min-height: 1em;
+}
+
+.picture-preview {
+    display: block;
+    margin-top: 0.75rem;
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #dce5f0;
+}
+
+.step-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.onboarding-btn {
+    background: #0f3a5f;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 60px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.onboarding-btn:hover {
+    background: #0c2d48;
+}
+
+.onboarding-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.onboarding-btn-outline {
+    background: transparent;
+    color: #1e4668;
+    border: 1.5px solid #dce5f0;
+    padding: 0.75rem 1.5rem;
+    border-radius: 60px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.onboarding-btn-outline:hover {
+    background: #f1f3f5;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: #1b5e8c;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.link-btn:disabled {
+    color: #b8c4d1;
+    cursor: not-allowed;
+}
+
+.otp-input-group input {
+    max-width: 220px;
+    letter-spacing: 0.3em;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.otp-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #5a7b99;
+    margin-bottom: 1rem;
+}
+
+.review-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.review-item label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #8a97a8;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+}
+
+.review-item span {
+    display: block;
+    background: #f1f3f5;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.alert-toast {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f4d6e;
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border-radius: 60px;
+    font-size: 0.85rem;
+    z-index: 999;
+    display: none;
+    white-space: nowrap;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    font-weight: 500;
+}
+
+@media (max-width: 600px) {
+    .onboarding-card {
+        padding: 1.5rem 1.25rem;
+        border-radius: 1rem;
+    }
+    .progress-bar li {
+        font-size: 0.7rem;
+    }
+    .step-actions {
+        flex-direction: column-reverse;
+    }
+    .step-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Profile | JSPICT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/onboarding.css') }}">
+</head>
+<body>
+    <div class="onboarding-topbar">
+        <img src="{{ url_for('static', filename='img/jspict-logo.png') }}" alt="JSPICT Logo" class="onboarding-logo">
+        <span>JSPICT Portal Onboarding</span>
+        <a href="{{ url_for('logout') }}" class="onboarding-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="onboarding-wrap">
+        <ol class="progress-bar" id="progressBar">
+            <li data-progress-step="info"><span class="progress-dot">1</span> Student Info</li>
+            <li data-progress-step="otp"><span class="progress-dot">2</span> Verify Email</li>
+            <li data-progress-step="review"><span class="progress-dot">3</span> Review & Confirm</li>
+        </ol>
+
+        <div class="onboarding-card" id="onboardingCard">
+            <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- STEP 1: STUDENT INFO -->
+            <section data-step-panel="info" class="step-panel">
+                <h2>Your Student Information</h2>
+                <p class="step-subtitle">These details are on file and can't be changed here.</p>
+
+                <div class="readonly-grid">
+                    <div class="readonly-field"><label>Registration Number</label><span>{{ current_user.reg_no }}</span></div>
+                    <div class="readonly-field"><label>Full Name</label><span>{{ current_user.name }}</span></div>
+                    <div class="readonly-field"><label>Nationality</label><span>{{ current_user.nationality }}</span></div>
+                    <div class="readonly-field"><label>State</label><span>{{ current_user.state }}</span></div>
+                    <div class="readonly-field"><label>Local Government</label><span>{{ current_user.lga }}</span></div>
+                    <div class="readonly-field"><label>Date of Birth</label><span>{{ current_user.formatted_dob }}</span></div>
+                    <div class="readonly-field"><label>Semester</label><span>{{ current_user.semester }}</span></div>
+                    <div class="readonly-field"><label>Department</label><span>{{ current_user.department }}</span></div>
+                    <div class="readonly-field"><label>Course</label><span>{{ current_user.course }}</span></div>
+                </div>
+
+                <h3>Complete Your Profile</h3>
+                <form id="infoForm">
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="infoEmail" name="email" required>
+                        <span class="field-error" id="infoEmailError"></span>
+                    </div>
+                    <div class="input-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="infoPhone" name="phone" required>
+                        <span class="field-error" id="infoPhoneError"></span>
+                    </div>
+                    <div class="input-group">
+                        <label>Residential Address</label>
+                        <input type="text" id="infoAddress" name="address" required>
+                        <span class="field-error" id="infoAddressError"></span>
+                    </div>
+                    <div class="input-group">
+                        <label>Profile Picture</label>
+                        <input type="file" id="infoPicture" name="profile_picture" accept="image/png,image/jpeg,image/webp" required>
+                        <span class="field-error" id="infoPictureError"></span>
+                        <img id="picturePreview" class="picture-preview" style="display:none;" alt="Preview">
+                    </div>
+
+                    <div class="step-actions">
+                        <button type="submit" class="onboarding-btn" id="infoNextBtn">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- STEP 2: EMAIL VERIFICATION -->
+            <section data-step-panel="otp" class="step-panel" style="display:none;">
+                <h2>Verify Your Email</h2>
+                <p class="step-subtitle">We've sent a 6-digit code to <strong id="otpEmailTarget"></strong></p>
+
+                <div class="input-group otp-input-group">
+                    <label>Verification Code</label>
+                    <input type="text" id="otpCode" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+                    <span class="field-error" id="otpError"></span>
+                </div>
+
+                <div class="otp-meta">
+                    <span id="otpTimer">Code expires in 5:00</span>
+                    <button type="button" class="link-btn" id="resendOtpBtn" disabled>Resend code</button>
+                </div>
+
+                <div class="step-actions">
+                    <button type="button" class="onboarding-btn-outline" id="otpBackBtn"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button type="button" class="onboarding-btn" id="otpVerifyBtn">Verify <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </section>
+
+            <!-- STEP 3: REVIEW & CONFIRM -->
+            <section data-step-panel="review" class="step-panel" style="display:none;">
+                <h2>Review Your Information</h2>
+                <p class="step-subtitle">Please confirm everything looks correct before saving.</p>
+
+                <div class="review-grid" id="reviewGrid"></div>
+
+                <div class="step-actions">
+                    <button type="button" class="onboarding-btn-outline" id="reviewEditBtn"><i class="fas fa-pencil-alt"></i> Edit</button>
+                    <button type="button" class="onboarding-btn" id="reviewConfirmBtn"><i class="fas fa-check"></i> Confirm & Save</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="toastMsg" class="alert-toast"></div>
+
+    <script type="module" src="{{ url_for('static', filename='js/onboarding/onboarding.js') }}"></script>
+</body>
+</html>
