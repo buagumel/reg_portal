@@ -106,19 +106,18 @@ def change_password():
     new_pass = data.get('new', '').strip()
     confirm = data.get('confirm', '').strip()
 
-    # Basic validation
     if not current:
         return jsonify({'success': False, 'message': 'Current password is required'}), 400
-    if not new_pass or len(new_pass) < 6:
-        return jsonify({'success': False, 'message': 'New password must be at least 6 characters'}), 400
+
+    failed_rules = validate_password_strength(new_pass)
+    if failed_rules:
+        return jsonify({'success': False, 'message': 'Password must contain ' + ', '.join(failed_rules) + '.'}), 400
     if new_pass != confirm:
         return jsonify({'success': False, 'message': 'Passwords do not match'}), 400
 
-    # Verify current password
     if not current_user.check_password(current):
         return jsonify({'success': False, 'message': 'Current password is incorrect'}), 400
 
-    # Set new password
     current_user.set_password(new_pass)
     db.session.commit()
 
