@@ -36,6 +36,8 @@ class User(db.Model, UserMixin):
     department = db.Column(db.String(150))
     course = db.Column(db.String(150))
     profile_picture = db.Column(db.String(300))
+    level = db.Column(db.String(50))
+    session = db.Column(db.String(20))
 
 
     def set_password(self, password):
