@@ -2,209 +2,123 @@
 
 {% block head %}
     <title>Course Registration · Student Portal</title>
-    <!-- Google Font + Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/registration.css') }}">
-    
-
 {% endblock %}
 
 
 {% block content %}
 <div class="registration-dashboard">
-    
+    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+
     <div class="page-header">
-
-        <a href="#" class="back-link" onclick="alert('Dashboard navigation demo'); return false;"><i class="fas fa-arrow-left"></i> Dashboard</a>
-
+        <a href="{{ url_for('dashboard') }}" class="back-link"><i class="fas fa-arrow-left"></i> Dashboard</a>
         <h1><i class="fas fa-edit"></i> Course Registration</h1>
         <div></div>
     </div>
 
-    <!-- Ongoing Registration Section with Title -->
-    <div class="ongoing-section">
-        <h3><i class="fas fa-hourglass-half"></i> On-going registration</h3>
-        <div class="ongoing-card">
+    <div class="ongoing-section" id="registrationCardSection" data-status="{{ status.window_status or 'none' }}">
+        <h3><i class="fas fa-hourglass-half"></i> Registration Status</h3>
+
+        {% if status.period is none %}
+        <div class="ongoing-card no-period-card">
+            <div class="empty-state">
+                <i class="fas fa-info-circle" style="font-size: 2rem; opacity: 0.5;"></i>
+                <p>No registration is currently available. Check back soon.</p>
+            </div>
+        </div>
+
+        {% elif status.existing_registration %}
+        <div class="ongoing-card registered-card" id="registeredCard">
             <div class="card-content">
                 <div class="ongoing-info">
-                    <div class="ongoing-badge"><i class="fas fa-hourglass-half"></i> Registration Open</div>
-                    <h2>2024/2025 Second Semester</h2>
-                    <div class="progress-area">
-                        <div class="progress-label"><i class="fas fa-check-circle"></i> Registration progress</div>
-                        <div class="progress-bar-bg">
-                            <div class="progress-fill"></div>
-                        </div>
-                        <div style="font-size: 0.75rem; margin-top: 0.3rem;">12 credits registered (80% of minimum)</div>
-                    </div>
+                    <div class="ongoing-badge registered-badge"><i class="fas fa-check-circle"></i> Registered</div>
+                    <h2>{{ status.period.academic_session.name }} {{ status.period.semester.name }}</h2>
                     <div class="reg-details">
-                        <span class="detail-item"><i class="fas fa-calendar-alt"></i> Opens: 01 Mar 2025</span>
-                        <span class="detail-item deadline"><i class="fas fa-clock"></i> Deadline: 15 Mar 2025</span>
-                        <span class="detail-item"><i class="fas fa-layer-group"></i> Min 15 | Max 24 credits</span>
+                        <span class="detail-item"><i class="fas fa-receipt"></i> Ref: {{ status.existing_registration.payment_reference }}</span>
+                        <span class="detail-item"><i class="fas fa-calendar-check"></i> Registered: {{ status.existing_registration.registered_at.strftime('%d %b %Y') }}</span>
+                        <span class="detail-item"><i class="fas fa-money-bill-wave"></i> Payment: {{ status.existing_registration.payment_status|capitalize }}</span>
                     </div>
-                </div>
-                <div class="ongoing-action">
-                    
-                    <button class="btn-outline-light" onclick="viewCurrentCourses()"><i class="fas fa-eye"></i> View Courses</button>
-                    <button class="btn-primary" onclick="continueRegistration()"><i class="fas fa-arrow-right"></i> Continue Registration</button>
+                    <p class="course-selection-note"><i class="fas fa-info-circle"></i> Course selection will open separately once available.</p>
                 </div>
             </div>
         </div>
+
+        {% else %}
+        <div class="ongoing-card" id="registrationCard">
+            <div class="card-content">
+                <div class="ongoing-info">
+                    {% if status.window_status == 'open' %}
+                    <div class="ongoing-badge"><i class="fas fa-hourglass-half"></i> Registration Open</div>
+                    {% elif status.window_status == 'not_yet_open' %}
+                    <div class="ongoing-badge not-open-badge"><i class="fas fa-clock"></i> Opens Soon</div>
+                    {% else %}
+                    <div class="ongoing-badge closed-badge"><i class="fas fa-lock"></i> Registration Closed</div>
+                    {% endif %}
+
+                    <h2>{{ status.period.academic_session.name }} {{ status.period.semester.name }}</h2>
+
+                    <div class="countdown-area" data-target="{{ (status.period.opens_at if status.window_status == 'not_yet_open' else status.period.closes_at).isoformat() }}" data-mode="{{ 'opens' if status.window_status == 'not_yet_open' else 'closes' }}">
+                        <div class="progress-label"><i class="fas fa-stopwatch"></i> <span id="countdownLabel">Calculating…</span></div>
+                    </div>
+
+                    <div class="reg-details">
+                        <span class="detail-item"><i class="fas fa-calendar-alt"></i> Opens: {{ status.period.opens_at.strftime('%d %b %Y') }}</span>
+                        <span class="detail-item deadline"><i class="fas fa-clock"></i> Deadline: {{ status.period.closes_at.strftime('%d %b %Y') }}</span>
+                        <span class="detail-item"><i class="fas fa-layer-group"></i> Min {{ status.min_credits }} | Max {{ status.max_credits }} credits</span>
+                        {% if status.registration_fee %}
+                        <span class="detail-item"><i class="fas fa-money-bill-wave"></i> Fee: ₦{{ '{:,.2f}'.format(status.registration_fee) }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="ongoing-action">
+                    <button class="btn-primary" id="registerNowBtn" {% if status.window_status != 'open' %}disabled{% endif %}>
+                        <i class="fas fa-arrow-right"></i> Register Now
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- Past Registrations Section -->
     <div class="past-section">
-        <h3><i class="fas fa-history"></i> Past Registrations</h3>
+        <h3><i class="fas fa-history"></i> Registration History</h3>
         <div class="registrations-list" id="pastRegistrationsList">
-            <!-- Dynamic content -->
+            {% if not history %}
+            <div class="empty-state">
+                <i class="fas fa-inbox" style="font-size: 2rem; opacity: 0.5;"></i>
+                <p>No past registrations found</p>
+            </div>
+            {% else %}
+            {% for reg in history %}
+            <div class="reg-item">
+                <div class="reg-info">
+                    <div class="reg-semester">{{ reg.registration_period.academic_session.name }} {{ reg.registration_period.semester.name }}</div>
+                    <div class="reg-meta">
+                        <span><i class="far fa-calendar-check"></i> Registered: {{ reg.registered_at.strftime('%d %b %Y') }}</span>
+                        <span><i class="fas fa-layer-group"></i> {{ reg.credits_registered }} credits</span>
+                    </div>
+                </div>
+                <div class="reg-status">
+                    <span class="status-badge status-{{ 'approved' if reg.status == 'registered' else 'closed' }}">{{ reg.status|capitalize }}</span>
+                    <span class="status-badge status-{{ 'approved' if reg.payment_status == 'paid' else 'pending' }}">{{ reg.payment_status|capitalize }}</span>
+                    <a href="#" class="view-link view-details-toggle"><span class="toggle-text">View details</span> <i class="fas fa-chevron-right"></i></a>
+                </div>
+                <div class="reg-detail-panel" hidden>
+                    <span><strong>Payment reference:</strong> {{ reg.payment_reference or '—' }}</span>
+                    <span><strong>Registered at:</strong> {{ reg.registered_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+                    <span><strong>Last updated:</strong> {{ reg.updated_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
         </div>
     </div>
 </div>
 
 <div id="toastMsg" class="toast-msg"></div>
-
-<script>
-    // Mock data for past registrations
-    const pastRegistrations = [
-        {
-            id: 1,
-            semester: "2024/2025 First Semester",
-            registrationDate: "10 Jan 2025",
-            credits: 18,
-            status: "approved",
-            coursesCount: 6
-        },
-        {
-            id: 2,
-            semester: "2023/2024 Second Semester",
-            registrationDate: "20 Aug 2024",
-            credits: 15,
-            status: "approved",
-            coursesCount: 5
-        },
-        {
-            id: 3,
-            semester: "2023/2024 First Semester",
-            registrationDate: "05 Jan 2024",
-            credits: 16,
-            status: "approved",
-            coursesCount: 5
-        },
-        {
-            id: 4,
-            semester: "2022/2023 Second Semester",
-            registrationDate: "15 Jul 2023",
-            credits: 14,
-            status: "closed",
-            coursesCount: 4,
-            note: "Incomplete"
-        },
-        {
-            id: 5,
-            semester: "2022/2023 First Semester",
-            registrationDate: "10 Jan 2023",
-            credits: 18,
-            status: "approved",
-            coursesCount: 6
-        }
-    ];
-
-    function showToast(message, isError = false) {
-        const toast = document.getElementById('toastMsg');
-        toast.textContent = message;
-        toast.style.backgroundColor = isError ? '#b13e3e' : '#1f4d6e';
-        toast.style.display = 'block';
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 3000);
-    }
-
-    function renderPastRegistrations() {
-        const container = document.getElementById('pastRegistrationsList');
-        if (!pastRegistrations.length) {
-            container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox" style="font-size: 2rem; opacity: 0.5;"></i><p>No past registrations found</p></div>`;
-            return;
-        }
-
-        let html = '';
-        pastRegistrations.forEach(reg => {
-            let statusClass = '';
-            let statusText = '';
-            if (reg.status === 'approved') {
-                statusClass = 'status-approved';
-                statusText = 'Approved';
-            } else if (reg.status === 'pending') {
-                statusClass = 'status-pending';
-                statusText = 'Pending';
-            } else {
-                statusClass = 'status-closed';
-                statusText = 'Closed';
-            }
-
-            html += `
-                <div class="reg-item">
-                    <div class="reg-info">
-                        <div class="reg-semester">${escapeHtml(reg.semester)}</div>
-                        <div class="reg-meta">
-                            <span><i class="far fa-calendar-check"></i> Registered: ${reg.registrationDate}</span>
-                            <span><i class="fas fa-layer-group"></i> ${reg.credits} credits</span>
-                            <span><i class="fas fa-book"></i> ${reg.coursesCount} courses</span>
-                        </div>
-                    </div>
-                    <div class="reg-status">
-                        <span class="status-badge ${statusClass}">${statusText}</span>
-                        <a href="#" class="view-link" onclick="viewPastRegistration(${reg.id}); return false;">View details <i class="fas fa-chevron-right"></i></a>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    function continueRegistration() {
-        showToast('Redirecting to course registration page...');
-        setTimeout(() => {
-            alert('Demo: This would open the course registration wizard.');
-        }, 500);
-    }
-
-    function viewCurrentCourses() {
-        showToast('Viewing current semester courses');
-        setTimeout(() => {
-            alert('Demo: Current semester courses would be displayed.');
-        }, 300);
-    }
-
-    function viewPastRegistration(regId) {
-        const reg = pastRegistrations.find(r => r.id === regId);
-        if (reg) {
-            showToast(`Viewing details for ${reg.semester}`);
-            setTimeout(() => {
-                alert(`Demo: Detailed view for ${reg.semester}\nCredits: ${reg.credits}\nCourses: ${reg.coursesCount}\nStatus: ${reg.status}`);
-            }, 200);
-        } else {
-            showToast('Registration not found', true);
-        }
-    }
-
-    window.continueRegistration = continueRegistration;
-    window.viewCurrentCourses = viewCurrentCourses;
-    window.viewPastRegistration = viewPastRegistration;
-
-    renderPastRegistrations();
-</script>
-
-{% block scripts %}
-
 {% endblock %}
 
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/registration/registration.js') }}"></script>
 {% endblock %}

@@ -340,3 +340,70 @@
             .ongoing-info h2 { font-size: 1.3rem; }
             .detail-item { font-size: 0.8rem; }
         }
+
+/* Registered confirmation state */
+.registered-card {
+    background: linear-gradient(135deg, #0f7b4e, #1a9e6b);
+}
+.registered-badge {
+    background: #ffffff;
+    color: #0f7b4e;
+}
+.course-selection-note {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Not-open / closed badges */
+.not-open-badge {
+    background: #fff0d9;
+    color: #b45b1c;
+}
+.closed-badge {
+    background: #f0d9d9;
+    color: #8a2f2f;
+}
+
+/* Countdown */
+.countdown-area {
+    margin: 0.8rem 0;
+    font-weight: 600;
+}
+
+/* No-period state */
+.no-period-card {
+    background: white;
+    box-shadow: none;
+}
+
+/* Register button disabled state */
+#registerNowBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* History detail expand panel */
+.reg-item {
+    flex-wrap: wrap;
+}
+.reg-detail-panel {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed #d9e9ff;
+    font-size: 0.85rem;
+    color: #4a6a86;
+}
+.reg-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
