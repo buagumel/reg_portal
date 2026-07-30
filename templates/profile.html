@@ -509,7 +509,7 @@
             const conf = document.getElementById('confirmPass').value.trim();
 
             if (!cur) { showToast('Current password required', true); return; }
-            if (newP.length < 6) { showToast('Password must be at least 6 characters', true); return; }
+            if (newP.length < 8) { showToast('Password must be at least 8 characters, with upper, lower, number, and symbol', true); return; }
             if (newP !== conf) { showToast('Passwords do not match', true); return; }
 
             changePwdBtn.disabled = true;

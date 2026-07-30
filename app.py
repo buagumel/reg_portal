@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_user, LoginManager, current_user, logout_user, login_required
 import os
-from datetime import datetime, timezone
 import time
 import uuid
 from flask_migrate import Migrate
@@ -18,9 +17,6 @@ from onboarding_helpers import (
     start_otp_session, register_failed_otp_attempt, otp_attempts_exceeded,
     clear_otp_session, save_profile_picture, MAX_OTP_ATTEMPTS
 )
-import re
-import random
-import string
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -169,6 +165,9 @@ def onboarding():
 @app.route('/onboarding/save-info', methods=['POST'])
 @login_required
 def onboarding_save_info():
+    if get_gate_redirect(current_user) != 'onboarding':
+        return jsonify({'success': False, 'message': 'Onboarding is already complete.'}), 403
+
     email = request.form.get('email', '').strip()
     phone = request.form.get('phone', '').strip()
     address = request.form.get('address', '').strip()
@@ -199,6 +198,8 @@ def onboarding_save_info():
     if errors:
         return jsonify({'success': False, 'message': 'Please correct the highlighted fields.', 'errors': errors}), 400
 
+    if email != current_user.email:
+        current_user.email_verified = False
     current_user.email = email
     current_user.phone = phone
     current_user.address = address
@@ -210,6 +211,9 @@ def onboarding_save_info():
 @app.route('/onboarding/complete', methods=['POST'])
 @login_required
 def onboarding_complete():
+    if get_gate_redirect(current_user) != 'onboarding':
+        return jsonify({'success': False, 'message': 'Onboarding is already complete.'}), 403
+
     if not current_user.email_verified:
         return jsonify({'success': False, 'message': 'Please verify your email before completing onboarding.'}), 400
 
@@ -385,7 +389,7 @@ def verify_email_code():
 
     if stored_code != code:
         attempts = register_failed_otp_attempt(session)
-        if attempts >= MAX_OTP_ATTEMPTS:
+        if otp_attempts_exceeded(session):
             clear_otp_session(session)
             return jsonify({
                 'success': False,
