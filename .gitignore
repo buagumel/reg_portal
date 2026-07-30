@@ -5,3 +5,5 @@ __pycache__/
 instance/
 .idea/
 .vscode/
+static/uploads/*
+!static/uploads/.gitkeep

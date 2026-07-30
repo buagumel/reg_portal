@@ -58,5 +58,6 @@ def save_profile_picture(file_storage, reg_no, upload_folder):
         return None, 'Profile picture must be smaller than 2MB'
 
     stored_filename = f"{secure_filename(reg_no)}.{ext}"
+    os.makedirs(upload_folder, exist_ok=True)
     file_storage.save(os.path.join(upload_folder, stored_filename))
     return f"uploads/{stored_filename}", None
