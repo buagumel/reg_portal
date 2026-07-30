@@ -290,8 +290,9 @@ def logout():
 
 
 @app.route('/profile')
+@login_required
 def profile():
-    return render_template('profile.html')
+    return render_template('profile.html', profile_display=get_profile_display(current_user))
 
 @app.route('/announcements')
 def announcements():
