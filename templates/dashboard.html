@@ -13,8 +13,11 @@
             <div class="student-summary">
                 <div class="profile-header">
                     <div class="profile-pic">
-                        <!-- <i class="fas fa-user-graduate"></i> -->
-                         <img id="profile-pic" src="{{ url_for('static', filename='uploads/profile.jpeg') }}" alt="Profile Picture">
+                        {% if current_user.profile_picture %}
+                        <img id="profile-pic" src="{{ url_for('static', filename=current_user.profile_picture) }}" alt="Profile Picture">
+                        {% else %}
+                        <i class="fas fa-user-graduate"></i>
+                        {% endif %}
                     </div>
                     <div class="student-name">{{ current_user.name }}</div>
                     <div class="student-id"><i class="fas fa-id-card"></i> {{ current_user.reg_no }}</div>
@@ -23,11 +26,11 @@
                 <div class="info-grid">
                     <div class="info-item">
                         <span class="info-label"><i class="far fa-calendar"></i> Programme</span>
-                        <span class="info-value">B.Sc. Comp. Sci.</span>
+                        <span class="info-value">{{ profile_display.programme }}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Semester</span>
-                        <span class="info-value">2nd · Year 3</span>
+                        <span class="info-value">{{ profile_display.level_semester }}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Phone</span>
@@ -70,105 +73,21 @@
                 <div>
             
                     <div class="courses-grid">
-                        <!-- <div class="course-card">
-                            <div>
-                                <div class="course-code">CSC 310</div>
-                                <div class="course-title">Database Systems</div>
-                                <div class="course-lecturer"><i class="fas fa-chalkboard-teacher"></i> Dr. Eze</div>
-                            </div>
-                            <span class="course-badge">3 credits · active</span>
-                        </div>
-                        <div class="course-card">
-                            <div>
-                                <div class="course-code">MAT 202</div>
-                                <div class="course-title">Calculus II</div>
-                                <div class="course-lecturer"><i class="fas fa-chalkboard-teacher"></i> Prof. Ade</div>
-                            </div>
-                            <span class="course-badge">4 credits · active</span>
-                        </div>
-                        <div class="course-card">
-                            <div>
-                                <div class="course-code">CSC 212</div>
-                                <div class="course-title">Digital Logic</div>
-                                <div class="course-lecturer"><i class="fas fa-chalkboard-teacher"></i> Dr. Nnamdi</div>
-                            </div>
-                            <span class="course-badge">3 credits · lab</span>
-                        </div>
-                        <div class="course-card">
-                            <div>
-                                <div class="course-code">GST 101</div>
-                                <div class="course-title">Communication</div>
-                                <div class="course-lecturer"><i class="fas fa-chalkboard-teacher"></i> Ms. Obi</div>
-                            </div>
-                            <span class="course-badge">2 credits · completed</span>
-                        </div> -->
-
-
 
         <div class="payment-section">
             <div class="payment-header">
-             
+
                 <h3><i class="fas fa-book-open" style="background: none; padding:0;"></i> Registered Courses (Current)</h3>
                 <a href="#" style="color: #1e5a8a; font-weight:600;">View all <i class="fas fa-chevron-right"></i></a>
             </div>
             <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Course Title</th>
-                            <th>Course Code</th>
-                            <th>Date</th>
-                            <!-- <th>Amount (₦)</th> -->
-                            <th>Credits</th>
-                            <!-- <th></th> -->
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Tuition (1st semester)</td>
-                            <td>12 Jan 2025</td>
-                            <td>RMT/1A2B3C</td>
-                            <!-- <td><strong>425,000</strong></td>
-                            <td><span class="status paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="view-link">receipt</a></td> -->
-                        </tr>
-                        <tr>
-                            <td>Lab fee (CSC 310)</td>
-                            <td>03 Mar 2025</td>
-                            <td>RMT/4D5E6F</td>
-                            <!-- <td><strong>25,500</strong></td>
-                            <td><span class="status">Pending</span></td>
-                            <td><a href="#" class="view-link">view</a></td> -->
-                        </tr>
-                        <tr>
-                            <td>ID card renewal</td>
-                            <td>20 Feb 2025</td>
-                            <td>RMT/7G8H9I</td>
-                            <!-- <td><strong>5,000</strong></td>
-                            <td><span class="status paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="view-link">receipt</a></td> -->
-                        </tr>
-                        <tr>
-                            <td>Library fee</td>
-                            <td>10 Feb 2025</td>
-                            <td>RMT/0J1K2L</td>
-                            <!-- <td><strong>8,200</strong></td>
-                            <td><span class="status paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="view-link">receipt</a></td> -->
-                        </tr>
-                        <tr>
-                            <td>Accommodation (installment)</td>
-                            <td>05 Feb 2025</td>
-                            <td>RMT/3M4N5O</td>
-                            <!-- <td><strong>150,000</strong></td>
-                            <td><span class="status overdue"><i class="fas fa-exclamation-circle"></i> overdue</span></td>
-                            <td><a href="#" class="view-link">pay now</a></td> -->
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="empty-state-row">
+                    <i class="fas fa-book-open"></i>
+                    <p>No courses registered yet.</p>
+                </div>
             </div>
-            
-        </div> 
+
+        </div>
             
 
 
@@ -188,61 +107,11 @@
                 <a href="#" style="color: #1e5a8a; font-weight:600;">View all <i class="fas fa-chevron-right"></i></a>
             </div>
             <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Date</th>
-                            <th>Reference</th>
-                            <th>Amount (₦)</th>
-                            <th>Status</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Tuition (1st semester)</td>
-                            <td>12 Jan 2025</td>
-                            <td>RMT/1A2B3C</td>
-                            <td><strong>425,000</strong></td>
-                            <td><span class="status paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="view-link">receipt</a></td>
-                        </tr>
-                        <tr>
-                            <td>Lab fee (CSC 310)</td>
-                            <td>03 Mar 2025</td>
-                            <td>RMT/4D5E6F</td>
-                            <td><strong>25,500</strong></td>
-                            <td><span class="status">Pending</span></td>
-                            <td><a href="#" class="view-link">view</a></td>
-                        </tr>
-                        <tr>
-                            <td>ID card renewal</td>
-                            <td>20 Feb 2025</td>
-                            <td>RMT/7G8H9I</td>
-                            <td><strong>5,000</strong></td>
-                            <td><span class="status paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="view-link">receipt</a></td>
-                        </tr>
-                        <tr>
-                            <td>Library fee</td>
-                            <td>10 Feb 2025</td>
-                            <td>RMT/0J1K2L</td>
-                            <td><strong>8,200</strong></td>
-                            <td><span class="status paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="view-link">receipt</a></td>
-                        </tr>
-                        <tr>
-                            <td>Accommodation (installment)</td>
-                            <td>05 Feb 2025</td>
-                            <td>RMT/3M4N5O</td>
-                            <td><strong>150,000</strong></td>
-                            <td><span class="status overdue"><i class="fas fa-exclamation-circle"></i> overdue</span></td>
-                            <td><a href="#" class="view-link">pay now</a></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="empty-state-row">
+                    <i class="fas fa-receipt"></i>
+                    <p>No payment history yet.</p>
+                </div>
             </div>
-            
-        </div> 
+
+        </div>
     </div> {% endblock %}

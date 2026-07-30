@@ -506,3 +506,21 @@
         /* Utility Micro Rules */
         a { text-decoration: none; }
         .fa-chevron-right { font-size: 0.8rem; }
+
+        .empty-state-row {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state-row i {
+            font-size: 1.8rem;
+            display: block;
+            margin-bottom: 0.6rem;
+            opacity: 0.6;
+        }
+
+        .empty-state-row p {
+            margin: 0;
+            font-size: 0.95rem;
+        }

@@ -17,6 +17,7 @@ from onboarding_helpers import (
     start_otp_session, register_failed_otp_attempt, otp_attempts_exceeded,
     clear_otp_session, save_profile_picture, MAX_OTP_ATTEMPTS
 )
+from services.student_profile import get_profile_display
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -264,9 +265,9 @@ def login():
     return render_template('login.html')
 
 @app.route('/')
-# @login_required
+@login_required
 def dashboard():
-    return render_template('dashboard.html')
+    return render_template('dashboard.html', profile_display=get_profile_display(current_user))
 
 
 
