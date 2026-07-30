@@ -18,6 +18,10 @@ from onboarding_helpers import (
     clear_otp_session, save_profile_picture, MAX_OTP_ATTEMPTS
 )
 from services.student_profile import get_profile_display
+from services.registration import (
+    get_registration_status_context, register_student, get_registration_history,
+    get_active_period, RegistrationError,
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -311,8 +315,38 @@ def pay_summary():
 
 
 @app.route('/registration')
+@login_required
 def registration():
-    return render_template('registration.html')
+    return render_template(
+        'registration.html',
+        status=get_registration_status_context(current_user),
+        history=get_registration_history(current_user),
+    )
+
+
+@app.route('/registration/register', methods=['POST'])
+@login_required
+def registration_register():
+    period = get_active_period()
+    if period is None:
+        return jsonify({'success': False, 'message': 'No registration period is currently configured.'}), 400
+
+    try:
+        reg = register_student(current_user, period)
+    except RegistrationError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Registration successful.',
+        'registration': {
+            'session': reg.registration_period.academic_session.name,
+            'semester': reg.registration_period.semester.name,
+            'payment_reference': reg.payment_reference,
+            'registered_at': reg.registered_at.strftime('%d %b %Y, %I:%M %p'),
+            'credits_registered': reg.credits_registered,
+        },
+    })
 
 
 @app.route('/add_drop')
