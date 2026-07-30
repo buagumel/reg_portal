@@ -1,6 +1,7 @@
 import random
 import string
 
+from sqlalchemy.exc import IntegrityError
 from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration
 
 
@@ -119,8 +120,12 @@ def register_student(user, period):
         payment_reference=_generate_payment_reference(),
         credits_registered=0,
     )
-    db.session.add(registration)
-    db.session.commit()
+    try:
+        db.session.add(registration)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise RegistrationError('You are already registered for this period.')
     return registration
 
 
