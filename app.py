@@ -320,11 +320,6 @@ def add_drop():
     return render_template('add_drop.html')
 
 
-@app.route('/add')
-def add():
-    return render_template('add.html')
-
-
 @app.route('/my_courses')
 def my_courses():
     return render_template('my_courses.html')
