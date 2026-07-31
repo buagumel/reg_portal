@@ -4,11 +4,7 @@ import string
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration
-
-
-class RegistrationError(Exception):
-    """Raised for a business-rule violation in the registration flow.
-    The message is user-facing."""
+from services.errors import RegistrationError
 
 
 def get_active_period():
