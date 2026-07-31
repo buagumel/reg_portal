@@ -46,6 +46,9 @@ class User(db.Model, UserMixin):
     profile_picture = db.Column(db.String(300))
     level = db.Column(db.String(50))
     session = db.Column(db.String(20))
+    emergency_contact = db.Column(db.String(150), nullable=True)
+    blood_group = db.Column(db.String(5), nullable=True)
+    updated_at = db.Column(db.DateTime, default=now_lagos, onupdate=now_lagos, nullable=False)
 
 
     def set_password(self, password):
@@ -172,3 +175,28 @@ class RegisteredCourse(db.Model):
 
     course = db.relationship('Course')
     student_registration = db.relationship('StudentRegistration', backref='registered_courses')
+
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(20), nullable=False)
+    priority = db.Column(db.String(10), nullable=False, default='medium')
+    related_url = db.Column(db.String(300), nullable=True)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+    archived_at = db.Column(db.DateTime, nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    action = db.Column(db.String(50), nullable=False)
+    details = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
