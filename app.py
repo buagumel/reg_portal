@@ -114,6 +114,37 @@ def update_profile():
         'email': current_user.email,
     })
 
+@app.route('/profile/picture', methods=['POST'])
+@login_required
+def profile_picture_upload():
+    file_storage = request.files.get('profile_picture')
+    if not file_storage:
+        return jsonify({'success': False, 'message': 'No file provided.'}), 400
+
+    upload_folder = os.path.join(app.static_folder, 'uploads')
+    try:
+        update_profile_picture(current_user, file_storage, upload_folder)
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Profile picture updated.',
+        'profile_picture': url_for('static', filename=current_user.profile_picture),
+    })
+
+
+@app.route('/profile/picture/delete', methods=['POST'])
+@login_required
+def profile_picture_delete():
+    try:
+        delete_profile_picture(current_user, app.static_folder)
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    return jsonify({'success': True, 'message': 'Profile picture removed.'})
+
+
 @app.route('/change-password', methods=['POST'])
 @login_required
 def change_password():
@@ -281,6 +312,7 @@ def login():
 @app.route('/')
 @login_required
 def dashboard():
+    notify_registration_window_events(current_user)
     return render_template('dashboard.html', profile_display=get_profile_display(current_user))
 
 
@@ -309,8 +341,88 @@ def profile():
     return render_template('profile.html', profile_display=get_profile_display(current_user))
 
 @app.route('/announcements')
+@login_required
 def announcements():
-    return render_template('announcements.html')
+    return render_template(
+        'announcements.html',
+        summary=get_summary_counts(current_user),
+        notifications=get_notifications(current_user),
+    )
+
+
+@app.route('/notifications/data')
+@login_required
+def notifications_data():
+    category = request.args.get('category') or None
+    priority = request.args.get('priority') or None
+    read_status = request.args.get('read_status') or None
+    date_from = request.args.get('date_from') or None
+    date_to = request.args.get('date_to') or None
+    search = request.args.get('search') or None
+    archived = request.args.get('archived') == 'true'
+
+    notifications = get_notifications(
+        current_user, category=category, priority=priority, read_status=read_status,
+        date_from=date_from, date_to=date_to, search=search, archived=archived,
+    )
+
+    def notif_json(n):
+        return {
+            'id': n.id, 'title': n.title, 'message': n.message, 'category': n.category,
+            'priority': n.priority, 'related_url': n.related_url,
+            'created_at': n.created_at.strftime('%d %b %Y, %I:%M %p'),
+            'is_read': n.read_at is not None,
+            'is_archived': n.archived_at is not None,
+        }
+
+    return jsonify({
+        'success': True,
+        'notifications': [notif_json(n) for n in notifications],
+        'summary': get_summary_counts(current_user),
+    })
+
+
+@app.route('/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def notification_mark_read(notification_id):
+    notification = mark_read(current_user, notification_id)
+    if notification is None:
+        return jsonify({'success': False, 'message': 'Notification not found.'}), 404
+    return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
+
+
+@app.route('/notifications/<int:notification_id>/unread', methods=['POST'])
+@login_required
+def notification_mark_unread(notification_id):
+    notification = mark_unread(current_user, notification_id)
+    if notification is None:
+        return jsonify({'success': False, 'message': 'Notification not found.'}), 404
+    return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
+
+
+@app.route('/notifications/<int:notification_id>/archive', methods=['POST'])
+@login_required
+def notification_archive(notification_id):
+    notification = archive_notification(current_user, notification_id)
+    if notification is None:
+        return jsonify({'success': False, 'message': 'Notification not found.'}), 404
+    return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
+
+
+@app.route('/notifications/<int:notification_id>/delete', methods=['POST'])
+@login_required
+def notification_delete(notification_id):
+    notification = delete_notification(current_user, notification_id)
+    if notification is None:
+        return jsonify({'success': False, 'message': 'Notification not found.'}), 404
+    return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
+
+
+@app.route('/notifications/mark-all-read', methods=['POST'])
+@login_required
+def notification_mark_all_read():
+    mark_all_read(current_user)
+    return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
 
 
 @app.route('/courses')
@@ -327,6 +439,7 @@ def pay_summary():
 @app.route('/registration')
 @login_required
 def registration():
+    notify_registration_window_events(current_user)
     return render_template(
         'registration.html',
         status=get_registration_status_context(current_user),
