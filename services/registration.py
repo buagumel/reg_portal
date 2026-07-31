@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload
 from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration
 from models import Course, RegisteredCourse
 from services.errors import RegistrationError
+from services.notification import create_notification
 from services.validation import validate_course_eligible, validate_credit_ceiling, validate_not_duplicate, validate_can_submit
 
 
@@ -125,6 +126,12 @@ def register_student(user, period):
     except IntegrityError:
         db.session.rollback()
         raise RegistrationError('You are already registered for this period.')
+
+    create_notification(
+        user, 'Payment completed',
+        f'Your registration payment for {period.academic_session.name} {period.semester.name} was completed successfully. Reference: {registration.payment_reference}.',
+        category='payments', priority='high', related_url='/registration',
+    )
     return registration
 
 
@@ -223,6 +230,12 @@ def submit_registration(user, period, student_registration):
 
     student_registration.courses_submitted = True
     db.session.commit()
+
+    create_notification(
+        user, 'Course registration submitted',
+        f'Your course selection for {period.academic_session.name} {period.semester.name} has been submitted successfully.',
+        category='courses', priority='high', related_url='/my_courses',
+    )
     return student_registration
 
 

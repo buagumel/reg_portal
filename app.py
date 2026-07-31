@@ -25,6 +25,16 @@ from services.registration import (
 )
 from services.course import get_available_courses
 from services.course_history import get_courses_by_semester
+from services.audit import log_action
+from services.notification import (
+    create_notification, get_notifications, get_summary_counts,
+    mark_read, mark_unread, mark_all_read, archive_notification, delete_notification,
+    notify_registration_window_events,
+)
+from services.profile import (
+    update_contact_info, change_password as profile_change_password,
+    update_profile_picture, delete_profile_picture,
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -80,27 +90,28 @@ def enforce_onboarding_gate():
 @app.route('/update-profile', methods=['POST'])
 @login_required
 def update_profile():
-    time.sleep(5)
     data = request.get_json()
     if not data:
         return jsonify({'success': False, 'message': 'Invalid request'}), 400
 
     phone = data.get('phone', '').strip()
-
-    # Basic validation
     if not phone:
         return jsonify({'success': False, 'message': 'Phone number is required'}), 400
 
-    # Update
-    current_user.phone = phone
-    db.session.commit()
+    address = data.get('address', '').strip()
+    emergency_contact = data.get('emergency_contact', '').strip()
+    blood_group = data.get('blood_group', '').strip()
 
-    # In your update_profile route, after commit:
+    update_contact_info(
+        current_user, phone=phone, address=address,
+        emergency_contact=emergency_contact, blood_group=blood_group,
+    )
+
     return jsonify({
         'success': True,
         'message': 'Profile updated successfully',
         'phone': current_user.formatted_phone,
-        'email': current_user.email
+        'email': current_user.email,
     })
 
 @app.route('/change-password', methods=['POST'])
@@ -114,20 +125,10 @@ def change_password():
     new_pass = data.get('new', '').strip()
     confirm = data.get('confirm', '').strip()
 
-    if not current:
-        return jsonify({'success': False, 'message': 'Current password is required'}), 400
-
-    failed_rules = validate_password_strength(new_pass)
-    if failed_rules:
-        return jsonify({'success': False, 'message': 'Password must contain ' + ', '.join(failed_rules) + '.'}), 400
-    if new_pass != confirm:
-        return jsonify({'success': False, 'message': 'Passwords do not match'}), 400
-
-    if not current_user.check_password(current):
-        return jsonify({'success': False, 'message': 'Current password is incorrect'}), 400
-
-    current_user.set_password(new_pass)
-    db.session.commit()
+    try:
+        profile_change_password(current_user, current, new_pass, confirm)
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
     return jsonify({'success': True, 'message': 'Password changed successfully'})
 
@@ -227,6 +228,12 @@ def onboarding_complete():
 
     current_user.onboarding_completed = True
     db.session.commit()
+
+    create_notification(
+        current_user, 'Welcome to the Student Portal',
+        'Your profile setup is complete. Welcome aboard!',
+        category='profile', priority='medium',
+    )
 
     try:
         msg = Message('Welcome to JSPICT Student Portal', recipients=[current_user.email])
@@ -571,6 +578,13 @@ def verify_email_code():
     current_user.email = pending_email
     current_user.email_verified = True
     db.session.commit()
+
+    log_action(current_user, 'email_changed', details=f'Email changed to {pending_email}')
+    create_notification(
+        current_user, 'Email address changed',
+        f'Your account email was changed to {pending_email}.',
+        category='profile', priority='medium',
+    )
 
     clear_otp_session(session)
 
