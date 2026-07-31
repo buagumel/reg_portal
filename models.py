@@ -130,9 +130,45 @@ class StudentRegistration(db.Model):
     payment_status = db.Column(db.String(20), nullable=False, default='pending')
     payment_reference = db.Column(db.String(100), nullable=True)
     credits_registered = db.Column(db.Integer, nullable=False, default=0)
+    courses_submitted = db.Column(db.Boolean, default=False, nullable=False)
     registered_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
     updated_at = db.Column(db.DateTime, default=now_lagos, onupdate=now_lagos, nullable=False)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'registration_period_id'),)
 
     registration_period = db.relationship('RegistrationPeriod')
+
+
+class Course(db.Model):
+    __tablename__ = 'courses'
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    credits = db.Column(db.Integer, nullable=False)
+    department = db.Column(db.String(150), nullable=False)
+    level = db.Column(db.String(50), nullable=True)
+    course_type = db.Column(db.String(20), nullable=False)
+    academic_session_id = db.Column(db.Integer, db.ForeignKey('academic_sessions.id'), nullable=False)
+    semester_id = db.Column(db.Integer, db.ForeignKey('semesters.id'), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    instructor = db.Column(db.String(150), nullable=True)
+    schedule = db.Column(db.String(200), nullable=True)
+
+    __table_args__ = (db.UniqueConstraint('code', 'academic_session_id', 'semester_id'),)
+
+    academic_session = db.relationship('AcademicSession')
+    semester = db.relationship('Semester')
+
+
+class RegisteredCourse(db.Model):
+    __tablename__ = 'registered_courses'
+    id = db.Column(db.Integer, primary_key=True)
+    student_registration_id = db.Column(db.Integer, db.ForeignKey('student_registrations.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    grade = db.Column(db.String(5), nullable=True)
+    added_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('student_registration_id', 'course_id'),)
+
+    course = db.relationship('Course')
+    student_registration = db.relationship('StudentRegistration', backref='registered_courses')
