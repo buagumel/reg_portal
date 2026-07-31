@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from app import app
 from models import (
     db, User, now_lagos,
-    AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration,
+    AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course,
 )
 
 DEFAULT_PASSWORD = "Default@123"
@@ -65,6 +65,7 @@ def seed():
             )
         db.session.commit()
         seed_registration_config()
+        seed_courses()
         print(f"\nDone. {created} student(s) created. Default password for first_login=True accounts: {DEFAULT_PASSWORD}")
 
 
@@ -161,6 +162,51 @@ def seed_registration_config():
             print(f'Created demo StudentRegistration for {david.reg_no}')
         else:
             print(f'Skipping demo StudentRegistration for {david.reg_no} (already exists)')
+
+
+def seed_courses():
+    academic_session = AcademicSession.query.filter_by(name='2025/2026').first()
+    first_semester = Semester.query.filter_by(name='First Semester').first()
+    if not academic_session or not first_semester:
+        print('Skipping course seed — run seed_registration_config first')
+        return
+
+    courses_data = [
+        dict(code='CSC 310', title='Database Systems', credits=3, department='Computer Science',
+             level='Year 1', course_type='core', instructor='Dr. A. Bello', schedule='Mon/Wed 10:00-11:30'),
+        dict(code='MAT 202', title='Calculus II', credits=4, department='Computer Science',
+             level='Year 1', course_type='core', instructor='Dr. F. Musa', schedule='Tue/Thu 08:00-09:30'),
+        dict(code='CSC 212', title='Digital Logic', credits=3, department='Computer Science',
+             level='Year 1', course_type='core', instructor=None, schedule=None),
+        dict(code='GST 202', title='Entrepreneurship', credits=1, department='Computer Science',
+             level=None, course_type='elective', instructor='Mrs. K. Eze', schedule='Fri 09:00-10:00'),
+        dict(code='CSC 330', title='Artificial Intelligence', credits=3, department='Computer Science',
+             level='Year 1', course_type='elective', instructor='Dr. A. Bello', schedule='Wed 13:00-15:00'),
+        dict(code='ITC 301', title='Network Fundamentals', credits=3, department='Information Technology',
+             level=None, course_type='core', instructor='Mr. S. Danjuma', schedule='Mon/Wed 12:00-13:30'),
+        dict(code='ITC 315', title='Web Technologies', credits=3, department='Information Technology',
+             level=None, course_type='elective', instructor='Mr. S. Danjuma', schedule='Thu 10:00-12:00'),
+        dict(code='ITC 320', title='IT Systems Lab', credits=2, department='Information Technology',
+             level=None, course_type='lab', instructor=None, schedule=None),
+    ]
+
+    created = 0
+    for data in courses_data:
+        existing = Course.query.filter_by(
+            code=data['code'], academic_session_id=academic_session.id, semester_id=first_semester.id
+        ).first()
+        if existing:
+            continue
+        course = Course(
+            academic_session_id=academic_session.id,
+            semester_id=first_semester.id,
+            description=f"{data['title']} — core curriculum course.",
+            **data,
+        )
+        db.session.add(course)
+        created += 1
+    db.session.commit()
+    print(f'Created {created} course(s).')
 
 
 if __name__ == "__main__":
