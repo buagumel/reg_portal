@@ -9,6 +9,7 @@ from app import app
 from models import (
     db, User, now_lagos,
     AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course,
+    Notification,
 )
 
 DEFAULT_PASSWORD = "Default@123"
@@ -66,6 +67,8 @@ def seed():
         db.session.commit()
         seed_registration_config()
         seed_courses()
+        seed_notifications()
+        seed_profile_extras()
         print(f"\nDone. {created} student(s) created. Default password for first_login=True accounts: {DEFAULT_PASSWORD}")
 
 
@@ -211,6 +214,61 @@ def seed_courses():
         created += 1
     db.session.commit()
     print(f'Created {created} course(s).')
+
+
+def seed_notifications():
+    chiamaka = User.query.filter_by(reg_no='2308-2301-0003').first()
+    if not chiamaka:
+        print('Skipping notification seed — run student seeding first')
+        return
+
+    existing_count = Notification.query.filter_by(user_id=chiamaka.id).count()
+    if existing_count > 0:
+        print(f'Skipping notification seed for {chiamaka.reg_no} (already has {existing_count})')
+        return
+
+    from services.notification import create_notification
+
+    n1 = create_notification(
+        chiamaka, 'Welcome to the Student Portal', 'Your profile setup is complete. Welcome aboard!',
+        category='profile', priority='medium',
+    )
+    n2 = create_notification(
+        chiamaka, 'Second semester exam timetable released',
+        'Official examination timetable for the second semester is now available.',
+        category='academic', priority='medium', related_url='/announcements',
+    )
+    n3 = create_notification(
+        chiamaka, 'System maintenance scheduled', 'The portal will be briefly unavailable for maintenance this weekend.',
+        category='system', priority='low',
+    )
+    n4 = create_notification(
+        chiamaka, 'Library extended hours during exams',
+        'Main library extended hours (7:00 AM - 11:00 PM) starting during examination weeks.',
+        category='announcements', priority='low',
+    )
+    n4.read_at = now_lagos()
+
+    n5 = create_notification(
+        chiamaka, 'Departmental seminar reminder', 'A departmental seminar takes place this week — attendance is optional.',
+        category='academic', priority='low',
+    )
+    n5.read_at = now_lagos()
+    n5.archived_at = now_lagos()
+
+    db.session.commit()
+    print(f'Created 5 demo notifications for {chiamaka.reg_no} (2 unread, 2 read, 1 archived)')
+
+
+def seed_profile_extras():
+    david = User.query.filter_by(reg_no='2308-2301-0004').first()
+    if david and not david.emergency_contact:
+        david.emergency_contact = 'Mrs. Adeyemi Adeyemi - 08033445566'
+        david.blood_group = 'O+'
+        db.session.commit()
+        print(f'Set emergency contact/blood group for {david.reg_no}')
+    else:
+        print('Skipping profile extras seed (already set or David not found)')
 
 
 if __name__ == "__main__":
