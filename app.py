@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from extensions import mail, Message
 from models import (
-    db, User
+    db, User, RegisteredCourse, StudentRegistration
 )
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
@@ -21,7 +21,10 @@ from services.student_profile import get_profile_display
 from services.registration import (
     get_registration_status_context, register_student, get_registration_history,
     get_active_period, RegistrationError,
+    add_course, drop_course, submit_registration, get_add_drop_context,
 )
+from services.course import get_available_courses, get_course_details
+from services.course_history import get_courses_by_semester
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -350,13 +353,145 @@ def registration_register():
 
 
 @app.route('/add_drop')
+@login_required
 def add_drop():
+    context = get_add_drop_context(current_user)
+    if context['period'] is None or context['student_registration'] is None:
+        flash('Please complete semester registration before selecting courses.')
+        return redirect(url_for('registration'))
     return render_template('add_drop.html')
 
 
+@app.route('/add_drop/data')
+@login_required
+def add_drop_data():
+    context = get_add_drop_context(current_user)
+    period, student_registration = context['period'], context['student_registration']
+    if period is None or student_registration is None:
+        return jsonify({'success': False, 'message': 'No active registration found.'}), 400
+
+    available = get_available_courses(current_user, period, student_registration)
+    selected = RegisteredCourse.query.filter_by(student_registration_id=student_registration.id).all()
+
+    def course_json(c):
+        return {'id': c.id, 'code': c.code, 'title': c.title, 'credits': c.credits, 'type': c.course_type}
+
+    return jsonify({
+        'success': True,
+        'session': period.academic_session.name,
+        'semester': period.semester.name,
+        'deadline': period.closes_at.strftime('%d %b %Y'),
+        'closes_at_iso': period.closes_at.isoformat(),
+        'min_credits': context['min_credits'],
+        'max_credits': context['max_credits'],
+        'credits_registered': student_registration.credits_registered,
+        'courses_submitted': student_registration.courses_submitted,
+        'available_courses': [course_json(c) for c in available],
+        'selected_courses': [course_json(rc.course) for rc in selected],
+    })
+
+
+@app.route('/add_drop/add', methods=['POST'])
+@login_required
+def add_drop_add():
+    data = request.get_json()
+    if not data or 'course_id' not in data:
+        return jsonify({'success': False, 'message': 'Invalid request'}), 400
+
+    context = get_add_drop_context(current_user)
+    period, student_registration = context['period'], context['student_registration']
+    if period is None or student_registration is None:
+        return jsonify({'success': False, 'message': 'No active registration found.'}), 400
+
+    try:
+        add_course(current_user, period, student_registration, data['course_id'])
+    except RegistrationError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    return jsonify({'success': True, 'credits_registered': student_registration.credits_registered})
+
+
+@app.route('/add_drop/drop', methods=['POST'])
+@login_required
+def add_drop_drop():
+    data = request.get_json()
+    if not data or 'course_id' not in data:
+        return jsonify({'success': False, 'message': 'Invalid request'}), 400
+
+    context = get_add_drop_context(current_user)
+    student_registration = context['student_registration']
+    if student_registration is None:
+        return jsonify({'success': False, 'message': 'No active registration found.'}), 400
+
+    try:
+        drop_course(current_user, student_registration, data['course_id'])
+    except RegistrationError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    return jsonify({'success': True, 'credits_registered': student_registration.credits_registered})
+
+
+@app.route('/add_drop/submit', methods=['POST'])
+@login_required
+def add_drop_submit():
+    context = get_add_drop_context(current_user)
+    period, student_registration = context['period'], context['student_registration']
+    if period is None or student_registration is None:
+        return jsonify({'success': False, 'message': 'No active registration found.'}), 400
+
+    try:
+        submit_registration(current_user, period, student_registration)
+    except RegistrationError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    return jsonify({'success': True, 'redirect': url_for('my_courses')})
+
+
+@app.route('/registration/slip')
+@login_required
+def registration_slip():
+    student_registration = (
+        StudentRegistration.query
+        .filter_by(user_id=current_user.id, courses_submitted=True)
+        .order_by(StudentRegistration.registered_at.desc())
+        .first()
+    )
+    if student_registration is None:
+        flash('No submitted registration found to print.')
+        return redirect(url_for('registration'))
+
+    courses = RegisteredCourse.query.filter_by(student_registration_id=student_registration.id).all()
+    return render_template('registration_slip.html', registration=student_registration, courses=courses)
+
+
 @app.route('/my_courses')
+@login_required
 def my_courses():
-    return render_template('my_courses.html')
+    return render_template('my_courses.html', groups=get_courses_by_semester(current_user))
+
+
+@app.route('/courses/<int:course_id>/details')
+@login_required
+def course_details(course_id):
+    registered_course = RegisteredCourse.query.join(StudentRegistration).filter(
+        RegisteredCourse.course_id == course_id,
+        StudentRegistration.user_id == current_user.id,
+    ).first()
+    if registered_course is None:
+        return jsonify({'success': False, 'message': 'Course not found.'}), 404
+
+    course = registered_course.course
+    return jsonify({
+        'success': True,
+        'code': course.code,
+        'title': course.title,
+        'credits': course.credits,
+        'department': course.department,
+        'semester': course.semester.name,
+        'description': course.description or 'Not available',
+        'instructor': course.instructor or 'Not available',
+        'schedule': course.schedule or 'Not available',
+    })
 
 @app.route('/payments_history')
 def payments_history():
