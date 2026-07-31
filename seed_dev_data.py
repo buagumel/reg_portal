@@ -188,6 +188,10 @@ def seed_courses():
              level=None, course_type='elective', instructor='Mr. S. Danjuma', schedule='Thu 10:00-12:00'),
         dict(code='ITC 320', title='IT Systems Lab', credits=2, department='Information Technology',
              level=None, course_type='lab', instructor=None, schedule=None),
+        dict(code='GST 101', title='Communication Skills', credits=2, department='Computer Science',
+             level=None, course_type='core', instructor='Mrs. K. Eze', schedule='Mon 08:00-09:00'),
+        dict(code='ITC 250', title='Software Engineering Principles', credits=5, department='Information Technology',
+             level=None, course_type='core', instructor='Mr. S. Danjuma', schedule='Tue 14:00-16:00'),
     ]
 
     created = 0
