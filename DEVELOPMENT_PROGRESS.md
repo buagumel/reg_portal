@@ -36,6 +36,26 @@ Tracks completed milestones against `doc/t.txt` (Student Registration Workflow).
 - Spec: `docs/superpowers/specs/2026-07-31-course-add-drop-design.md`
 - Out of scope (deferred): grading (the `grade` column exists but nothing sets it yet), real PDF generation, post-submission editing, admin UI for the course catalog.
 
+## Feature 7: Notification Management — Complete
+
+- New model: `Notification` (title, message, category, priority, read/archived/deleted state, optional related URL).
+- `services/notification.py`: centralized `create_notification` (the single creation path for every other module), filtering/search, summary counts, mark read/unread, mark-all-read, archive, soft-delete — every read/write scoped to the acting user.
+- Automatic notifications wired into: onboarding completion, payment/registration completion, course registration submission, profile updates, password changes, email changes.
+- Registration-window notifications ("opens" / "closes soon") are generated opportunistically on dashboard/registration page loads rather than via a background scheduler — this codebase has no task runner, and idempotency is enforced per (user, period, trigger) so repeat visits never duplicate.
+- `announcements.html` rewired to real backend data: server-rendered initial load, AJAX-driven filtering (category, priority, read status, date range, search) and actions, matching the Add/Drop page's "keep the JS, swap the data source" pattern.
+- Fixed: `/announcements` was missing `@login_required`.
+- Spec: `docs/superpowers/specs/2026-07-31-notifications-profile-design.md`
+
+## Feature 8: Profile Management — Complete
+
+- New model: `AuditLog`. New `User` columns: `emergency_contact`, `blood_group`, `updated_at`.
+- `services/profile.py`: contact-info updates (phone/address/emergency contact/blood group), password change (reusing the same policy from onboarding), profile picture upload/replace/delete (reusing `onboarding_helpers.save_profile_picture`) — every write creates both an `AuditLog` row and a `Notification`, and is scoped only to the acting user (no cross-user write surface).
+- `profile.html` extended in place: Address is now editable, Emergency Contact and Blood Group are new fields, and the previously-fake avatar edit (a `prompt()` demo) is now a real file upload with replace/delete support.
+- Email-change OTP flow reused unchanged from the earlier onboarding milestone (`onboarding_helpers`) — satisfies "reuse existing OTP implementation," no new OTP service was needed.
+- `/change-password` and `/update-profile` refactored to delegate to `services/profile.py` (moved business logic out of the route, including removing a stray unexplained `time.sleep(5)` debug leftover from `update_profile`).
+- Spec: `docs/superpowers/specs/2026-07-31-notifications-profile-design.md`
+- Out of scope (deferred): Feature 9 (Payments), a real background scheduler, push/email notifications for the Notification model, an admin notification-composition UI.
+
 ## Known pre-existing issues (not yet fixed)
 
 - `payments_history`, `pay_summary` routes are missing `@login_required` (same class of bug fixed on `dashboard`, `profile`, `registration`, `add_drop`, and `my_courses`). Not fixed yet since those pages/routes aren't otherwise touched.
@@ -43,4 +63,4 @@ Tracks completed milestones against `doc/t.txt` (Student Registration Workflow).
 
 ## Next milestone
 
-TBD — awaiting direction on the next feature from `doc/t.txt`.
+Feature 9: Payments — awaiting approval before starting.
