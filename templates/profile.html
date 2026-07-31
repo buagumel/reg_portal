@@ -209,15 +209,19 @@
                 <div class="avatar-wrapper">
                     <div class="avatar-placeholder" id="avatarDisplay">
                         {% if current_user.profile_picture %}
-                        <img src="{{ url_for('static', filename=current_user.profile_picture) }}" alt="Profile Picture" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                        <img id="avatarImg" src="{{ url_for('static', filename=current_user.profile_picture) }}" alt="Profile Picture" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
                         {% else %}
-                        <i class="fas fa-user-graduate fa-3x"></i>
+                        <i class="fas fa-user-graduate fa-3x" id="avatarIcon"></i>
                         {% endif %}
                     </div>
                     <div class="edit-avatar-btn" id="editAvatarBtn">
                         <i class="fas fa-camera"></i>
                     </div>
+                    <input type="file" id="avatarFileInput" accept=".png,.jpg,.jpeg,.webp" style="display:none;">
                 </div>
+                {% if current_user.profile_picture %}
+                <button type="button" class="btn-outline-sm" id="removePhotoBtn" style="margin-top:0.5rem;"><i class="fas fa-trash-alt"></i> Remove photo</button>
+                {% endif %}
                 <h2 class="profile-name" id="profileFullName">{{ current_user.name }}</h2>
                 <div class="student-badge"><i class="fas fa-id-card"></i> <span id="profileMatric">{{ current_user.reg_no }}</span> · <span id="profileProgram">{{ profile_display.programme }}</span></div>
             </div>
@@ -283,9 +287,25 @@
                         </div>
                     </div>
 
-                    <div class="info-group">
+                    <div class="input-group">
                         <label><i class="fas fa-map-marker-alt"></i> Address</label>
-                        <span class="field-display" id="displayAddressField">{{ current_user.address }}</span>
+                        <input type="text" id="editAddress" value="{{ current_user.address or '' }}">
+                    </div>
+
+                    <div class="double-field">
+                        <div class="input-group">
+                            <label><i class="fas fa-phone-volume"></i> Emergency Contact</label>
+                            <input type="text" id="editEmergencyContact" value="{{ current_user.emergency_contact or '' }}" placeholder="Name and phone number">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-tint"></i> Blood Group</label>
+                            <select id="editBloodGroup">
+                                <option value="" {% if not current_user.blood_group %}selected{% endif %}>Unknown</option>
+                                {% for bg in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+                                <option value="{{ bg }}" {% if current_user.blood_group == bg %}selected{% endif %}>{{ bg }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
 
                     <div class="double-field">
@@ -332,7 +352,7 @@
                         </div>
                     </div>
 
-                    <button class="save-btn" id="updateProfileBtn"><i class="fas fa-save"></i> Update Phone</button>
+                    <button class="save-btn" id="updateProfileBtn"><i class="fas fa-save"></i> Save Changes</button>
                 </div>
             </div>
 
@@ -469,13 +489,16 @@
             });
         });
 
-        // ---------- Update Phone ----------
+        // ---------- Save Changes ----------
         updateBtn.addEventListener('click', function() {
             const phone = editPhone.value.trim();
+            const address = document.getElementById('editAddress').value.trim();
+            const emergencyContact = document.getElementById('editEmergencyContact').value.trim();
+            const bloodGroup = document.getElementById('editBloodGroup').value;
             if (!phone) { showToast('Phone number is required', true); return; }
 
             updateBtn.disabled = true;
-            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             const csrfToken = document.getElementById('csrf_token').value;
 
@@ -485,7 +508,12 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({ phone: phone })
+                body: JSON.stringify({
+                    phone: phone,
+                    address: address,
+                    emergency_contact: emergencyContact,
+                    blood_group: bloodGroup
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -494,6 +522,8 @@
                 if (data.success) {
                     displayPhoneSpan.innerText = data.phone;
                     editPhone.value = data.phone;
+                    const displayAddressSpan = document.getElementById('displayAddress');
+                    if (displayAddressSpan) displayAddressSpan.innerText = address;
                     showToast(data.message, false);
                 } else {
                     showToast(data.message, true);
@@ -559,17 +589,59 @@
         // ---------- Print ----------
         document.getElementById('printBtn').addEventListener('click', () => window.print());
 
-        // ---------- Avatar edit ----------
+        // ---------- Avatar upload/delete ----------
         const avatarDiv = document.getElementById('avatarDisplay');
-        document.getElementById('editAvatarBtn').addEventListener('click', () => {
-            const icon = prompt('Enter icon name (e.g., user-graduate, book, user-astronaut)', 'user-graduate');
-            if (icon && icon.trim()) {
-                avatarDiv.innerHTML = `<i class="fas fa-${icon} fa-3x"></i>`;
-            } else {
-                avatarDiv.innerHTML = `<i class="fas fa-user-graduate fa-3x"></i>`;
-            }
-            showToast('Avatar updated', false);
+        const avatarFileInput = document.getElementById('avatarFileInput');
+        document.getElementById('editAvatarBtn').addEventListener('click', () => avatarFileInput.click());
+
+        avatarFileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+
+            fetch('/profile/picture', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.getElementById('csrf_token').value },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    avatarDiv.innerHTML = `<img id="avatarImg" src="${data.profile_picture}" alt="Profile Picture" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                    showToast(data.message, false);
+                } else {
+                    showToast(data.message, true);
+                }
+                avatarFileInput.value = '';
+            })
+            .catch(() => {
+                showToast('An error occurred', true);
+                avatarFileInput.value = '';
+            });
         });
+
+        const removePhotoBtn = document.getElementById('removePhotoBtn');
+        if (removePhotoBtn) {
+            removePhotoBtn.addEventListener('click', function() {
+                fetch('/profile/picture/delete', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': document.getElementById('csrf_token').value }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        avatarDiv.innerHTML = '<i class="fas fa-user-graduate fa-3x" id="avatarIcon"></i>';
+                        removePhotoBtn.remove();
+                        showToast(data.message, false);
+                    } else {
+                        showToast(data.message, true);
+                    }
+                })
+                .catch(() => showToast('An error occurred', true));
+            });
+        }
 
         // ---------- Tabs ----------
         const tabs = document.querySelectorAll('.tab-btn');
