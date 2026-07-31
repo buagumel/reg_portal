@@ -25,11 +25,22 @@ Tracks completed milestones against `doc/t.txt` (Student Registration Workflow).
 - Spec: `docs/superpowers/specs/2026-07-30-semester-registration-design.md`
 - Out of scope (deferred): Course Add/Drop, real Remita integration, admin UI for managing registration periods.
 
+## Feature 5 & 6: Course Add/Drop and My Courses — Complete
+
+- New models: `Course`, `RegisteredCourse`; `StudentRegistration.courses_submitted` flag added.
+- New services: `services/course.py` (catalog/eligibility filtering), `services/course_history.py` (My Courses grouping), `services/validation.py` (reusable business-rule checks), `services/registration.py` extended with `add_course`/`drop_course`/`submit_registration`/`get_add_drop_context`. `RegistrationError` moved to `services/errors.py` to break a circular import, still re-exported from `services.registration` for backward compatibility.
+- `add_drop.html` keeps its original JS-array-driven architecture, rewired to fetch real data (`/add_drop/data`) and perform real add/drop/submit actions instead of mutating in-memory-only state — selections now survive a page refresh.
+- `my_courses.html` converted to server-rendered Jinja (matching Feature 4's `registration.html` precedent), grouped by session/semester with the current semester expanded by default (native `<details>`/`<summary>`).
+- New course-details modal (My Courses' "View" buttons) and a printable registration slip (`/registration/slip`, browser print, no new dependency).
+- Fixed: `/add_drop` and `/my_courses` were missing `@login_required` — fixed as part of rewriting both routes.
+- Spec: `docs/superpowers/specs/2026-07-31-course-add-drop-design.md`
+- Out of scope (deferred): grading (the `grade` column exists but nothing sets it yet), real PDF generation, post-submission editing, admin UI for the course catalog.
+
 ## Known pre-existing issues (not yet fixed)
 
-- `add_drop`, `my_courses`, `payments_history`, `pay_summary` routes are missing `@login_required` (same class of bug fixed on `dashboard`, `profile`, and now `registration`). Not fixed yet since those pages/routes aren't otherwise touched.
+- `payments_history`, `pay_summary` routes are missing `@login_required` (same class of bug fixed on `dashboard`, `profile`, `registration`, `add_drop`, and `my_courses`). Not fixed yet since those pages/routes aren't otherwise touched.
 - `constants_file.py` contains real credentials and is not gitignored (flagged in `CLAUDE.md`).
 
 ## Next milestone
 
-Feature 5: Course Add/Drop — students select courses against their active `StudentRegistration`, respecting the resolved `min_credits`/`max_credits`.
+TBD — awaiting direction on the next feature from `doc/t.txt`.
