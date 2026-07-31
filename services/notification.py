@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from models import db, now_lagos, Notification
 
@@ -40,9 +40,17 @@ def get_notifications(user, category=None, priority=None, read_status=None,
     elif read_status == 'read':
         query = query.filter(Notification.read_at.isnot(None))
     if date_from:
-        query = query.filter(Notification.created_at >= date_from)
+        try:
+            parsed_from = datetime.strptime(date_from, '%Y-%m-%d')
+            query = query.filter(Notification.created_at >= parsed_from)
+        except ValueError:
+            pass
     if date_to:
-        query = query.filter(Notification.created_at <= date_to)
+        try:
+            parsed_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(Notification.created_at < parsed_to)
+        except ValueError:
+            pass
     if search:
         like = f'%{search}%'
         query = query.filter(db.or_(Notification.title.ilike(like), Notification.message.ilike(like)))

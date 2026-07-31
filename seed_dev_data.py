@@ -238,6 +238,8 @@ def seed_notifications():
         'Official examination timetable for the second semester is now available.',
         category='academic', priority='medium', related_url='/announcements',
     )
+    n2.read_at = now_lagos()
+
     n3 = create_notification(
         chiamaka, 'System maintenance scheduled', 'The portal will be briefly unavailable for maintenance this weekend.',
         category='system', priority='low',

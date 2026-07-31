@@ -249,6 +249,11 @@
             font-size: 1.3rem;
             flex-shrink: 0;
         }
+        .priority-critical .notification-icon {
+            background: #f8d0d0;
+            color: #7a1f1f;
+            box-shadow: inset 0 0 0 2px #b13e3e;
+        }
         .priority-high .notification-icon {
             background: #ffe9e9;
             color: #b13e3e;

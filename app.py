@@ -87,6 +87,12 @@ def enforce_onboarding_gate():
 
     return jsonify({'success': False, 'message': 'Please complete the required step before continuing.'}), 403
 
+@app.context_processor
+def inject_unread_notification_count():
+    if current_user.is_authenticated:
+        return {'unread_notification_count': get_summary_counts(current_user)['unread']}
+    return {}
+
 @app.route('/update-profile', methods=['POST'])
 @login_required
 def update_profile():

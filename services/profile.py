@@ -8,20 +8,20 @@ from services.notification import create_notification
 
 
 def update_contact_info(user, phone=None, address=None, emergency_contact=None, blood_group=None):
-    """Update whichever fields are passed. None means 'not being changed' —
-    callers that want to clear a field must pass an explicit empty string,
-    not omit the argument."""
+    """Update whichever fields are passed and actually different from their
+    current value. None means 'not being changed'; a passed value identical
+    to the current one is treated as unchanged, not as a fresh edit."""
     changes = []
-    if phone is not None:
+    if phone is not None and phone != (user.phone or ''):
         user.phone = phone
         changes.append('phone')
-    if address is not None:
+    if address is not None and address != (user.address or ''):
         user.address = address
         changes.append('address')
-    if emergency_contact is not None:
+    if emergency_contact is not None and emergency_contact != (user.emergency_contact or ''):
         user.emergency_contact = emergency_contact
         changes.append('emergency contact')
-    if blood_group is not None:
+    if blood_group is not None and blood_group != (user.blood_group or ''):
         user.blood_group = blood_group
         changes.append('blood group')
 

@@ -334,3 +334,16 @@ input, textarea, select {
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
 }
+
+.toast-msg {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1f4d6e;
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border-radius: 60px;
+    font-size: 0.85rem;
+    z-index: 1100;
+    display: none;
+}
