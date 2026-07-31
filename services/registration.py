@@ -4,7 +4,9 @@ import string
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration
+from models import Course, RegisteredCourse
 from services.errors import RegistrationError
+from services.validation import validate_course_eligible, validate_credit_ceiling, validate_not_duplicate, validate_can_submit
 
 
 def get_active_period():
@@ -138,3 +140,102 @@ def get_registration_history(user):
         .order_by(StudentRegistration.registered_at.desc())
         .all()
     )
+
+
+def _recompute_credits(student_registration):
+    """Recompute and store credits_registered from the current
+    RegisteredCourse rows — always re-queried (not read from an in-memory
+    relationship collection) so it's correct regardless of add/drop order."""
+    total = (
+        db.session.query(db.func.coalesce(db.func.sum(Course.credits), 0))
+        .join(RegisteredCourse, RegisteredCourse.course_id == Course.id)
+        .filter(RegisteredCourse.student_registration_id == student_registration.id)
+        .scalar()
+    )
+    student_registration.credits_registered = total
+
+
+def add_course(user, period, student_registration, course_id):
+    """Validate and add a course to the student's registration. Raises
+    RegistrationError on any business-rule violation."""
+    course = Course.query.get(course_id)
+    if course is None:
+        raise RegistrationError('Course not found.')
+
+    if student_registration.courses_submitted:
+        raise RegistrationError('Course selection has already been submitted.')
+
+    validate_course_eligible(course, user, period)
+    validate_not_duplicate(student_registration, course)
+
+    _, max_credits, _ = get_credit_limits(period, user.department)
+    validate_credit_ceiling(student_registration.credits_registered, course.credits, max_credits)
+
+    registered_course = RegisteredCourse(
+        student_registration_id=student_registration.id,
+        course_id=course.id,
+    )
+    db.session.add(registered_course)
+
+    try:
+        db.session.flush()
+    except IntegrityError:
+        db.session.rollback()
+        raise RegistrationError('You have already added this course.')
+
+    _recompute_credits(student_registration)
+    db.session.commit()
+    return student_registration
+
+
+def drop_course(user, student_registration, course_id):
+    """Remove a course from the student's registration. Raises
+    RegistrationError if not found or already submitted."""
+    if student_registration.courses_submitted:
+        raise RegistrationError('Course selection has already been submitted.')
+
+    registered_course = RegisteredCourse.query.filter_by(
+        student_registration_id=student_registration.id, course_id=course_id
+    ).first()
+    if registered_course is None:
+        raise RegistrationError('Course not found in your registration.')
+
+    db.session.delete(registered_course)
+    db.session.flush()
+    _recompute_credits(student_registration)
+    db.session.commit()
+    return student_registration
+
+
+def submit_registration(user, period, student_registration):
+    """Validate and finalize the student's course selection. Raises
+    RegistrationError on any business-rule violation."""
+    window_status = get_window_status(period)
+    min_credits, max_credits, _ = get_credit_limits(period, user.department)
+    validate_can_submit(student_registration, window_status, min_credits, max_credits)
+
+    student_registration.courses_submitted = True
+    db.session.commit()
+    return student_registration
+
+
+def get_add_drop_context(user):
+    """Assemble everything the Add/Drop page needs. period/student_registration
+    are None if there's nothing eligible to add courses against."""
+    period = get_active_period()
+    if period is None:
+        return {'period': None, 'student_registration': None, 'min_credits': None, 'max_credits': None}
+
+    student_registration = StudentRegistration.query.filter_by(
+        user_id=user.id, registration_period_id=period.id
+    ).first()
+    if student_registration is None:
+        return {'period': period, 'student_registration': None, 'min_credits': None, 'max_credits': None}
+
+    min_credits, max_credits, _ = get_credit_limits(period, user.department)
+    return {
+        'period': period,
+        'student_registration': student_registration,
+        'min_credits': min_credits,
+        'max_credits': max_credits,
+    }
