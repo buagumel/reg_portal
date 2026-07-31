@@ -15,8 +15,14 @@ function openModal(data) {
 document.querySelectorAll('.view-details-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         const courseId = btn.dataset.courseId;
-        const resp = await fetch(`/courses/${courseId}/details`);
-        const data = await resp.json();
+        let data;
+        try {
+            const resp = await fetch(`/courses/${courseId}/details`);
+            data = await resp.json();
+        } catch (err) {
+            console.error('Failed to load course details', err);
+            return;
+        }
         if (!data.success) return;
         openModal(data);
     });

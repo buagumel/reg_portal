@@ -30,9 +30,13 @@
     <table class="slip-table">
         <thead><tr><th>Code</th><th>Title</th><th>Credits</th></tr></thead>
         <tbody>
+            {% if not courses %}
+            <tr><td colspan="3" style="text-align:center; padding:1.5rem; color:#5a7b99;">No courses were selected for this registration.</td></tr>
+            {% else %}
             {% for rc in courses %}
             <tr><td>{{ rc.course.code }}</td><td>{{ rc.course.title }}</td><td>{{ rc.course.credits }}</td></tr>
             {% endfor %}
+            {% endif %}
         </tbody>
     </table>
     <p><strong>Total Credits:</strong> {{ registration.credits_registered }}</p>

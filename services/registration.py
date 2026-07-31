@@ -165,6 +165,9 @@ def add_course(user, period, student_registration, course_id):
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
 
+    if get_window_status(period) != 'open':
+        raise RegistrationError('Registration is not currently open.')
+
     validate_course_eligible(course, user, period)
     validate_not_duplicate(student_registration, course)
 
@@ -188,11 +191,15 @@ def add_course(user, period, student_registration, course_id):
     return student_registration
 
 
-def drop_course(user, student_registration, course_id):
+def drop_course(user, period, student_registration, course_id):
     """Remove a course from the student's registration. Raises
-    RegistrationError if not found or already submitted."""
+    RegistrationError if not found, already submitted, or the registration
+    window is no longer open."""
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
+
+    if get_window_status(period) != 'open':
+        raise RegistrationError('Registration is not currently open.')
 
     registered_course = RegisteredCourse.query.filter_by(
         student_registration_id=student_registration.id, course_id=course_id

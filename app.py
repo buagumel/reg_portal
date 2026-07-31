@@ -23,7 +23,7 @@ from services.registration import (
     get_active_period, RegistrationError,
     add_course, drop_course, submit_registration, get_add_drop_context,
 )
-from services.course import get_available_courses, get_course_details
+from services.course import get_available_courses
 from services.course_history import get_courses_by_semester
 
 app = Flask(__name__)
@@ -419,12 +419,12 @@ def add_drop_drop():
         return jsonify({'success': False, 'message': 'Invalid request'}), 400
 
     context = get_add_drop_context(current_user)
-    student_registration = context['student_registration']
-    if student_registration is None:
+    period, student_registration = context['period'], context['student_registration']
+    if period is None or student_registration is None:
         return jsonify({'success': False, 'message': 'No active registration found.'}), 400
 
     try:
-        drop_course(current_user, student_registration, data['course_id'])
+        drop_course(current_user, period, student_registration, data['course_id'])
     except RegistrationError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
 

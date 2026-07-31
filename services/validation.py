@@ -41,6 +41,8 @@ def validate_can_submit(student_registration, window_status, min_credits, max_cr
         raise RegistrationError('Payment must be completed before submitting course selection.')
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
+    if not student_registration.registered_courses:
+        raise RegistrationError('You must select at least one course before submitting.')
     if student_registration.credits_registered < min_credits:
         raise RegistrationError(f'You must register at least {min_credits} credits before submitting.')
     if student_registration.credits_registered > max_credits:

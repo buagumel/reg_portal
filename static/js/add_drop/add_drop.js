@@ -93,8 +93,14 @@ function renderAvailableCourses() {
 }
 
 async function loadData() {
-    const resp = await fetch('/add_drop/data');
-    const data = await resp.json();
+    let data;
+    try {
+        const resp = await fetch('/add_drop/data');
+        data = await resp.json();
+    } catch (err) {
+        showToast('Failed to load registration data. Please try logging in again.', true);
+        return;
+    }
     if (!data.success) {
         showToast(data.message || 'Failed to load registration data', true);
         return;
