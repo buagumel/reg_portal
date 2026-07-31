@@ -37,7 +37,7 @@ DEMO_STUDENTS = [
         email="chiamaka.demo@example.com", phone="08012345678", address="12 Unity Road, Kazaure",
     ),
     dict(
-        reg_no="2308-2301-0004", name="David Adeyemi", first_login=True, onboarding_completed=True,
+        reg_no="2308-2301-0004", name="David Adeyemi", first_login=False, onboarding_completed=True,
         email_verified=True,
         student_type="National", state="Oyo", lga="Ibadan North", nationality="Nigeria",
         dob=date(1999, 5, 9), gender="Male", semester="2nd Semester", level="Year 2",

@@ -58,9 +58,11 @@
 
                     <h2>{{ status.period.academic_session.name }} {{ status.period.semester.name }}</h2>
 
-                    <div class="countdown-area" data-target="{{ (status.period.opens_at if status.window_status == 'not_yet_open' else status.period.closes_at).isoformat() }}" data-mode="{{ 'opens' if status.window_status == 'not_yet_open' else 'closes' }}">
+                    {% if status.window_status != 'closed' %}
+                    <div class="countdown-area" data-target="{{ (status.period.opens_at if status.window_status == 'not_yet_open' else status.period.closes_at).isoformat() }}+01:00" data-mode="{{ 'opens' if status.window_status == 'not_yet_open' else 'closes' }}">
                         <div class="progress-label"><i class="fas fa-stopwatch"></i> <span id="countdownLabel">Calculating…</span></div>
                     </div>
+                    {% endif %}
 
                     <div class="reg-details">
                         <span class="detail-item"><i class="fas fa-calendar-alt"></i> Opens: {{ status.period.opens_at.strftime('%d %b %Y') }}</span>

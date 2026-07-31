@@ -2,6 +2,7 @@ import random
 import string
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration
 
 
@@ -133,6 +134,10 @@ def get_registration_history(user):
     """Return all of the student's StudentRegistration records, newest first."""
     return (
         StudentRegistration.query
+        .options(
+            joinedload(StudentRegistration.registration_period).joinedload(RegistrationPeriod.academic_session),
+            joinedload(StudentRegistration.registration_period).joinedload(RegistrationPeriod.semester),
+        )
         .filter_by(user_id=user.id)
         .order_by(StudentRegistration.registered_at.desc())
         .all()
