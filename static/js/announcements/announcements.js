@@ -23,22 +23,33 @@ function buildParams() {
 function categoryLabel(c) { return c.charAt(0).toUpperCase() + c.slice(1); }
 function priorityLabel(p) { return p.charAt(0).toUpperCase() + p.slice(1); }
 
+function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+}
+
 function renderNotification(n) {
+    const title = escapeHtml(n.title);
+    const message = escapeHtml(n.message);
+    const category = escapeHtml(categoryLabel(n.category));
+    const priority = escapeHtml(priorityLabel(n.priority));
+    const relatedUrl = n.related_url ? escapeHtml(n.related_url) : '';
     return `
         <div class="notification-item priority-${n.priority}" data-id="${n.id}">
             <div class="notification-icon"><i class="fas fa-bell"></i></div>
             <div class="notification-content">
                 <div class="notification-header">
-                    <div class="notification-title">${n.title} ${!n.is_read ? '<span class="unread-badge">New</span>' : ''}</div>
+                    <div class="notification-title">${title} ${!n.is_read ? '<span class="unread-badge">New</span>' : ''}</div>
                     <div class="notification-date"><i class="far fa-clock"></i> ${n.created_at}</div>
                 </div>
                 <div class="notification-meta">
-                    <span class="notification-category"><i class="fas fa-tag"></i> ${categoryLabel(n.category)}</span>
-                    <span><i class="fas fa-flag"></i> ${priorityLabel(n.priority)} priority</span>
+                    <span class="notification-category"><i class="fas fa-tag"></i> ${category}</span>
+                    <span><i class="fas fa-flag"></i> ${priority} priority</span>
                 </div>
-                <div class="notification-message">${n.message}</div>
+                <div class="notification-message">${message}</div>
                 <div class="notification-footer">
-                    ${n.related_url ? `<a href="${n.related_url}" class="action-link">View <i class="fas fa-arrow-right"></i></a>` : ''}
+                    ${relatedUrl ? `<a href="${relatedUrl}" class="action-link">View <i class="fas fa-arrow-right"></i></a>` : ''}
                     <button class="dismiss-btn toggle-read-btn" data-id="${n.id}" data-read="${n.is_read}">
                         <i class="fas fa-${n.is_read ? 'envelope' : 'envelope-open'}"></i> ${n.is_read ? 'Mark unread' : 'Mark read'}
                     </button>
