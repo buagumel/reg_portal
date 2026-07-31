@@ -539,3 +539,13 @@
         .notification-message {
             hyphens: auto;
         }
+
+.filter-bar select,
+.filter-bar input[type="date"] {
+    padding: 0.5rem 0.9rem;
+    border-radius: 60px;
+    border: 1px solid #c7dcf5;
+    background: white;
+    color: #0f3150;
+    font-size: 0.85rem;
+}

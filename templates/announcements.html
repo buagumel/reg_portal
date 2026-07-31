@@ -1,289 +1,110 @@
 {% extends "base.html" %}
-   
-
-
 
 {% block head %}
-    <title>Notifications & Announcements · EduPortal</title>
-    <!-- Font Awesome 6 (free) -->
+    <title>Notifications & Announcements · Student Portal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/announcements.css') }}">
 {% endblock %}
 
-
-
-
 {% block content %}
 <div class="notifications-page">
-    <!-- header with navigation and actions -->
+    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+
     <div class="page-header">
-        <a href="#" class="back-link" onclick="alert('Dashboard navigation demo'); return false;"><i class="fas fa-arrow-left"></i> Dashboard</a>
+        <a href="{{ url_for('dashboard') }}" class="back-link"><i class="fas fa-arrow-left"></i> Dashboard</a>
         <h1 class="page-title"><i class="fas fa-bell"></i> Notifications & Announcements</h1>
         <div class="header-actions">
-            <button class="btn-outline" onclick="alert('Preferences & settings panel')"><i class="fas fa-cog"></i> Settings</button>
-            <button class="btn-primary" onclick="markAllReadDemo()"><i class="fas fa-check-double"></i> Mark all read</button>
+            <button class="btn-primary" id="markAllReadBtn"><i class="fas fa-check-double"></i> Mark all read</button>
         </div>
     </div>
 
-    <!-- summary stats cards -->
     <div class="summary-grid">
         <div class="summary-card">
             <div class="summary-icon"><i class="fas fa-bell"></i></div>
-            <div class="summary-content">
-                <h4>Total</h4>
-                <div class="summary-number">24</div>
-            </div>
+            <div class="summary-content"><h4>Total</h4><div class="summary-number" id="summaryTotal">{{ summary.total }}</div></div>
         </div>
         <div class="summary-card">
             <div class="summary-icon"><i class="fas fa-envelope-open"></i></div>
-            <div class="summary-content">
-                <h4>Unread</h4>
-                <div class="summary-number" id="unreadCountDisplay">8</div>
-            </div>
+            <div class="summary-content"><h4>Unread</h4><div class="summary-number" id="summaryUnread">{{ summary.unread }}</div></div>
         </div>
         <div class="summary-card">
-            <div class="summary-icon"><i class="fas fa-exclamation-circle"></i></div>
-            <div class="summary-content">
-                <h4>Important</h4>
-                <div class="summary-number">5</div>
-            </div>
+            <div class="summary-icon"><i class="fas fa-envelope"></i></div>
+            <div class="summary-content"><h4>Read</h4><div class="summary-number" id="summaryRead">{{ summary.read }}</div></div>
         </div>
         <div class="summary-card">
-            <div class="summary-icon"><i class="fas fa-calendar-alt"></i></div>
-            <div class="summary-content">
-                <h4>This week</h4>
-                <div class="summary-number">12</div>
-            </div>
+            <div class="summary-icon"><i class="fas fa-archive"></i></div>
+            <div class="summary-content"><h4>Archived</h4><div class="summary-number" id="summaryArchived">{{ summary.archived }}</div></div>
         </div>
     </div>
 
-    <!-- filter tabs -->
     <div class="filter-bar">
         <div class="filter-tabs">
-            <button class="filter-tab active" data-filter="all">All</button>
-            <button class="filter-tab" data-filter="unread">Unread</button>
-            <button class="filter-tab" data-filter="announcements">Announcements</button>
-            <button class="filter-tab" data-filter="deadlines">Deadlines</button>
-            <button class="filter-tab" data-filter="payments">Payments</button>
-            <button class="filter-tab" data-filter="events">Events</button>
+            <button class="filter-tab active" data-value="all"><i class="fas fa-inbox"></i> All</button>
+            <button class="filter-tab" data-value="unread">Unread</button>
+            <button class="filter-tab" data-value="archived">Archived</button>
         </div>
-        <button class="mark-read-btn" id="markVisibleReadBtn"><i class="fas fa-check"></i> Mark visible as read</button>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search notifications">
+        </div>
     </div>
 
-    <!-- notifications list container -->
+    <div class="filter-bar" style="margin-top: 0.5rem;">
+        <select id="categoryFilter">
+            <option value="">All categories</option>
+            <option value="registration">Registration</option>
+            <option value="payments">Payments</option>
+            <option value="courses">Courses</option>
+            <option value="academic">Academic</option>
+            <option value="profile">Profile</option>
+            <option value="system">System</option>
+            <option value="announcements">Announcements</option>
+        </select>
+        <select id="priorityFilter">
+            <option value="">All priorities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+        </select>
+        <input type="date" id="dateFromFilter" title="From date">
+        <input type="date" id="dateToFilter" title="To date">
+    </div>
+
     <div class="notifications-list" id="notificationsList">
-        <!-- HIGH PRIORITY / DEADLINE -->
-        <div class="notification-item priority-high" data-category="deadlines" data-read="false">
-            <div class="notification-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        {% for n in notifications %}
+        <div class="notification-item priority-{{ n.priority }}" data-id="{{ n.id }}">
+            <div class="notification-icon"><i class="fas fa-bell"></i></div>
             <div class="notification-content">
                 <div class="notification-header">
-                    <div class="notification-title">Tuition deadline approaching <span class="unread-badge">New</span></div>
-                    <div class="notification-date"><i class="far fa-clock"></i> 2 hours ago</div>
+                    <div class="notification-title">{{ n.title }} {% if not n.read_at %}<span class="unread-badge">New</span>{% endif %}</div>
+                    <div class="notification-date"><i class="far fa-clock"></i> {{ n.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
                 </div>
-                <div class="notification-meta"><span class="notification-category"><i class="fas fa-tag"></i> Deadline</span><span style="color: #b13e3e;"><i class="fas fa-flag"></i> High priority</span></div>
-                <div class="notification-message">Second semester tuition payment deadline is March 15, 2026. Late payment will attract a penalty of ₦5,000. Please complete payment before deadline.</div>
-                <div class="notification-footer"><a href="#" class="action-link" onclick="alert('View payment details'); return false;">View payment options <i class="fas fa-arrow-right"></i></a><button class="dismiss-btn" onclick="dismissNotification(this)"><i class="fas fa-times"></i> Dismiss</button></div>
+                <div class="notification-meta">
+                    <span class="notification-category"><i class="fas fa-tag"></i> {{ n.category|capitalize }}</span>
+                    <span><i class="fas fa-flag"></i> {{ n.priority|capitalize }} priority</span>
+                </div>
+                <div class="notification-message">{{ n.message }}</div>
+                <div class="notification-footer">
+                    {% if n.related_url %}<a href="{{ n.related_url }}" class="action-link">View <i class="fas fa-arrow-right"></i></a>{% endif %}
+                    <button class="dismiss-btn toggle-read-btn" data-id="{{ n.id }}" data-read="{{ 'true' if n.read_at else 'false' }}">
+                        <i class="fas fa-{{ 'envelope' if n.read_at else 'envelope-open' }}"></i> {{ 'Mark unread' if n.read_at else 'Mark read' }}
+                    </button>
+                    <button class="dismiss-btn archive-btn" data-id="{{ n.id }}"><i class="fas fa-archive"></i> Archive</button>
+                    <button class="dismiss-btn delete-btn" data-id="{{ n.id }}"><i class="fas fa-times"></i> Delete</button>
+                </div>
             </div>
         </div>
-        <!-- ANNOUNCEMENT -->
-        <div class="notification-item priority-announcement" data-category="announcements" data-read="false">
-            <div class="notification-icon"><i class="fas fa-bullhorn"></i></div>
-            <div class="notification-content">
-                <div class="notification-header"><div class="notification-title">University Matriculation Ceremony <span class="unread-badge">New</span></div><div class="notification-date"><i class="far fa-clock"></i> Yesterday</div></div>
-                <div class="notification-meta"><span class="notification-category"><i class="fas fa-megaphone"></i> Announcement</span><span><i class="fas fa-users"></i> All students</span></div>
-                <div class="notification-message">The 25th Matriculation Ceremony holds on March 20, 2026 at Main Auditorium by 10:00 AM. Freshers seated by 9:30 AM.</div>
-                <div class="notification-footer"><a href="#" class="action-link" onclick="alert('View ceremony details'); return false;">View schedule <i class="fas fa-arrow-right"></i></a><button class="dismiss-btn" onclick="dismissNotification(this)"><i class="fas fa-times"></i> Dismiss</button></div>
-            </div>
-        </div>
-        <!-- PAYMENT RECEIPT (read) -->
-        <div class="notification-item priority-low" data-category="payments" data-read="true">
-            <div class="notification-icon"><i class="fas fa-receipt"></i></div>
-            <div class="notification-content">
-                <div class="notification-header"><div class="notification-title">Payment receipt generated</div><div class="notification-date"><i class="far fa-clock"></i> 3 days ago</div></div>
-                <div class="notification-meta"><span class="notification-category"><i class="fas fa-credit-card"></i> Payment</span><span style="color:#0f7b4e;"><i class="fas fa-check-circle"></i> Receipt available</span></div>
-                <div class="notification-message">Your payment of ₦425,000 for First Semester Tuition confirmed. Receipt ID: RMT-1A2B-3C4D.</div>
-                <div class="notification-footer"><a href="#" class="action-link" onclick="alert('Download receipt'); return false;"><i class="fas fa-download"></i> Download receipt</a><button class="dismiss-btn" onclick="dismissNotification(this)"><i class="fas fa-times"></i> Dismiss</button></div>
-            </div>
-        </div>
-        <!-- EVENT -->
-        <div class="notification-item priority-medium" data-category="events" data-read="true">
-            <div class="notification-icon"><i class="fas fa-calendar-check"></i></div>
-            <div class="notification-content">
-                <div class="notification-header"><div class="notification-title">Departmental Seminar: AI in Africa</div><div class="notification-date"><i class="far fa-clock"></i> 4 days ago</div></div>
-                <div class="notification-meta"><span class="notification-category"><i class="fas fa-calendar"></i> Event</span><span><i class="fas fa-map-pin"></i> CS Auditorium</span></div>
-                <div class="notification-message">CS department seminar "AI Applications in African Context" by Prof. Adekunle on March 18, 2026.</div>
-                <div class="notification-footer"><a href="#" class="action-link" onclick="alert('Add to calendar'); return false;"><i class="fas fa-calendar-plus"></i> Add to calendar</a><button class="dismiss-btn" onclick="dismissNotification(this)"><i class="fas fa-times"></i> Dismiss</button></div>
-            </div>
-        </div>
-        <!-- ANNOUNCEMENT exam timetable -->
-        <div class="notification-item priority-announcement" data-category="announcements" data-read="false">
-            <div class="notification-icon"><i class="fas fa-file-alt"></i></div>
-            <div class="notification-content">
-                <div class="notification-header"><div class="notification-title">Second semester exam timetable released <span class="unread-badge">New</span></div><div class="notification-date"><i class="far fa-clock"></i> 5 days ago</div></div>
-                <div class="notification-meta"><span class="notification-category"><i class="fas fa-megaphone"></i> Announcement</span><span><i class="fas fa-clock"></i> Exams start April 10</span></div>
-                <div class="notification-message">Official examination timetable for second semester 2024/2025 session is now available.</div>
-                <div class="notification-footer"><a href="#" class="action-link" onclick="alert('View timetable'); return false;">View timetable <i class="fas fa-arrow-right"></i></a><button class="dismiss-btn" onclick="dismissNotification(this)"><i class="fas fa-times"></i> Dismiss</button></div>
-            </div>
-        </div>
-        <!-- DEADLINE course registration -->
-        <div class="notification-item priority-high" data-category="deadlines" data-read="true">
-            <div class="notification-icon"><i class="fas fa-clock"></i></div>
-            <div class="notification-content">
-                <div class="notification-header"><div class="notification-title">Course registration deadline extended</div><div class="notification-date"><i class="far fa-clock"></i> 1 week ago</div></div>
-                <div class="notification-meta"><span class="notification-category"><i class="fas fa-tag"></i> Deadline</span><span style="color:#b45b1c;"><i class="fas fa-hourglass-half"></i> Extended</span></div>
-                <div class="notification-message">Course registration deadline extended to March 10, 2026. Register immediately for second semester courses.</div>
-                <div class="notification-footer"><a href="#" class="action-link" onclick="alert('Register now'); return false;">Register now <i class="fas fa-arrow-right"></i></a><button class="dismiss-btn" onclick="dismissNotification(this)"><i class="fas fa-times"></i> Dismiss</button></div>
-            </div>
-        </div>
-        <!-- library notice low -->
-        <div class="notification-item priority-low" data-category="events" data-read="true">
-            <div class="notification-icon"><i class="fas fa-book"></i></div>
-            <div class="notification-content">
-                <div class="notification-header"><div class="notification-title">Library extended hours during exams</div><div class="notification-date"><i class="far fa-clock"></i> 1 week ago</div></div>
-                <div class="notification-meta"><span class="notification-category"><i class="fas fa-university"></i> Library</span></div>
-                <div class="notification-message">Main library extended hours (7:00 AM - 11:00 PM) starting March 15 until end of examinations.</div>
-                <div class="notification-footer"><a href="#" class="action-link" onclick="alert('Library schedule'); return false;">More info <i class="fas fa-arrow-right"></i></a><button class="dismiss-btn" onclick="dismissNotification(this)"><i class="fas fa-times"></i> Dismiss</button></div>
-            </div>
-        </div>
-
-        <!-- demo pagination (static but fully responsive) -->
-        <div class="pagination">
-            <div style="color: var(--text-muted); font-size:0.85rem;">Showing 1–7 of 24 notifications</div>
-            <div class="page-buttons">
-                <button class="page-btn" onclick="alert('previous page (demo)')"><i class="fas fa-chevron-left"></i></button>
-                <button class="page-btn active">1</button>
-                <button class="page-btn" onclick="alert('page 2 (demo)')">2</button>
-                <button class="page-btn" onclick="alert('page 3 (demo)')">3</button>
-                <button class="page-btn" onclick="alert('page 4 (demo)')">4</button>
-                <button class="page-btn" onclick="alert('next page (demo)')"><i class="fas fa-chevron-right"></i></button>
-            </div>
-        </div>
+        {% endfor %}
+        {% if not notifications %}
+        <div class="empty-state"><i class="far fa-bell-slash"></i><p>No notifications yet.</p></div>
+        {% endif %}
     </div>
-
-    <!-- preferences footer -->
-    <!-- <div class="preferences-footer">
-        <div><i class="fas fa-bell-slash" style="color: var(--text-muted);"></i> <span>You can customize notification preferences</span></div>
-        <button class="btn-outline" style="padding: 0.4rem 1.2rem;" onclick="alert('Manage preferences')"><i class="fas fa-cog"></i> Manage preferences</button>
-    </div> -->
 </div>
 
+<div id="toastMsg" class="toast-msg"></div>
 {% endblock %}
 
 {% block scripts %}
-
-
-
-<script>
-    // Helper: update visible unread count based on current filter + unread badges
-    function updateUnreadCount() {
-        const allUnread = document.querySelectorAll('.notification-item .unread-badge');
-        const unreadTotal = allUnread.length;
-        const unreadSpan = document.getElementById('unreadCountDisplay');
-        if (unreadSpan) unreadSpan.innerText = unreadTotal;
-    }
-
-    // Dismiss: remove notification item with smooth fade/remove effect
-    function dismissNotification(btnElement) {
-        const notification = btnElement.closest('.notification-item');
-        if (notification) {
-            notification.style.transition = 'opacity 0.2s, transform 0.2s';
-            notification.style.opacity = '0';
-            notification.style.transform = 'scale(0.97)';
-            setTimeout(() => {
-                notification.remove();
-                updateUnreadCount();
-                // after removal, re-run current filter to keep consistency
-                const activeFilterBtn = document.querySelector('.filter-tab.active');
-                if (activeFilterBtn) applyFilter(activeFilterBtn.dataset.filter);
-            }, 150);
-        }
-    }
-
-    // apply filter based on data-filter value
-    function applyFilter(filterValue) {
-        const notifications = document.querySelectorAll('.notification-item');
-        let visibleCount = 0;
-        notifications.forEach(item => {
-            let shouldShow = false;
-            if (filterValue === 'all') shouldShow = true;
-            else if (filterValue === 'unread') {
-                const hasUnread = item.querySelector('.unread-badge') !== null;
-                shouldShow = hasUnread;
-            } else {
-                const category = item.dataset.category;
-                shouldShow = (category === filterValue);
-            }
-            item.style.display = shouldShow ? 'flex' : 'none';
-            if (shouldShow) visibleCount++;
-        });
-        // update empty state message if needed
-        let emptyDiv = document.querySelector('.empty-state-message');
-        const listContainer = document.querySelector('.notifications-list');
-        if (!emptyDiv) {
-            emptyDiv = document.createElement('div');
-            emptyDiv.className = 'empty-state empty-state-message';
-            emptyDiv.innerHTML = '<i class="far fa-bell-slash"></i><p>No notifications match this filter</p>';
-            emptyDiv.style.display = 'none';
-            listContainer.appendChild(emptyDiv);
-        }
-        if (visibleCount === 0 && notifications.length > 0) {
-            emptyDiv.style.display = 'block';
-        } else {
-            emptyDiv.style.display = 'none';
-        }
-    }
-
-    // mark all notifications currently visible as "read" (remove unread badges)
-    function markVisibleAsRead() {
-        const visibleItems = document.querySelectorAll('.notification-item[style*="display: flex"], .notification-item:not([style*="display: none"])');
-        visibleItems.forEach(item => {
-            const badge = item.querySelector('.unread-badge');
-            if (badge) badge.remove();
-            item.setAttribute('data-read', 'true');
-        });
-        updateUnreadCount();
-        // reapply current filter to refresh unread filter if active
-        const activeTab = document.querySelector('.filter-tab.active');
-        if (activeTab && activeTab.dataset.filter === 'unread') {
-            applyFilter('unread');
-        } else if (activeTab) {
-            applyFilter(activeTab.dataset.filter);
-        }
-        alert('All visible notifications marked as read');
-    }
-
-    // Mark all read (global)
-    function markAllReadDemo() {
-        const allBadges = document.querySelectorAll('.notification-item .unread-badge');
-        allBadges.forEach(badge => badge.remove());
-        document.querySelectorAll('.notification-item').forEach(item => item.setAttribute('data-read', 'true'));
-        updateUnreadCount();
-        const activeTab = document.querySelector('.filter-tab.active');
-        if (activeTab && activeTab.dataset.filter === 'unread') applyFilter('unread');
-        else if (activeTab) applyFilter(activeTab.dataset.filter);
-        alert('All notifications marked as read');
-    }
-
-    // init filter listeners, update unread count initially
-    document.addEventListener('DOMContentLoaded', function() {
-        const filterTabs = document.querySelectorAll('.filter-tab');
-        filterTabs.forEach(tab => {
-            tab.addEventListener('click', function(e) {
-                filterTabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                const filter = this.dataset.filter;
-                applyFilter(filter);
-            });
-        });
-        // "mark visible as read" button
-        const markVisibleBtn = document.getElementById('markVisibleReadBtn');
-        if (markVisibleBtn) markVisibleBtn.addEventListener('click', markVisibleAsRead);
-        
-        // initial unread count
-        updateUnreadCount();
-        // apply 'all' filter by default
-        applyFilter('all');
-    });
-</script>
-
+<script type="module" src="{{ url_for('static', filename='js/announcements/announcements.js') }}"></script>
 {% endblock %}
