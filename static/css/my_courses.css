@@ -486,3 +486,38 @@
         .action-btn, .filter-tab, .btn-outline, .back-link, .search-box button {
             touch-action: manipulation;
         }
+
+.course-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 49, 80, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+.course-modal {
+    background: white;
+    border-radius: 1.2rem;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+.course-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #5a7b99;
+    cursor: pointer;
+}
+.course-modal-body > div {
+    margin-bottom: 0.8rem;
+    color: #2c3e50;
+}

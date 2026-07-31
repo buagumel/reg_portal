@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Registration Slip · Student Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .slip-container { max-width: 700px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 1rem; border: 1px solid #d9e9ff; }
+        .slip-header { text-align: center; margin-bottom: 1.5rem; }
+        .slip-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .slip-table th, .slip-table td { padding: 0.6rem; border-bottom: 1px solid #eef3fc; text-align: left; }
+        .print-btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.5rem; border-radius: 60px; background: #0f3150; color: white; border: none; cursor: pointer; }
+        @media print {
+            .navbar, .print-btn { display: none !important; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="slip-container">
+    <div class="slip-header">
+        <h2><i class="fas fa-file-alt"></i> Course Registration Slip</h2>
+        <p>{{ registration.registration_period.academic_session.name }} · {{ registration.registration_period.semester.name }}</p>
+    </div>
+    <div>
+        <strong>Name:</strong> {{ current_user.name }}<br>
+        <strong>Reg No:</strong> {{ current_user.reg_no }}<br>
+        <strong>Department:</strong> {{ current_user.department }}<br>
+        <strong>Submitted:</strong> {{ registration.updated_at.strftime('%d %b %Y, %I:%M %p') }}
+    </div>
+    <table class="slip-table">
+        <thead><tr><th>Code</th><th>Title</th><th>Credits</th></tr></thead>
+        <tbody>
+            {% for rc in courses %}
+            <tr><td>{{ rc.course.code }}</td><td>{{ rc.course.title }}</td><td>{{ rc.course.credits }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p><strong>Total Credits:</strong> {{ registration.credits_registered }}</p>
+    <button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+</div>
+{% endblock %}
