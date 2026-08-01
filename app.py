@@ -925,8 +925,13 @@ def admin_forgot_password():
     email = request.form.get('email', '').strip()
     admin_user = AdminUser.query.filter_by(email=email).first()
 
+    # Start the OTP session unconditionally so the code-entry page is
+    # reached the same way whether or not the email matched an account —
+    # otherwise the code-entry page's own session guard would bounce
+    # non-matching emails straight back, revealing which emails are admins.
+    code = start_otp_session(session, email)
+
     if admin_user:
-        code = start_otp_session(session, email)
         session['admin_reset_admin_id'] = admin_user.id
         try:
             msg = Message('Admin Password Reset Code', recipients=[email])
@@ -957,6 +962,8 @@ def admin_verify_reset_code():
         return jsonify({'success': False, 'message': 'Too many attempts. Please request a new code.'}), 400
 
     if time.time() > session.get('email_verification_expiry', 0):
+        clear_otp_session(session)
+        session.pop('admin_reset_admin_id', None)
         return jsonify({'success': False, 'message': 'This code has expired. Please request a new one.'}), 400
 
     if code != session.get('email_verification_code'):
