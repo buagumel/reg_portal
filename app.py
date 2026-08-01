@@ -551,10 +551,16 @@ def payment_create_submit():
 
     item_specs = []
     for sel in selections:
+        if not isinstance(sel, dict):
+            continue
         category = PaymentCategory.query.filter_by(id=sel.get('category_id'), is_active=True).first()
         if category is None or category.default_amount is None:
             continue
-        quantity = max(1, int(sel.get('quantity', 1)))
+        try:
+            quantity = int(sel.get('quantity', 1))
+        except (TypeError, ValueError):
+            quantity = 1
+        quantity = max(1, min(quantity, 10))
         item_specs.append((category, quantity, category.default_amount))
 
     try:
