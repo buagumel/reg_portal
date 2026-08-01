@@ -58,9 +58,19 @@ Tracks completed milestones against `doc/t.txt` (Student Registration Workflow).
 
 ## Known pre-existing issues (not yet fixed)
 
-- `payments_history`, `pay_summary` routes are missing `@login_required` (same class of bug fixed on `dashboard`, `profile`, `registration`, `add_drop`, and `my_courses`). Not fixed yet since those pages/routes aren't otherwise touched.
 - `constants_file.py` contains real credentials and is not gitignored (flagged in `CLAUDE.md`).
+
+## Feature 9, 10 & 11: Payment Module (History, Independent Creation, Processing) — Complete
+
+- New models: `PaymentCategory`, `PaymentItem`, `PaymentReceipt`, `GatewayResponse`; `Payment` extended from its unused one-column stub into the real transaction record.
+- New services: `services/payment_gateway.py` (`PaymentGateway` abstraction with a real `RemitaGateway` against Remita's published test/demo sandbox, and an offline `SimulatedGateway` used only by manual verification scripts), `services/payment.py` (create/initiate/verify/retry/cancel/history — `verify_payment` is idempotent), `services/payment_validation.py` (duplicate-pending detection), `services/receipt.py` (reportlab PDF generation, resend-by-email).
+- `services/registration.py`'s `register_student()` refactored: registration payment is no longer simulated as instantly successful — it creates a real pending `Payment` and the student completes it via `payment_summary.html`'s Pay Now button, through the real gateway.
+- `payments_history.html` and `payment_summary.html` keep their existing visual structure, wired to real data (AJAX-driven search/status filter/date-range filter/pagination for history, matching the Notifications page's established pattern). New `/payment/create` page for independent payments (Library Fee, Hostel Fee, ID Card, etc.) against the admin-configurable `PaymentCategory` catalog.
+- Printable receipts (`window.print()`, matching the registration slip pattern) plus real PDF download (`reportlab`) and resend-by-email.
+- Fixed: `/payments_history` and `/pay_summary` (now `/payment/registration/<id>`) were missing `@login_required`.
+- Spec: `docs/superpowers/specs/2026-08-01-payment-module-design.md`
+- Out of scope (deferred): Admin UI for managing `PaymentCategory` (Admin Portal not started), gating Add/Drop or course submission on `payment_status`.
 
 ## Next milestone
 
-Feature 9: Payments — awaiting approval before starting.
+Admin Portal — not yet started.

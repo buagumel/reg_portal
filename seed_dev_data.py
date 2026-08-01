@@ -9,7 +9,7 @@ from app import app
 from models import (
     db, User, now_lagos,
     AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course,
-    Notification,
+    Notification, PaymentCategory, Payment,
 )
 
 DEFAULT_PASSWORD = "Default@123"
@@ -69,6 +69,8 @@ def seed():
         seed_courses()
         seed_notifications()
         seed_profile_extras()
+        seed_payment_categories()
+        seed_payments()
         print(f"\nDone. {created} student(s) created. Default password for first_login=True accounts: {DEFAULT_PASSWORD}")
 
 
@@ -271,6 +273,77 @@ def seed_profile_extras():
         print(f'Set emergency contact/blood group for {david.reg_no}')
     else:
         print('Skipping profile extras seed (already set or David not found)')
+
+
+def seed_payment_categories():
+    categories = [
+        ('Registration Fee', 'registration_fee', 'Per-semester registration fee (amount set by the active registration period).', None),
+        ('Library Fee', 'library_fee', 'Annual library access and book borrowing fee.', 5000),
+        ('Laboratory Fee', 'laboratory_fee', 'Per-semester laboratory materials and equipment fee.', 12000),
+        ('Acceptance Fee', 'acceptance_fee', 'One-time fee paid on admission.', 50000),
+        ('Hostel Fee', 'hostel_fee', 'Per-session hostel accommodation fee.', 45000),
+        ('Transcript Fee', 'transcript_fee', 'Official transcript request and processing fee.', 7500),
+        ('ID Card', 'id_card', 'Student ID card issuance or replacement.', 2000),
+        ('Late Registration', 'late_registration', 'Penalty fee for registering after the deadline.', 10000),
+    ]
+    for name, code, description, default_amount in categories:
+        if PaymentCategory.query.filter_by(code=code).first():
+            print(f'Skipping payment category "{name}" (already exists)')
+            continue
+        db.session.add(PaymentCategory(
+            name=name, code=code, description=description,
+            default_amount=default_amount, is_active=True,
+        ))
+        db.session.commit()
+        print(f'Seeded payment category: {name}')
+
+
+def seed_payments():
+    from services.payment import create_payment, initiate_payment, verify_payment, cancel_payment
+    from services.payment_gateway import SimulatedGateway
+
+    chiamaka = User.query.filter_by(reg_no='2308-2301-0003').first()
+    if not chiamaka:
+        print('Skipping seed_payments (Chiamaka demo user not found)')
+        return
+
+    if Payment.query.filter_by(user_id=chiamaka.id).count() > 0:
+        print('Skipping seed_payments (Chiamaka already has payment history)')
+        return
+
+    library = PaymentCategory.query.filter_by(code='library_fee').first()
+    id_card = PaymentCategory.query.filter_by(code='id_card').first()
+    hostel = PaymentCategory.query.filter_by(code='hostel_fee').first()
+    if not (library and id_card and hostel):
+        print('Skipping seed_payments (categories not seeded yet)')
+        return
+
+    gateway = SimulatedGateway()
+
+    # initiate_payment() calls url_for(..., _external=True), which needs an
+    # active request context (no SERVER_NAME is configured on this app) —
+    # matching this repo's established manual-verification pattern of
+    # wrapping such calls in app.test_request_context().
+    with app.test_request_context():
+        # One successful payment, fully driven through the real service flow.
+        p1 = create_payment(chiamaka, [(library, 1, library.default_amount)], idempotency_key='seed-payment-1')
+        initiate_payment(gateway, p1, chiamaka)
+        p1.gateway_status = 'successful'
+        verify_payment(gateway, p1)
+
+        # One cancelled payment. Created and cancelled *before* the pending
+        # one below — validate_no_duplicate_pending only allows one pending
+        # independent payment per user at a time, so p3 must be resolved
+        # (cancelled) before p2 is created and left pending.
+        p3 = create_payment(chiamaka, [(hostel, 1, hostel.default_amount)], idempotency_key='seed-payment-3')
+        initiate_payment(gateway, p3, chiamaka)
+        cancel_payment(p3)
+
+        # One pending payment (RRR obtained, never completed — exercises Resume).
+        p2 = create_payment(chiamaka, [(id_card, 1, id_card.default_amount)], idempotency_key='seed-payment-2')
+        initiate_payment(gateway, p2, chiamaka)
+
+    print('Seeded 3 demo payments for Chiamaka (1 successful, 1 pending, 1 cancelled)')
 
 
 if __name__ == "__main__":
