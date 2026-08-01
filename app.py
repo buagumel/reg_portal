@@ -327,7 +327,14 @@ def login():
 @login_required
 def dashboard():
     notify_registration_window_events(current_user)
-    return render_template('dashboard.html', profile_display=get_profile_display(current_user))
+    recent_payments, _ = get_payment_history(current_user, page=1, per_page=5)
+    payment_summary = get_payment_summary_counts(current_user)
+    return render_template(
+        'dashboard.html',
+        profile_display=get_profile_display(current_user),
+        recent_payments=recent_payments,
+        payment_summary=payment_summary,
+    )
 
 
 
@@ -749,8 +756,59 @@ def course_details(course_id):
     })
 
 @app.route('/payments_history')
+@login_required
 def payments_history():
-    return render_template('payments_history.html')
+    items, total = get_payment_history(current_user, page=1, per_page=10)
+    summary = get_payment_summary_counts(current_user)
+    return render_template('payments_history.html', payments=items, total=total, page=1, per_page=10, summary=summary)
+
+
+@app.route('/payments_history/data')
+@login_required
+def payments_history_data():
+    status = request.args.get('status') or None
+    search = request.args.get('search') or None
+    date_from = request.args.get('date_from') or None
+    date_to = request.args.get('date_to') or None
+    page = max(1, int(request.args.get('page', 1)))
+    per_page = 10
+
+    items, total = get_payment_history(
+        current_user, status=status, search=search,
+        date_from=date_from, date_to=date_to, page=page, per_page=per_page,
+    )
+    raw_summary = get_payment_summary_counts(current_user)
+
+    return jsonify({
+        'success': True,
+        'page': page,
+        'per_page': per_page,
+        'total': total,
+        'summary': {
+            'total': raw_summary['total'],
+            'total_amount_paid': float(raw_summary['total_amount_paid']),
+            'pending': raw_summary['pending'],
+            'cancelled': raw_summary['cancelled'],
+        },
+        'payments': [
+            {
+                'reference': p.reference,
+                'rrr': p.rrr or '-',
+                'description': ', '.join(i.description for i in p.items) or '-',
+                'category': p.items[0].category.name if p.items else '-',
+                'amount': float(p.total_amount),
+                'status': p.status,
+                'date': p.initiated_at.strftime('%d %b %Y'),
+                'session': p.registration.registration_period.academic_session.name if p.registration else '-',
+                'semester': p.registration.registration_period.semester.name if p.registration else '-',
+                'method': 'Remita',
+                'can_retry': p.status in ('pending', 'timeout', 'failed'),
+                'can_resume': p.status in ('pending', 'timeout'),
+                'has_receipt': p.status == 'successful',
+            }
+            for p in items
+        ],
+    })
 
 @app.route('/admin')
 def admin():

@@ -104,13 +104,29 @@
         <div class="payment-section">
             <div class="payment-header">
                 <h3><i class="fas fa-credit-card" style="background: none; padding:0;"></i> Recent payment history</h3>
-                <a href="#" style="color: #1e5a8a; font-weight:600;">View all <i class="fas fa-chevron-right"></i></a>
+                <a href="{{ url_for('payments_history') }}" style="color: #1e5a8a; font-weight:600;">View all <i class="fas fa-chevron-right"></i></a>
             </div>
             <div class="table-wrapper">
+                {% if not recent_payments %}
                 <div class="empty-state-row">
                     <i class="fas fa-receipt"></i>
                     <p>No payment history yet.</p>
                 </div>
+                {% else %}
+                <table>
+                    <thead><tr><th>Description</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for p in recent_payments %}
+                        <tr>
+                            <td>{{ p.items[0].description if p.items else '-' }}</td>
+                            <td>{{ p.initiated_at.strftime('%d %b %Y') }}</td>
+                            <td>₦{{ '{:,.2f}'.format(p.total_amount) }}</td>
+                            <td>{{ p.status|capitalize }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
             </div>
 
         </div>

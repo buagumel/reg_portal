@@ -3,195 +3,93 @@
 
 {% block head %}
     <title>Full Payment History · EduPortal</title>
-    <!-- Font Awesome 6 (free) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/payments_history.css') }}">
-
 {% endblock %}
 
 
 {% block content %}
     <div class="payment-page">
-        <!-- header with back navigation -->
+        <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+
         <div class="page-header">
-            <a href="#" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            <a href="{{ url_for('dashboard') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
             <h1 class="page-title"><i class="fas fa-credit-card" style="margin-right: 0.5rem;"></i>Full Payment History</h1>
-            <div></div> <!-- spacer for flex -->
+            <a href="{{ url_for('payment_create_page') }}" class="back-link"><i class="fas fa-plus-circle"></i> Create Payment</a>
         </div>
 
-        <!-- summary cards row (financial snapshot) -->
         <div class="summary-grid">
             <div class="summary-card">
+                <div class="summary-icon"><i class="fas fa-receipt"></i></div>
+                <div class="summary-content"><h4>Total payments</h4><div class="summary-amount" id="summaryTotal">{{ summary.total }}</div></div>
+            </div>
+            <div class="summary-card">
                 <div class="summary-icon"><i class="fas fa-wallet"></i></div>
-                <div class="summary-content">
-                    <h4>Total paid</h4>
-                    <div class="summary-amount">₦1,283,700 <small>.00</small></div>
-                </div>
+                <div class="summary-content"><h4>Total paid</h4><div class="summary-amount" id="summaryAmountPaid">₦{{ '{:,.2f}'.format(summary.total_amount_paid) }}</div></div>
             </div>
             <div class="summary-card">
                 <div class="summary-icon"><i class="fas fa-clock"></i></div>
-                <div class="summary-content">
-                    <h4>Pending</h4>
-                    <div class="summary-amount">₦58,700 <small>.00</small></div>
-                </div>
+                <div class="summary-content"><h4>Pending</h4><div class="summary-amount" id="summaryPending">{{ summary.pending }}</div></div>
             </div>
             <div class="summary-card">
                 <div class="summary-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <div class="summary-content">
-                    <h4>Overdue</h4>
-                    <div class="summary-amount">₦150,000 <small>.00</small></div>
-                </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-icon"><i class="fas fa-receipt"></i></div>
-                <div class="summary-content">
-                    <h4>Transactions</h4>
-                    <div class="summary-amount">24 <small>total</small></div>
-                </div>
+                <div class="summary-content"><h4>Cancelled</h4><div class="summary-amount" id="summaryCancelled">{{ summary.cancelled }}</div></div>
             </div>
         </div>
 
-        <!-- filter bar (status tabs + search) -->
         <div class="filter-bar">
-            <div class="filter-tabs">
-                <button class="filter-tab active">All payments</button>
-                <button class="filter-tab">Paid</button>
-                <button class="filter-tab">Pending</button>
-                <button class="filter-tab">Overdue</button>
-                <button class="filter-tab">2025</button>
+            <div class="filter-tabs" id="filterTabs">
+                <button class="filter-tab active" data-status="">All payments</button>
+                <button class="filter-tab" data-status="successful">Paid</button>
+                <button class="filter-tab" data-status="pending">Pending</button>
+                <button class="filter-tab" data-status="cancelled">Cancelled</button>
             </div>
+            <input type="date" id="dateFrom" class="date-filter">
+            <input type="date" id="dateTo" class="date-filter">
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" placeholder="Search reference or description" value="tuition">
-                <button>Search</button>
+                <input type="text" id="searchInput" placeholder="Search reference or RRR">
+                <button id="searchBtn">Search</button>
             </div>
         </div>
 
-        <!-- main payment history table card -->
         <div class="table-card">
             <div class="table-header">
                 <h2><i class="fas fa-history"></i> Transaction history</h2>
                 <div class="print-export">
                     <button onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-                    <button><i class="fas fa-file-csv"></i> Export</button>
                 </div>
             </div>
 
             <div class="table-wrapper">
-                <table>
+                <table id="paymentsTable">
                     <thead>
                         <tr>
                             <th>Description</th>
                             <th>Date</th>
-                            <th>Reference ID</th>
+                            <th>Session / Semester</th>
+                            <th>Reference</th>
                             <th>Amount (₦)</th>
                             <th>Status</th>
-                            <th>Receipt</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Tuition (1st semester)</strong> <span style="color: #5b7f9f; font-size: 0.8rem; margin-left:0.4rem;">2024/2025</span></td>
-                            <td>12 Jan 2025</td>
-                            <td style="font-family: monospace;">RMT-1A2B-3C4D</td>
-                            <td><strong>425,000.00</strong></td>
-                            <td><span class="status-badge paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Tuition (2nd semester)</strong> <span style="color: #5b7f9f; font-size: 0.8rem;">installment</span></td>
-                            <td>03 Mar 2025</td>
-                            <td>RMT-4D5E-6F7G</td>
-                            <td><strong>200,000.00</strong></td>
-                            <td><span class="status-badge pending"><i class="fas fa-hourglass-half"></i> Pending</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-eye"></i> view</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Lab fee (CSC 310)</strong> <span style="color: #5b7f9f;">materials</span></td>
-                            <td>28 Feb 2025</td>
-                            <td>RMT-7G8H-9I0J</td>
-                            <td><strong>25,500.00</strong></td>
-                            <td><span class="status-badge paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>ID card renewal</strong></td>
-                            <td>20 Feb 2025</td>
-                            <td>RMT-0J1K-2L3M</td>
-                            <td><strong>5,000.00</strong></td>
-                            <td><span class="status-badge paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Library fee</strong> (annual)</td>
-                            <td>10 Feb 2025</td>
-                            <td>RMT-3M4N-5O6P</td>
-                            <td><strong>8,200.00</strong></td>
-                            <td><span class="status-badge paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Accommodation (installment)</strong> <span style="color: #b13e3e;">overdue</span></td>
-                            <td>05 Feb 2025</td>
-                            <td>RMT-6Q7R-8S9T</td>
-                            <td><strong>150,000.00</strong></td>
-                            <td><span class="status-badge overdue"><i class="fas fa-exclamation-circle"></i> Overdue</span></td>
-                            <td><a href="#" class="receipt-link" style="color:#b13e3e;">pay now</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Sports fee</strong></td>
-                            <td>28 Jan 2025</td>
-                            <td>RMT-1U2V-3W4X</td>
-                            <td><strong>3,500.00</strong></td>
-                            <td><span class="status-badge paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>ICT levy</strong></td>
-                            <td>15 Jan 2025</td>
-                            <td>RMT-5Y6Z-7A8B</td>
-                            <td><strong>12,000.00</strong></td>
-                            <td><span class="status-badge paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Departmental dues</strong> (CSC)</td>
-                            <td>10 Jan 2025</td>
-                            <td>RMT-9C0D-1E2F</td>
-                            <td><strong>4,500.00</strong></td>
-                            <td><span class="status-badge pending"><i class="fas fa-hourglass-half"></i> Pending</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-eye"></i> view</a></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Medical insurance</strong></td>
-                            <td>05 Jan 2025</td>
-                            <td>RMT-3G4H-5I6J</td>
-                            <td><strong>9,800.00</strong></td>
-                            <td><span class="status-badge paid"><i class="fas fa-check-circle"></i> Paid</span></td>
-                            <td><a href="#" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a></td>
-                        </tr>
+                    <tbody id="paymentsTableBody">
+                        <tr><td colspan="7" style="text-align:center; padding:2rem; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- pagination and results info -->
             <div class="pagination">
-                <div style="color: var(--text-muted); font-size:0.9rem;">Showing 1–10 of 24 transactions</div>
-                <div class="page-buttons">
-                    <button class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                    <button class="page-btn active">1</button>
-                    <button class="page-btn">2</button>
-                    <button class="page-btn">3</button>
-                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                </div>
+                <div id="paginationInfo" style="color: var(--text-muted); font-size:0.9rem;"></div>
+                <div class="page-buttons" id="pageButtons"></div>
             </div>
-        </div>
-
-        <!-- additional info row (optional note) -->
-        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; color: var(--text-muted); background: white; padding: 1.2rem 2rem; border-radius: 90px; border: 1px solid #d9e9ff;">
-            <span><i class="fas fa-info-circle" style="color: #2b6a9e;"></i> Payments take 24–48 hours to reflect.</span>
-            <span><i class="fas fa-download"></i> Download annual statement: <a href="#" style="font-weight:600;">2024-2025.pdf</a></span>
         </div>
     </div>
 
+<div id="toastMsg" class="toast-msg"></div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/payments_history/payments_history.js') }}"></script>
 {% endblock %}
