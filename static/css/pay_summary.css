@@ -209,3 +209,10 @@
             .courses-table { font-size: 0.85rem; }
             .fee-amount { font-size: 1.5rem; }
         }
+.result-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+}
+.result-icon.success { color: #0e7a4b; }
+.result-icon.failed { color: #b13e3e; }
+.result-icon.pending { color: #b6580b; }

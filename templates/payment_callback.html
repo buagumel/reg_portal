@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Payment Result · Student Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pay_summary.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="payment-summary-container">
+    <div class="summary-card">
+        <div class="summary-body" style="text-align:center; padding: 3rem 2rem;">
+            {% if payment.status == 'successful' %}
+                <div class="result-icon success"><i class="fas fa-check-circle"></i></div>
+                <h2>Payment Successful</h2>
+                <p>Your payment of ₦{{ '{:,.2f}'.format(payment.total_amount) }} (reference {{ payment.reference }}) was completed.</p>
+                <a class="pay-now-btn" style="display:inline-flex; text-decoration:none; margin-top:1.5rem;" href="{{ url_for('payment_receipt', reference=payment.reference) }}"><i class="fas fa-receipt"></i> View Receipt</a>
+            {% elif payment.status == 'failed' %}
+                <div class="result-icon failed"><i class="fas fa-times-circle"></i></div>
+                <h2>Payment Failed</h2>
+                <p>Your payment (reference {{ payment.reference }}) was not successful. You can retry from Payment History.</p>
+            {% else %}
+                <div class="result-icon pending"><i class="fas fa-hourglass-half"></i></div>
+                <h2>Payment Pending</h2>
+                <p>We haven't received confirmation yet for reference {{ payment.reference }}. Check Payment History shortly, or retry verification there.</p>
+            {% endif %}
+            <div style="margin-top:2rem;">
+                <a href="{{ url_for('payments_history') }}" style="font-weight:600; color: var(--primary-dark, #103957);">Go to Payment History</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

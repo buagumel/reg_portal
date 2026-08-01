@@ -40,7 +40,7 @@ from services.payment import (
     retry_verification, cancel_payment, get_payment_history,
     get_summary_counts as get_payment_summary_counts,
 )
-from services.payment_gateway import get_gateway, GatewayError
+from services.payment_gateway import get_gateway, GatewayError, build_checkout_url
 from services.errors import PaymentError
 
 app = Flask(__name__)
@@ -473,6 +473,63 @@ def payment_initiate(reference):
         return jsonify({'success': False, 'message': str(e)}), 502
     return jsonify({'success': True, 'redirect': checkout_url})
 
+
+@app.route('/payment/callback')
+def payment_callback():
+    # No @login_required: Remita's redirect may arrive in a context where
+    # the session cookie isn't guaranteed, so this route is scoped instead
+    # by the payment's unique unguessable reference token (like a password
+    # reset link). It performs no write on behalf of a user identity beyond
+    # what verify_payment does to the Payment/Registration it already owns.
+    order_id = request.args.get('orderId') or request.args.get('orderid') or request.args.get('reference')
+    payment = Payment.query.filter_by(reference=order_id).first() if order_id else None
+    if payment is None:
+        flash('Could not identify the payment to verify.')
+        return redirect(url_for('payments_history'))
+
+    gateway = get_gateway(app)
+    verify_payment(gateway, payment)
+    return render_template('payment_callback.html', payment=payment)
+
+
+@app.route('/payment/<reference>/resume')
+@login_required
+def payment_resume(reference):
+    payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
+    if payment.status not in ('pending', 'timeout'):
+        flash('This payment is no longer pending.')
+        return redirect(url_for('payments_history'))
+
+    if payment.rrr:
+        return redirect(build_checkout_url(payment.rrr))
+
+    gateway = get_gateway(app)
+    try:
+        checkout_url = initiate_payment(gateway, payment, current_user)
+    except GatewayError:
+        flash('Could not reach the payment gateway. Please try again shortly.')
+        return redirect(url_for('payments_history'))
+    return redirect(checkout_url)
+
+
+@app.route('/payment/<reference>/cancel', methods=['POST'])
+@login_required
+def payment_cancel(reference):
+    payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
+    try:
+        cancel_payment(payment)
+    except PaymentError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    return jsonify({'success': True, 'message': 'Payment cancelled.'})
+
+
+@app.route('/payment/<reference>/retry', methods=['POST'])
+@login_required
+def payment_retry(reference):
+    payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
+    gateway = get_gateway(app)
+    retry_verification(gateway, payment)
+    return jsonify({'success': True, 'status': payment.status})
 
 
 @app.route('/registration')
