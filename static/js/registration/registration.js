@@ -35,7 +35,7 @@ function setupRegisterNow() {
     if (!btn) return;
 
     btn.addEventListener('click', async () => {
-        if (!window.confirm('Confirm semester registration? This will simulate a successful payment for development purposes.')) {
+        if (!window.confirm('Confirm semester registration? You will be redirected to complete payment.')) {
             return;
         }
 
@@ -46,8 +46,8 @@ function setupRegisterNow() {
         const result = await postJson('/registration/register', {});
 
         if (result.success) {
-            showToast(result.message || 'Registration successful.');
-            setTimeout(() => window.location.reload(), 1200);
+            showToast(result.message || 'Registration created.');
+            window.location.href = result.redirect;
         } else {
             showToast(result.message || 'Registration failed.', true);
             btn.disabled = false;

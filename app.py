@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from extensions import mail, Message
 from models import (
-    db, User, RegisteredCourse, StudentRegistration
+    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory,
 )
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
@@ -35,10 +35,18 @@ from services.profile import (
     update_contact_info, change_password as profile_change_password,
     update_profile_picture, delete_profile_picture,
 )
+from services.payment import (
+    get_active_categories, create_payment, initiate_payment, verify_payment,
+    retry_verification, cancel_payment, get_payment_history,
+    get_summary_counts as get_payment_summary_counts,
+)
+from services.payment_gateway import get_gateway, GatewayError
+from services.errors import PaymentError
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['PAYMENT_GATEWAY_MODE'] = 'remita'
 app.config['MAIL_SERVER'] = MAIL_SERVER 
 app.config['MAIL_PORT'] = 587                           
 app.config['MAIL_USE_TLS'] = True                      
@@ -436,9 +444,34 @@ def courses():
     return "This is the courses page.";
 
 
-@app.route('/pay_summary')
-def pay_summary():
-    return render_template('payment_summary.html')
+@app.route('/payment/registration/<int:registration_id>')
+@login_required
+def payment_registration_summary(registration_id):
+    registration = StudentRegistration.query.filter_by(id=registration_id, user_id=current_user.id).first_or_404()
+    if registration.payment_status == 'paid':
+        flash('This registration has already been paid for.')
+        return redirect(url_for('registration'))
+    payment = (
+        Payment.query
+        .filter_by(registration_id=registration.id, status='pending')
+        .order_by(Payment.id.desc())
+        .first()
+    )
+    return render_template('payment_summary.html', registration=registration, payment=payment)
+
+
+@app.route('/payment/<reference>/initiate', methods=['POST'])
+@login_required
+def payment_initiate(reference):
+    payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
+    if payment.status != 'pending':
+        return jsonify({'success': False, 'message': 'This payment is no longer pending.'}), 400
+    gateway = get_gateway(app)
+    try:
+        checkout_url = initiate_payment(gateway, payment, current_user)
+    except GatewayError as e:
+        return jsonify({'success': False, 'message': str(e)}), 502
+    return jsonify({'success': True, 'redirect': checkout_url})
 
 
 
@@ -467,14 +500,8 @@ def registration_register():
 
     return jsonify({
         'success': True,
-        'message': 'Registration successful.',
-        'registration': {
-            'session': reg.registration_period.academic_session.name,
-            'semester': reg.registration_period.semester.name,
-            'payment_reference': reg.payment_reference,
-            'registered_at': reg.registered_at.strftime('%d %b %Y, %I:%M %p'),
-            'credits_registered': reg.credits_registered,
-        },
+        'message': 'Registration created. Redirecting to payment...',
+        'redirect': url_for('payment_registration_summary', registration_id=reg.id),
     })
 
 

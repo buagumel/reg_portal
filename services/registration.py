@@ -1,11 +1,9 @@
-import random
-import string
-
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration
+from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, PaymentCategory
 from models import Course, RegisteredCourse
-from services.errors import RegistrationError
+from services.payment import create_payment
+from services.errors import RegistrationError, PaymentError
 from services.notification import create_notification
 from services.validation import validate_course_eligible, validate_credit_ceiling, validate_not_duplicate, validate_can_submit
 
@@ -87,18 +85,11 @@ def get_registration_status_context(user):
     }
 
 
-def _generate_payment_reference():
-    # TODO: replace with the real Remita payment reference once the Remita
-    # integration is built (initiate payment -> webhook/callback verifies
-    # the transaction -> only then create/confirm this record).
-    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-    return f'SIMULATED-{suffix}'
-
-
 def register_student(user, period):
     """Validate and create a StudentRegistration for the given period, with
-    payment simulated as immediately successful. Raises RegistrationError on
-    any business-rule violation."""
+    payment left pending — the caller redirects to the payment summary page,
+    where the student clicks Pay Now to actually initiate payment through
+    the real gateway."""
     if get_window_status(period) != 'open':
         raise RegistrationError('Registration is not currently open for this period.')
 
@@ -108,16 +99,11 @@ def register_student(user, period):
     if existing:
         raise RegistrationError('You are already registered for this period.')
 
-    # TODO: this is where real Remita payment initiation would happen instead
-    # of immediately marking payment_status='paid'. For now the full workflow
-    # (record creation + "successful payment") is simulated so downstream
-    # features (Add/Drop, payment history) can be built against a real record.
     registration = StudentRegistration(
         user_id=user.id,
         registration_period_id=period.id,
         status='registered',
-        payment_status='paid',
-        payment_reference=_generate_payment_reference(),
+        payment_status='pending',
         credits_registered=0,
     )
     try:
@@ -127,10 +113,24 @@ def register_student(user, period):
         db.session.rollback()
         raise RegistrationError('You are already registered for this period.')
 
+    _, _, registration_fee = get_credit_limits(period, user.department)
+    category = PaymentCategory.query.filter_by(code='registration_fee').first()
+    if category is not None:
+        try:
+            payment = create_payment(
+                user, [(category, 1, registration_fee)],
+                idempotency_key=f'registration-{registration.id}',
+                registration_id=registration.id,
+            )
+            registration.payment_reference = payment.reference
+            db.session.commit()
+        except PaymentError:
+            pass  # a pending payment already exists for this registration — shouldn't happen for a brand-new one, but never block registration creation on this
+
     create_notification(
-        user, 'Payment completed',
-        f'Your registration payment for {period.academic_session.name} {period.semester.name} was completed successfully. Reference: {registration.payment_reference}.',
-        category='payments', priority='high', related_url='/registration',
+        user, 'Registration created - payment required',
+        f'Your registration for {period.academic_session.name} {period.semester.name} has been created. Complete payment to activate it.',
+        category='registration', priority='high', related_url='/registration',
     )
     return registration
 
