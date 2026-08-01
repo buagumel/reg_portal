@@ -329,12 +329,10 @@ def login():
 def dashboard():
     notify_registration_window_events(current_user)
     recent_payments, _ = get_payment_history(current_user, page=1, per_page=5)
-    payment_summary = get_payment_summary_counts(current_user)
     return render_template(
         'dashboard.html',
         profile_display=get_profile_display(current_user),
         recent_payments=recent_payments,
-        payment_summary=payment_summary,
     )
 
 
@@ -461,7 +459,10 @@ def payment_registration_summary(registration_id):
         return redirect(url_for('registration'))
     payment = (
         Payment.query
-        .filter_by(registration_id=registration.id, status='pending')
+        .filter(
+            Payment.registration_id == registration.id,
+            Payment.status.in_(('pending', 'timeout')),
+        )
         .order_by(Payment.id.desc())
         .first()
     )
@@ -474,6 +475,10 @@ def payment_initiate(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
     if payment.status != 'pending':
         return jsonify({'success': False, 'message': 'This payment is no longer pending.'}), 400
+
+    if payment.rrr:
+        return jsonify({'success': True, 'redirect': build_checkout_url(payment.rrr)})
+
     gateway = get_gateway(app)
     try:
         checkout_url = initiate_payment(gateway, payment, current_user)
@@ -592,6 +597,11 @@ def payment_create_submit():
     selections = data.get('items', [])
     if not idempotency_key:
         return jsonify({'success': False, 'message': 'Invalid request.'}), 400
+    # Namespace the client-supplied key by user, defensively — belt-and-braces
+    # on top of create_payment's own user_id-scoped lookup, so a client can
+    # never collide with (and get handed back) another user's payment even if
+    # the query scoping above were ever weakened.
+    idempotency_key = f'{current_user.id}:{idempotency_key}'
 
     item_specs = []
     for sel in selections:
@@ -611,6 +621,9 @@ def payment_create_submit():
         payment = create_payment(current_user, item_specs, idempotency_key)
     except PaymentError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
+
+    if payment.status != 'pending':
+        return jsonify({'success': False, 'message': 'This payment has already been processed.'}), 400
 
     gateway = get_gateway(app)
     try:
@@ -795,9 +808,8 @@ def course_details(course_id):
 @app.route('/payments_history')
 @login_required
 def payments_history():
-    items, total = get_payment_history(current_user, page=1, per_page=10)
     summary = get_payment_summary_counts(current_user)
-    return render_template('payments_history.html', payments=items, total=total, page=1, per_page=10, summary=summary)
+    return render_template('payments_history.html', summary=summary)
 
 
 @app.route('/payments_history/data')
@@ -807,7 +819,10 @@ def payments_history_data():
     search = request.args.get('search') or None
     date_from = request.args.get('date_from') or None
     date_to = request.args.get('date_to') or None
-    page = max(1, int(request.args.get('page', 1)))
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        page = 1
     per_page = 10
 
     items, total = get_payment_history(

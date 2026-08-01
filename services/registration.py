@@ -124,8 +124,12 @@ def register_student(user, period):
             )
             registration.payment_reference = payment.reference
             db.session.commit()
-        except PaymentError:
-            pass  # a pending payment already exists for this registration — shouldn't happen for a brand-new one, but never block registration creation on this
+        except PaymentError as e:
+            from flask import current_app
+            current_app.logger.warning(
+                'Registration %s created without a payable Payment (create_payment raised: %s)',
+                registration.id, e,
+            )
 
     create_notification(
         user, 'Registration created - payment required',

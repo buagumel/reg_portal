@@ -1,5 +1,5 @@
 import io
-import random
+import secrets
 import string
 
 from reportlab.lib.pagesizes import A4
@@ -12,7 +12,7 @@ from models import db, PaymentReceipt
 
 
 def _generate_receipt_number():
-    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10))
     return f'RCT-{suffix}'
 
 

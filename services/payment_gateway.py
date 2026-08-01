@@ -95,13 +95,20 @@ class RemitaGateway(PaymentGateway):
 
         _log_response(payment, data)
 
+        # Fail OPEN, not closed: only explicitly-known codes resolve to a
+        # terminal state. Success and pending are recognized allow-lists;
+        # anything unrecognized (a response shape we didn't anticipate, a
+        # transient error body, a missing field) falls through to 'pending'
+        # so the payment stays retryable instead of being permanently marked
+        # failed with no in-app recovery path. No failure codes are known to
+        # be documented with confidence, so there is deliberately no
+        # explicit failure allow-list here — default-to-pending is the safe
+        # minimum.
         status_code = str(data.get('status', ''))
         if status_code == '00':
             resolved = 'successful'
-        elif status_code in ('021', '025'):
-            resolved = 'pending'
         else:
-            resolved = 'failed'
+            resolved = 'pending'  # includes '021'/'025' and anything unrecognized
 
         return {'status': resolved, 'gateway_status': data.get('message', status_code), 'raw': data}
 

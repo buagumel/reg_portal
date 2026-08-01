@@ -1,4 +1,4 @@
-import random
+import secrets
 import string
 
 from flask import url_for
@@ -12,7 +12,7 @@ from services.audit import log_action
 
 
 def _generate_reference():
-    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10))
     return f'PAY-{suffix}'
 
 
@@ -23,7 +23,7 @@ def get_active_categories():
 def create_payment(user, item_specs, idempotency_key, registration_id=None):
     """Returns the Payment. If idempotency_key was already used, returns the
     existing row instead of creating a duplicate (double-submit guard)."""
-    existing = Payment.query.filter_by(idempotency_key=idempotency_key).first()
+    existing = Payment.query.filter_by(idempotency_key=idempotency_key, user_id=user.id).first()
     if existing:
         return existing
 
