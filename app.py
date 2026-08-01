@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from extensions import mail, Message
 from models import (
-    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory,
+    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser,
 )
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
@@ -70,11 +70,15 @@ login_manager.login_message = "Please log in to access this page."
 
 @login_manager.user_loader
 def load_user(idn):
+    if idn.startswith('admin:'):
+        return AdminUser.query.get(int(idn.split(':', 1)[1]))
     return db.get_or_404(User, idn)
 
 @app.before_request
 def enforce_onboarding_gate():
     if not current_user.is_authenticated:
+        return None
+    if isinstance(current_user, AdminUser):
         return None
 
     exempt_endpoints = {
