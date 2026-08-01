@@ -105,6 +105,10 @@ def verify_payment(gateway, payment):
             category='payments', priority='high', related_url='/payments_history',
         )
         log_action(payment.user, 'payment_failed', details=f'reference={payment.reference}')
+    elif result['status'] == 'cancelled':
+        payment.status = 'cancelled'
+        db.session.commit()
+        log_action(payment.user, 'payment_cancelled_by_gateway', details=f'reference={payment.reference}')
     else:
         db.session.commit()  # still pending — gateway_status updated, no state change
 
@@ -112,21 +116,36 @@ def verify_payment(gateway, payment):
 
 
 def _on_payment_successful(payment):
-    from services.receipt import get_or_create_receipt, send_receipt_email
-
+    """The gateway has already confirmed success and `payment.status` is
+    already committed as 'successful' by the caller — that fact is durable
+    and correct regardless of what happens below. Receipt creation,
+    notification, audit logging, and email are best-effort follow-ups: since
+    verify_payment's idempotency guard short-circuits on a terminal status,
+    nothing would ever retry these if one of them raised, so any failure
+    here must be swallowed (logged, not re-raised) rather than leave the
+    request — and the payment — stuck."""
     if payment.registration_id:
         payment.registration.payment_status = 'paid'
         db.session.commit()
 
-    receipt = get_or_create_receipt(payment)
+    try:
+        from flask import current_app
+        from services.receipt import get_or_create_receipt, send_receipt_email
 
-    create_notification(
-        payment.user, 'Payment successful',
-        f'Your payment of ₦{payment.total_amount:,.2f} (reference {payment.reference}) was successful. Receipt: {receipt.receipt_number}.',
-        category='payments', priority='high', related_url=f'/payment/{payment.reference}/receipt',
-    )
-    log_action(payment.user, 'payment_successful', details=f'reference={payment.reference} amount={payment.total_amount}')
-    send_receipt_email(payment, receipt)
+        receipt = get_or_create_receipt(payment)
+
+        create_notification(
+            payment.user, 'Payment successful',
+            f'Your payment of ₦{payment.total_amount:,.2f} (reference {payment.reference}) was successful. Receipt: {receipt.receipt_number}.',
+            category='payments', priority='high', related_url=f'/payment/{payment.reference}/receipt',
+        )
+        log_action(payment.user, 'payment_successful', details=f'reference={payment.reference} amount={payment.total_amount}')
+        send_receipt_email(payment, receipt)
+    except Exception:
+        current_app.logger.warning(
+            'Post-payment follow-up (receipt/notification/email) failed for reference %s',
+            payment.reference,
+        )
 
 
 def retry_verification(gateway, payment):
