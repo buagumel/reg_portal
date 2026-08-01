@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Payment Receipt · Student Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .receipt-container { max-width: 700px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 1rem; border: 1px solid #d9e9ff; }
+        .receipt-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+        .receipt-header img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+        .receipt-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .receipt-table th, .receipt-table td { padding: 0.6rem; border-bottom: 1px solid #eef3fc; text-align: left; }
+        .receipt-total { text-align: right; font-weight: 700; font-size: 1.1rem; margin-top: 0.5rem; }
+        .receipt-qr { width: 90px; height: 90px; border: 1px dashed #9fb8d1; display: flex; align-items: center; justify-content: center; color: #5f7e9c; margin-top: 1.5rem; }
+        .receipt-actions { display: flex; gap: 0.8rem; margin-top: 1.5rem; }
+        .receipt-actions button, .receipt-actions a { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.4rem; border-radius: 60px; background: #0f3150; color: white; border: none; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+        @media print {
+            .navbar, .receipt-actions { display: none !important; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="receipt-container">
+    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+    <div class="receipt-header">
+        <img src="{{ url_for('static', filename='img/jspict-logo.png') }}" alt="JSPICT Logo">
+        <div>
+            <h2>Payment Receipt</h2>
+            <p>{{ receipt.receipt_number }}</p>
+        </div>
+    </div>
+    <div>
+        <strong>Student:</strong> {{ payment.user.name }} ({{ payment.user.reg_no }})<br>
+        <strong>Reference:</strong> {{ payment.reference }}<br>
+        <strong>RRR:</strong> {{ payment.rrr or '-' }}<br>
+        <strong>Payment Date:</strong> {{ payment.verified_at.strftime('%d %b %Y, %I:%M %p') if payment.verified_at else '-' }}<br>
+        <strong>Gateway Status:</strong> {{ payment.gateway_status or '-' }}
+    </div>
+    <table class="receipt-table">
+        <thead><tr><th>Description</th><th>Qty</th><th>Amount (₦)</th></tr></thead>
+        <tbody>
+            {% for item in payment.items %}
+            <tr><td>{{ item.description }}</td><td>{{ item.quantity }}</td><td>{{ '{:,.2f}'.format(item.amount * item.quantity) }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="receipt-total">Total: ₦{{ '{:,.2f}'.format(payment.total_amount) }}</div>
+    <div class="receipt-qr">QR</div>
+
+    <div class="receipt-actions">
+        <button onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+        <a href="{{ url_for('payment_receipt_pdf', reference=payment.reference) }}"><i class="fas fa-file-pdf"></i> Download PDF</a>
+        <button id="resendBtn" data-reference="{{ payment.reference }}"><i class="fas fa-envelope"></i> Resend Email</button>
+    </div>
+</div>
+
+<div id="toastMsg" class="toast-msg"></div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+    import { postJson } from '{{ url_for("static", filename="js/shared/api.js") }}';
+    import { showToast } from '{{ url_for("static", filename="js/shared/toast.js") }}';
+
+    const btn = document.getElementById('resendBtn');
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        const result = await postJson(`/payment/${btn.dataset.reference}/resend-receipt`, {});
+        showToast(result.message || (result.success ? 'Receipt sent.' : 'Could not resend receipt.'), !result.success);
+        btn.disabled = false;
+    });
+</script>
+{% endblock %}

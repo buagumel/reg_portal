@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response
 from flask_login import login_user, LoginManager, current_user, logout_user, login_required
 import os
 import time
@@ -42,6 +42,7 @@ from services.payment import (
 )
 from services.payment_gateway import get_gateway, GatewayError, build_checkout_url
 from services.errors import PaymentError
+from services.receipt import get_or_create_receipt, render_pdf, send_receipt_email
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -537,6 +538,42 @@ def payment_retry(reference):
     gateway = get_gateway(app)
     retry_verification(gateway, payment)
     return jsonify({'success': True, 'status': payment.status})
+
+
+@app.route('/payment/<reference>/receipt')
+@login_required
+def payment_receipt(reference):
+    payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
+    if payment.status != 'successful':
+        flash('Receipt is only available for successful payments.')
+        return redirect(url_for('payments_history'))
+    receipt = get_or_create_receipt(payment)
+    return render_template('payment_receipt.html', payment=payment, receipt=receipt)
+
+
+@app.route('/payment/<reference>/receipt.pdf')
+@login_required
+def payment_receipt_pdf(reference):
+    payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
+    if payment.status != 'successful':
+        flash('Receipt is only available for successful payments.')
+        return redirect(url_for('payments_history'))
+    receipt = get_or_create_receipt(payment)
+    pdf_bytes = render_pdf(payment, receipt)
+    return Response(pdf_bytes, mimetype='application/pdf', headers={
+        'Content-Disposition': f'attachment; filename={receipt.receipt_number}.pdf'
+    })
+
+
+@app.route('/payment/<reference>/resend-receipt', methods=['POST'])
+@login_required
+def payment_resend_receipt(reference):
+    payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
+    if payment.status != 'successful':
+        return jsonify({'success': False, 'message': 'No receipt available for this payment.'}), 400
+    receipt = get_or_create_receipt(payment)
+    send_receipt_email(payment, receipt)
+    return jsonify({'success': True, 'message': 'Receipt email sent.'})
 
 
 @app.route('/payment/create', methods=['GET'])
