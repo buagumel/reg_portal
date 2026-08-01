@@ -1,0 +1,12 @@
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #0f3150;
+    color: #ffd966;
+    padding: 0.3rem 0.9rem;
+    border-radius: 60px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}

@@ -43,6 +43,9 @@ from services.payment import (
 from services.payment_gateway import get_gateway, GatewayError, build_checkout_url
 from services.errors import PaymentError
 from services.receipt import get_or_create_receipt, render_pdf, send_receipt_email
+from services.admin_auth import authenticate_admin, change_admin_password
+from services.admin_audit import log_admin_action
+from services.admin_permission import admin_required, permission_required, get_visible_quick_actions
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -55,7 +58,9 @@ app.config['MAIL_USERNAME'] = MAIL_USERNAME
 app.config['MAIL_PASSWORD'] =  MAIL_PASSWORD       
 app.config['MAIL_DEFAULT_SENDER'] = ("JSPICT, Kazaure", app.config['MAIL_USERNAME'])
 
-mail.init_app(app) 
+ADMIN_SESSION_TIMEOUT_SECONDS = 15 * 60
+
+mail.init_app(app)
 db.init_app(app)
 
 with app.app_context():
@@ -99,6 +104,24 @@ def enforce_onboarding_gate():
         return redirect(url_for(redirect_endpoint))
 
     return jsonify({'success': False, 'message': 'Please complete the required step before continuing.'}), 403
+
+@app.before_request
+def enforce_admin_session_timeout():
+    if not current_user.is_authenticated or not isinstance(current_user, AdminUser):
+        return None
+    if request.endpoint in ('admin_login', 'static'):
+        return None
+
+    now_ts = time.time()
+    last_activity = session.get('admin_last_activity')
+    if last_activity is not None and (now_ts - last_activity) > ADMIN_SESSION_TIMEOUT_SECONDS:
+        logout_user()
+        session.pop('admin_last_activity', None)
+        flash('Your admin session expired due to inactivity. Please log in again.')
+        return redirect(url_for('admin_login'))
+
+    session['admin_last_activity'] = now_ts
+    return None
 
 @app.context_processor
 def inject_unread_notification_count():
@@ -868,7 +891,80 @@ def payments_history_data():
 
 @app.route('/admin')
 def admin():
+    return redirect(url_for('admin_login'))
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if current_user.is_authenticated and isinstance(current_user, AdminUser):
+        return redirect(url_for('admin_dashboard'))
+
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        remember = True if request.form.get('rememberCheck') else False
+
+        admin_user = authenticate_admin(email, password, ip_address=request.remote_addr)
+        if admin_user:
+            login_user(admin_user, remember=remember)
+            session['admin_last_activity'] = time.time()
+            if admin_user.first_login:
+                return redirect(url_for('admin_force_password_change'))
+            return redirect(url_for('admin_dashboard'))
+
+        return render_template('admin/admin_login.html', error='Invalid email or password.', email=email, remember=remember)
+
     return render_template('admin/admin_login.html')
+
+
+@app.route('/admin/forgot-password')
+def admin_forgot_password():
+    # Placeholder so the login template's link resolves; Task 4 replaces
+    # this with the full forgot-password/reset flow.
+    return redirect(url_for('admin_login'))
+
+
+@app.route('/admin/logout')
+@admin_required
+def admin_logout():
+    log_admin_action(current_user, 'logout', ip_address=request.remote_addr)
+    logout_user()
+    session.pop('admin_last_activity', None)
+    return redirect(url_for('admin_login'))
+
+
+@app.route('/admin/force-password-change', methods=['GET', 'POST'])
+@admin_required
+def admin_force_password_change():
+    if request.method == 'GET':
+        if not current_user.first_login:
+            return redirect(url_for('admin_dashboard'))
+        return render_template('admin/admin_force_password_change.html')
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Invalid request'}), 400
+
+    new_pass = data.get('new', '').strip()
+    confirm = data.get('confirm', '').strip()
+
+    if not new_pass:
+        return jsonify({'success': False, 'message': 'New password is required'}), 400
+    if new_pass != confirm:
+        return jsonify({'success': False, 'message': 'Passwords do not match'}), 400
+
+    failed_rules = validate_password_strength(new_pass)
+    if failed_rules:
+        return jsonify({'success': False, 'message': 'Password must contain ' + ', '.join(failed_rules) + '.'}), 400
+
+    change_admin_password(current_user, new_pass)
+    log_admin_action(current_user, 'password_changed', ip_address=request.remote_addr)
+
+    return jsonify({
+        'success': True,
+        'message': 'Password changed successfully.',
+        'redirect': url_for('admin_dashboard'),
+    })
 
 @app.route('/send-email-code', methods=['POST'])
 @login_required
