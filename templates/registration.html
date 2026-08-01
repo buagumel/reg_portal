@@ -32,7 +32,11 @@
         <div class="ongoing-card registered-card" id="registeredCard">
             <div class="card-content">
                 <div class="ongoing-info">
+                    {% if status.existing_registration.payment_status == 'paid' %}
                     <div class="ongoing-badge registered-badge"><i class="fas fa-check-circle"></i> Registered</div>
+                    {% else %}
+                    <div class="ongoing-badge registered-badge"><i class="fas fa-check-circle"></i> Registered — Payment Pending</div>
+                    {% endif %}
                     <h2>{{ status.period.academic_session.name }} {{ status.period.semester.name }}</h2>
                     <div class="reg-details">
                         <span class="detail-item"><i class="fas fa-receipt"></i> Ref: {{ status.existing_registration.payment_reference }}</span>
@@ -41,6 +45,13 @@
                     </div>
                     <p class="course-selection-note"><i class="fas fa-info-circle"></i> Course selection will open separately once available.</p>
                 </div>
+                {% if status.existing_registration.payment_status != 'paid' %}
+                <div class="ongoing-action">
+                    <a class="btn-primary" href="{{ url_for('payment_registration_summary', registration_id=status.existing_registration.id) }}">
+                        <i class="fas fa-credit-card"></i> Complete Payment
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
 

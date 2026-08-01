@@ -34,16 +34,18 @@ async function getJson(url) {
 
 function renderActions(p) {
     const actions = [];
+    const ref = escapeHtml(p.reference);
     if (p.has_receipt) {
-        actions.push(`<a href="/payment/${p.reference}/receipt" class="receipt-link"><i class="fas fa-eye"></i> View</a>`);
-        actions.push(`<a href="/payment/${p.reference}/receipt.pdf" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a>`);
-        actions.push(`<button class="receipt-link resend-btn" data-reference="${p.reference}"><i class="fas fa-envelope"></i> Resend</button>`);
+        actions.push(`<a href="/payment/${ref}/receipt" class="receipt-link"><i class="fas fa-eye"></i> View</a>`);
+        actions.push(`<a href="/payment/${ref}/receipt.pdf" class="receipt-link"><i class="fas fa-file-pdf"></i> PDF</a>`);
+        actions.push(`<button class="receipt-link resend-btn" data-reference="${ref}"><i class="fas fa-envelope"></i> Resend</button>`);
     }
     if (p.can_resume) {
-        actions.push(`<a href="/payment/${p.reference}/resume" class="receipt-link"><i class="fas fa-play"></i> Resume</a>`);
+        actions.push(`<a href="/payment/${ref}/resume" class="receipt-link"><i class="fas fa-play"></i> Resume</a>`);
+        actions.push(`<button class="receipt-link cancel-btn" data-reference="${ref}"><i class="fas fa-times"></i> Cancel</button>`);
     }
     if (p.can_retry) {
-        actions.push(`<button class="receipt-link retry-btn" data-reference="${p.reference}"><i class="fas fa-redo"></i> Retry</button>`);
+        actions.push(`<button class="receipt-link retry-btn" data-reference="${ref}"><i class="fas fa-redo"></i> Retry</button>`);
     }
     return actions.join(' ');
 }
@@ -79,6 +81,18 @@ function renderRows(payments) {
             const result = await postJson(`/payment/${btn.dataset.reference}/resend-receipt`, {});
             showToast(result.message || (result.success ? 'Receipt sent.' : 'Could not resend receipt.'), !result.success);
             btn.disabled = false;
+        });
+    });
+    tableBody.querySelectorAll('.cancel-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            const result = await postJson(`/payment/${btn.dataset.reference}/cancel`, {});
+            showToast(result.success ? 'Payment cancelled.' : (result.message || 'Could not cancel payment.'), !result.success);
+            if (result.success) {
+                load();
+            } else {
+                btn.disabled = false;
+            }
         });
     });
 }
