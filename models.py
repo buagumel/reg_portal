@@ -79,6 +79,19 @@ class User(db.Model, UserMixin):
 class Payment(db.Model):
     __tablename__ = 'payments'
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    reference = db.Column(db.String(50), unique=True, nullable=False)
+    idempotency_key = db.Column(db.String(64), unique=True, nullable=False)
+    rrr = db.Column(db.String(50), nullable=True)
+    registration_id = db.Column(db.Integer, db.ForeignKey('student_registrations.id'), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    total_amount = db.Column(db.Numeric(10, 2), nullable=False)
+    gateway_status = db.Column(db.String(100), nullable=True)
+    initiated_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+    verified_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User')
+    registration = db.relationship('StudentRegistration')
 
 
 class AcademicSession(db.Model):
@@ -200,3 +213,43 @@ class AuditLog(db.Model):
     details = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class PaymentCategory(db.Model):
+    __tablename__ = 'payment_categories'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    code = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    default_amount = db.Column(db.Numeric(10, 2), nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class PaymentItem(db.Model):
+    __tablename__ = 'payment_items'
+    id = db.Column(db.Integer, primary_key=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payments.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('payment_categories.id'), nullable=False)
+    description = db.Column(db.String(200), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+
+    payment = db.relationship('Payment', backref='items')
+    category = db.relationship('PaymentCategory')
+
+
+class PaymentReceipt(db.Model):
+    __tablename__ = 'payment_receipts'
+    id = db.Column(db.Integer, primary_key=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payments.id'), unique=True, nullable=False)
+    receipt_number = db.Column(db.String(50), unique=True, nullable=False)
+    generated_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class GatewayResponse(db.Model):
+    __tablename__ = 'gateway_responses'
+    id = db.Column(db.Integer, primary_key=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payments.id'), nullable=False)
+    raw_payload = db.Column(db.Text, nullable=False)
+    received_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
