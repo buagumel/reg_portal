@@ -917,11 +917,88 @@ def admin_login():
     return render_template('admin/admin_login.html')
 
 
-@app.route('/admin/forgot-password')
+@app.route('/admin/forgot-password', methods=['GET', 'POST'])
 def admin_forgot_password():
-    # Placeholder so the login template's link resolves; Task 4 replaces
-    # this with the full forgot-password/reset flow.
-    return redirect(url_for('admin_login'))
+    if request.method == 'GET':
+        return render_template('admin/admin_forgot_password.html')
+
+    email = request.form.get('email', '').strip()
+    admin_user = AdminUser.query.filter_by(email=email).first()
+
+    if admin_user:
+        code = start_otp_session(session, email)
+        session['admin_reset_admin_id'] = admin_user.id
+        try:
+            msg = Message('Admin Password Reset Code', recipients=[email])
+            msg.body = f'Your password reset code is: {code}\nThis code expires in 5 minutes.'
+            mail.send(msg)
+        except Exception:
+            app.logger.warning('Failed to send admin password reset email to %s', email)
+
+    # Always redirect the same way regardless of whether the email matched
+    # an account, so this endpoint never reveals which emails are admins.
+    return redirect(url_for('admin_verify_reset_code'))
+
+
+@app.route('/admin/verify-reset-code', methods=['GET', 'POST'])
+def admin_verify_reset_code():
+    if 'email_verification_code' not in session:
+        return redirect(url_for('admin_forgot_password'))
+
+    if request.method == 'GET':
+        return render_template('admin/admin_verify_reset_code.html', email=session.get('pending_email'))
+
+    data = request.get_json()
+    code = (data.get('code', '') if data else '').strip()
+
+    if otp_attempts_exceeded(session):
+        clear_otp_session(session)
+        session.pop('admin_reset_admin_id', None)
+        return jsonify({'success': False, 'message': 'Too many attempts. Please request a new code.'}), 400
+
+    if time.time() > session.get('email_verification_expiry', 0):
+        return jsonify({'success': False, 'message': 'This code has expired. Please request a new one.'}), 400
+
+    if code != session.get('email_verification_code'):
+        register_failed_otp_attempt(session)
+        return jsonify({'success': False, 'message': 'Incorrect code.'}), 400
+
+    session['admin_reset_verified'] = True
+    return jsonify({'success': True, 'redirect': url_for('admin_reset_password')})
+
+
+@app.route('/admin/reset-password', methods=['GET', 'POST'])
+def admin_reset_password():
+    if not session.get('admin_reset_verified') or 'admin_reset_admin_id' not in session:
+        return redirect(url_for('admin_forgot_password'))
+
+    if request.method == 'GET':
+        return render_template('admin/admin_reset_password.html')
+
+    data = request.get_json()
+    new_pass = (data.get('new', '') if data else '').strip()
+    confirm = (data.get('confirm', '') if data else '').strip()
+
+    if not new_pass or new_pass != confirm:
+        return jsonify({'success': False, 'message': 'Passwords do not match'}), 400
+
+    failed_rules = validate_password_strength(new_pass)
+    if failed_rules:
+        return jsonify({'success': False, 'message': 'Password must contain ' + ', '.join(failed_rules) + '.'}), 400
+
+    admin_user = AdminUser.query.get(session['admin_reset_admin_id'])
+    change_admin_password(admin_user, new_pass)
+    log_admin_action(admin_user, 'password_reset', ip_address=request.remote_addr)
+
+    clear_otp_session(session)
+    session.pop('admin_reset_admin_id', None)
+    session.pop('admin_reset_verified', None)
+
+    return jsonify({
+        'success': True,
+        'message': 'Password reset successfully. Please log in.',
+        'redirect': url_for('admin_login'),
+    })
 
 
 @app.route('/admin/logout')
