@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Create Payment · Student Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/payment_create.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="payment-create-page">
+    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" id="idempotencyKey" value="{{ idempotency_key }}">
+
+    <div class="page-header">
+        <a href="{{ url_for('payments_history') }}" class="back-link"><i class="fas fa-arrow-left"></i> Payment History</a>
+        <h1 class="page-title"><i class="fas fa-plus-circle"></i> Create Payment</h1>
+        <div></div>
+    </div>
+
+    {% if not categories %}
+    <div class="empty-state-card">
+        <i class="fas fa-inbox"></i>
+        <p>No payable items are currently available.</p>
+    </div>
+    {% else %}
+    <div class="category-grid" id="categoryGrid">
+        {% for category in categories %}
+        <label class="category-card">
+            <input type="checkbox" class="category-checkbox" data-id="{{ category.id }}" data-amount="{{ category.default_amount }}" data-name="{{ category.name }}">
+            <div class="category-info">
+                <span class="category-name">{{ category.name }}</span>
+                {% if category.description %}<span class="category-desc">{{ category.description }}</span>{% endif %}
+            </div>
+            <span class="category-amount">₦{{ '{:,.2f}'.format(category.default_amount) }}</span>
+        </label>
+        {% endfor %}
+    </div>
+
+    <div class="summary-panel">
+        <h3><i class="fas fa-receipt"></i> Payment Summary</h3>
+        <ul id="summaryList" class="summary-list">
+            <li class="summary-empty">No items selected yet.</li>
+        </ul>
+        <div class="summary-total">
+            <span>Total</span>
+            <span id="summaryTotal">₦0.00</span>
+        </div>
+        <button class="pay-now-btn" id="proceedBtn" disabled><i class="fas fa-credit-card"></i> Proceed to Payment</button>
+    </div>
+    {% endif %}
+</div>
+
+<div id="toastMsg" class="toast-msg"></div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/payment_create/payment_create.js') }}"></script>
+{% endblock %}

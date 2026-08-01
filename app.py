@@ -532,6 +532,45 @@ def payment_retry(reference):
     return jsonify({'success': True, 'status': payment.status})
 
 
+@app.route('/payment/create', methods=['GET'])
+@login_required
+def payment_create_page():
+    categories = [c for c in get_active_categories() if c.default_amount is not None]
+    idempotency_key = str(uuid.uuid4())
+    return render_template('payment_create.html', categories=categories, idempotency_key=idempotency_key)
+
+
+@app.route('/payment/create', methods=['POST'])
+@login_required
+def payment_create_submit():
+    data = request.get_json() or {}
+    idempotency_key = data.get('idempotency_key', '')
+    selections = data.get('items', [])
+    if not idempotency_key:
+        return jsonify({'success': False, 'message': 'Invalid request.'}), 400
+
+    item_specs = []
+    for sel in selections:
+        category = PaymentCategory.query.filter_by(id=sel.get('category_id'), is_active=True).first()
+        if category is None or category.default_amount is None:
+            continue
+        quantity = max(1, int(sel.get('quantity', 1)))
+        item_specs.append((category, quantity, category.default_amount))
+
+    try:
+        payment = create_payment(current_user, item_specs, idempotency_key)
+    except PaymentError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    gateway = get_gateway(app)
+    try:
+        checkout_url = initiate_payment(gateway, payment, current_user)
+    except GatewayError as e:
+        return jsonify({'success': False, 'message': str(e)}), 502
+
+    return jsonify({'success': True, 'redirect': checkout_url})
+
+
 @app.route('/registration')
 @login_required
 def registration():
