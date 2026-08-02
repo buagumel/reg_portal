@@ -62,6 +62,7 @@ from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 from services.course_import import import_courses_csv
 from models import CourseImportJob
+from services.admin_student import list_active_programmes, list_students, get_student, get_student_profile
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -1300,6 +1301,51 @@ def admin_session_clone(session_id):
 @permission_required('students.manage')
 def admin_stub_students_import():
     return render_template('admin/coming_soon.html', feature_name='Upload Students')
+
+
+@app.route('/admin/students')
+@permission_required('students.manage')
+def admin_students():
+    return render_template(
+        'admin/students.html', departments=list_active_departments(), programmes=list_active_programmes(),
+    )
+
+
+@app.route('/admin/students/data')
+@permission_required('students.manage')
+def admin_students_data():
+    search = request.args.get('search', '').strip() or None
+    department_id = request.args.get('department_id', type=int)
+    programme_id = request.args.get('programme_id', type=int)
+    level = request.args.get('level', '').strip() or None
+    semester = request.args.get('semester', '').strip() or None
+    status = request.args.get('status', '').strip() or None
+    enrolled_from = request.args.get('enrolled_from') or None
+    enrolled_to = request.args.get('enrolled_to') or None
+    page = request.args.get('page', 1, type=int)
+    sort = request.args.get('sort', 'name')
+
+    result = list_students(
+        search=search, department_id=department_id, programme_id=programme_id, level=level, semester=semester,
+        status=status, enrolled_from=enrolled_from, enrolled_to=enrolled_to, page=page, sort=sort,
+    )
+    return jsonify({
+        'success': True,
+        'students': [{
+            'id': s.id, 'reg_no': s.reg_no, 'name': s.name,
+            'department': s.department or '—', 'programme': s.course or '—',
+            'level': s.level or '—', 'semester': s.semester or '—', 'status': s.account_status,
+            'profile_picture_url': url_for('static', filename=s.profile_picture) if s.profile_picture else None,
+        } for s in result['items']],
+        'total': result['total'], 'page': result['page'], 'per_page': result['per_page'],
+    })
+
+
+@app.route('/admin/students/<int:student_id>')
+@permission_required('students.manage')
+def admin_student_profile(student_id):
+    profile = get_student_profile(student_id)
+    return render_template('admin/student_profile.html', **profile)
 
 
 @app.route('/admin/courses')

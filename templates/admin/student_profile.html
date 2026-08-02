@@ -1,0 +1,127 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Students / {{ user.reg_no }}{% endblock %}
+
+{% block content %}
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+    <div style="display:flex; gap:1rem; align-items:center;">
+        {% if user.profile_picture %}
+        <img src="{{ url_for('static', filename=user.profile_picture) }}" style="width:64px; height:64px; border-radius:50%; object-fit:cover;">
+        {% else %}
+        <i class="fas fa-user-circle" style="font-size:3.5rem; color: var(--text-muted);"></i>
+        {% endif %}
+        <div>
+            <h2 style="margin:0;">{{ user.name }}</h2>
+            <p style="color: var(--text-muted); margin:0.2rem 0 0;">{{ user.reg_no }} &middot; <span style="text-transform:capitalize;">{{ user.account_status }}</span></p>
+        </div>
+    </div>
+    <div>
+        <a href="/admin/students/{{ user.id }}/edit" style="color: var(--primary-dark); font-weight:600;">Edit</a>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Personal Information</h3>
+        <p><strong>Email:</strong> {{ user.email or 'Not set' }}</p>
+        <p><strong>Phone:</strong> {{ user.formatted_phone or 'Not set' }}</p>
+        <p><strong>Address:</strong> {{ user.address or 'Not set' }}</p>
+        <p><strong>Nationality:</strong> {{ user.nationality or 'Not set' }} &middot; <strong>State:</strong> {{ user.state or 'Not set' }} &middot; <strong>LGA:</strong> {{ user.lga or 'Not set' }}</p>
+        <p><strong>Date of Birth:</strong> {{ user.formatted_dob or 'Not set' }} &middot; <strong>Gender:</strong> {{ user.gender or 'Not set' }}</p>
+        <p><strong>Emergency Contact:</strong> {{ user.emergency_contact or 'Not set' }} &middot; <strong>Blood Group:</strong> {{ user.blood_group or 'Not set' }}</p>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Academic Information</h3>
+        <p><strong>Department:</strong> {{ user.department or 'Not set' }}</p>
+        <p><strong>Programme:</strong> {{ user.course or 'Not set' }}</p>
+        <p><strong>Level:</strong> {{ user.level or 'Not set' }}</p>
+        <p><strong>Semester:</strong> {{ user.semester or 'Not set' }}</p>
+        <p><strong>Session:</strong> {{ user.session or 'Not set' }}</p>
+        <p><strong>Onboarding:</strong> {{ 'Completed' if user.onboarding_completed else 'Not completed' }} &middot; <strong>Email Verified:</strong> {{ 'Yes' if user.email_verified else 'No' }}</p>
+    </div>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Registration History</h3>
+    {% if not registration_history %}
+    <p style="color: var(--text-muted);">No registration history yet.</p>
+    {% else %}
+    <table style="width:100%; border-collapse:collapse;">
+        <thead><tr style="text-align:left; border-bottom: 1px solid var(--border-color);"><th style="padding:0.6rem;">Session</th><th style="padding:0.6rem;">Semester</th><th style="padding:0.6rem;">Status</th><th style="padding:0.6rem;">Payment</th><th style="padding:0.6rem;">Credits</th><th style="padding:0.6rem;">Registered</th></tr></thead>
+        <tbody>
+            {% for reg in registration_history %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.6rem;">{{ reg.registration_period.academic_session.name }}</td>
+                <td style="padding:0.6rem;">{{ reg.registration_period.semester.name }}</td>
+                <td style="padding:0.6rem; text-transform:capitalize;">{{ reg.status }}</td>
+                <td style="padding:0.6rem; text-transform:capitalize;">{{ reg.payment_status }}</td>
+                <td style="padding:0.6rem;">{{ reg.credits_registered }}</td>
+                <td style="padding:0.6rem;">{{ reg.registered_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Course History</h3>
+    {% if not course_history %}
+    <p style="color: var(--text-muted);">No course history yet.</p>
+    {% else %}
+    {% for group in course_history %}
+    <details {{ 'open' if group.is_current }} style="margin-bottom:0.8rem;">
+        <summary style="cursor:pointer; font-weight:600;">{{ group.academic_session }} — {{ group.semester }} {% if group.is_current %}(current){% endif %}</summary>
+        <ul style="margin:0.6rem 0 0; padding-left:1.2rem;">
+            {% for rc in group.courses %}
+            <li>{{ rc.course.code }} — {{ rc.course.title }} {% if rc.grade %}(Grade: {{ rc.grade }}){% endif %}</li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Payment History <span style="font-weight:400; color: var(--text-muted); font-size:0.85rem;">(most recent 10 of {{ payment_total }})</span></h3>
+    {% if not payment_history %}
+    <p style="color: var(--text-muted);">No payments yet.</p>
+    {% else %}
+    <table style="width:100%; border-collapse:collapse;">
+        <thead><tr style="text-align:left; border-bottom: 1px solid var(--border-color);"><th style="padding:0.6rem;">Reference</th><th style="padding:0.6rem;">Amount</th><th style="padding:0.6rem;">Status</th><th style="padding:0.6rem;">Date</th></tr></thead>
+        <tbody>
+            {% for p in payment_history %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.6rem; font-family:monospace;">{{ p.reference }}</td>
+                <td style="padding:0.6rem;">₦{{ '%.2f'|format(p.total_amount) }}</td>
+                <td style="padding:0.6rem; text-transform:capitalize;">{{ p.status }}</td>
+                <td style="padding:0.6rem;">{{ p.initiated_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Activity Log</h3>
+        {% if not activity_log %}
+        <p style="color: var(--text-muted);">No recorded activity.</p>
+        {% else %}
+        <ul style="list-style:none; padding:0; margin:0;">
+            {% for log in activity_log %}
+            <li style="padding:0.5rem 0; border-bottom: 1px solid var(--border-color); font-size:0.9rem;">
+                <strong>{{ log.action }}</strong> — {{ log.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                {% if log.details %}<div style="color: var(--text-muted); font-size:0.8rem;">{{ log.details }}</div>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Support Tickets</h3>
+        <p style="color: var(--text-muted);">Not yet available.</p>
+    </div>
+</div>
+{% endblock %}
