@@ -1,4 +1,4 @@
-from models import db, Course, Department
+from models import db, Course, Department, CoursePrerequisite, CourseCorequisite, CourseAssessmentComponent
 
 
 def list_courses(search=None, department_id=None, level=None, semester_id=None,
@@ -67,3 +67,48 @@ def set_course_status(course_id, status):
     course.status = status
     db.session.commit()
     return course
+
+
+def get_course_detail(course_id):
+    course = get_course(course_id)
+    prerequisites = [cp.prerequisite_course for cp in CoursePrerequisite.query.filter_by(course_id=course_id).all()]
+    corequisites = [cc.corequisite_course for cc in CourseCorequisite.query.filter_by(course_id=course_id).all()]
+    assessment_components = CourseAssessmentComponent.query.filter_by(course_id=course_id).all()
+    return {
+        'course': course, 'prerequisites': prerequisites, 'corequisites': corequisites,
+        'assessment_components': assessment_components,
+    }
+
+
+def list_courses_for_picker(exclude_id=None):
+    query = Course.query.filter(Course.status != 'archived')
+    if exclude_id:
+        query = query.filter(Course.id != exclude_id)
+    return query.order_by(Course.code).all()
+
+
+def set_prerequisites(course_id, prerequisite_course_ids):
+    CoursePrerequisite.query.filter_by(course_id=course_id).delete()
+    for prereq_id in prerequisite_course_ids:
+        if prereq_id != course_id:
+            db.session.add(CoursePrerequisite(course_id=course_id, prerequisite_course_id=prereq_id))
+    db.session.commit()
+
+
+def set_corequisites(course_id, corequisite_course_ids):
+    CourseCorequisite.query.filter_by(course_id=course_id).delete()
+    for coreq_id in corequisite_course_ids:
+        if coreq_id != course_id:
+            db.session.add(CourseCorequisite(course_id=course_id, corequisite_course_id=coreq_id))
+    db.session.commit()
+
+
+def set_assessment_components(course_id, components):
+    """components: list of {'name': str, 'weight_percent': int}."""
+    CourseAssessmentComponent.query.filter_by(course_id=course_id).delete()
+    for comp in components:
+        if comp.get('name') and comp.get('weight_percent') is not None:
+            db.session.add(CourseAssessmentComponent(
+                course_id=course_id, name=comp['name'], weight_percent=comp['weight_percent'],
+            ))
+    db.session.commit()

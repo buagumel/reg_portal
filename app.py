@@ -57,7 +57,7 @@ from services.admin_session import (
     list_semesters, list_periods, get_period, create_period, update_period, activate_period,
     list_holidays, create_holiday, list_inactive_periods,
 )
-from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status
+from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 
@@ -1378,8 +1378,56 @@ def admin_course_new():
 @app.route('/admin/courses/<int:course_id>')
 @permission_required('courses.manage')
 def admin_course_detail(course_id):
-    course = get_course(course_id)
-    return render_template('admin/course_detail.html', course=course)
+    detail = get_course_detail(course_id)
+    other_courses = list_courses_for_picker(exclude_id=course_id)
+    return render_template('admin/course_detail.html', other_courses=other_courses, **detail)
+
+
+@app.route('/admin/courses/<int:course_id>/prerequisites', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_prerequisites(course_id):
+    prereq_ids = request.form.getlist('prerequisite_ids', type=int)
+    set_prerequisites(course_id, prereq_ids)
+    log_admin_action(current_user, 'course_prerequisites_updated', target_type='course', target_id=course_id,
+                      details=f'count={len(prereq_ids)}', ip_address=request.remote_addr)
+    flash('Prerequisites updated.')
+    return redirect(url_for('admin_course_detail', course_id=course_id))
+
+
+@app.route('/admin/courses/<int:course_id>/corequisites', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_corequisites(course_id):
+    coreq_ids = request.form.getlist('corequisite_ids', type=int)
+    set_corequisites(course_id, coreq_ids)
+    log_admin_action(current_user, 'course_corequisites_updated', target_type='course', target_id=course_id,
+                      details=f'count={len(coreq_ids)}', ip_address=request.remote_addr)
+    flash('Corequisites updated.')
+    return redirect(url_for('admin_course_detail', course_id=course_id))
+
+
+@app.route('/admin/courses/<int:course_id>/assessment', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_assessment(course_id):
+    names = request.form.getlist('component_name')
+    weights = request.form.getlist('component_weight')
+    components = []
+    for name, weight in zip(names, weights):
+        name = name.strip()
+        if name and weight:
+            try:
+                components.append({'name': name, 'weight_percent': int(weight)})
+            except ValueError:
+                continue
+
+    set_assessment_components(course_id, components)
+    total_weight = sum(c['weight_percent'] for c in components)
+    if components and total_weight != 100:
+        flash(f'Assessment components saved, but weights total {total_weight}% (expected 100%) — double-check before relying on this.')
+    else:
+        flash('Assessment components updated.')
+    log_admin_action(current_user, 'course_assessment_updated', target_type='course', target_id=course_id,
+                      details=f'count={len(components)} total_weight={total_weight}', ip_address=request.remote_addr)
+    return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
 @app.route('/admin/courses/<int:course_id>/edit', methods=['GET', 'POST'])
