@@ -1376,17 +1376,21 @@ def admin_student_new():
 
     reg_no = request.form.get('reg_no', '').strip()
     name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip()
     if not reg_no or not name:
         flash('Registration number and name are required.')
         return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
     if User.query.filter_by(reg_no=reg_no).first():
         flash(f'A student with registration number "{reg_no}" already exists.')
         return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
+    if email and User.query.filter_by(email=email).first():
+        flash(f'A student with email "{email}" already exists.')
+        return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
 
     dob_raw = request.form.get('dob') or None
     student, temp_password = create_student(
         reg_no=reg_no, name=name,
-        email=request.form.get('email', '').strip(), phone=request.form.get('phone', '').strip(),
+        email=email, phone=request.form.get('phone', '').strip(),
         department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
         level=request.form.get('level', '').strip(), semester=request.form.get('semester', '').strip(),
         session=request.form.get('session', '').strip(),
@@ -1412,14 +1416,18 @@ def admin_student_edit(student_id):
     from datetime import date
 
     name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip() or None
     if not name:
         flash('Name is required.')
+        return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes, form=request.form)
+    if email and User.query.filter(User.email == email, User.id != student_id).first():
+        flash(f'A student with email "{email}" already exists.')
         return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes, form=request.form)
 
     dob_raw = request.form.get('dob') or None
     update_student(
         student_id, name=name,
-        email=request.form.get('email', '').strip() or None, phone=request.form.get('phone', '').strip() or None,
+        email=email, phone=request.form.get('phone', '').strip() or None,
         department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
         level=request.form.get('level', '').strip() or None, semester=request.form.get('semester', '').strip() or None,
         session=request.form.get('session', '').strip() or None,

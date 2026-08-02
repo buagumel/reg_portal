@@ -55,16 +55,28 @@ def get_student_profile(student_id):
     }
 
 
+def _generate_temp_password():
+    """Generate a random temporary password using a CSPRNG, guaranteed to satisfy the
+    existing password-strength policy (8+ chars, upper/lower/digit/special)."""
+    import secrets
+    import string
+    from auth_helpers import validate_password_strength
+
+    alphabet = string.ascii_letters + string.digits + '!@#$%^&*'
+    while True:
+        password = ''.join(secrets.choice(alphabet) for _ in range(12))
+        if not validate_password_strength(password):
+            return password
+
+
 def create_student(reg_no, name, email=None, phone=None, department_id=None, programme_id=None,
                     level=None, semester=None, session=None, nationality=None, state=None, lga=None,
                     dob=None, gender=None, student_type=None):
-    import random
-    import string
     from models import Department, Programme
 
     department = Department.query.get(department_id) if department_id else None
     programme = Programme.query.get(programme_id) if programme_id else None
-    temp_password = f'Temp{"".join(random.choices(string.digits, k=4))}!'
+    temp_password = _generate_temp_password()
 
     student = User(
         reg_no=reg_no, name=name, email=email or None, phone=phone or None,
@@ -107,11 +119,8 @@ def set_account_status(student_id, status):
 
 
 def reset_student_password(student_id):
-    import random
-    import string
-
     student = get_student(student_id)
-    temp_password = f'Temp{"".join(random.choices(string.digits, k=4))}!'
+    temp_password = _generate_temp_password()
     student.set_password(temp_password)
     student.first_login = True
     db.session.commit()
