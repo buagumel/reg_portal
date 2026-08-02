@@ -358,6 +358,7 @@ def seed_admin_rbac():
         ('registration.manage', 'Open/close registration periods'),
         ('announcements.manage', 'Create system announcements'),
         ('reports.view', 'View and generate reports'),
+        ('departments.manage', 'Create, edit, and manage departments'),
     ]
     perm_objs = {}
     for code, description in permissions:
@@ -374,11 +375,11 @@ def seed_admin_rbac():
     roles = {
         'Super Administrator': (
             'Complete system access',
-            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view'],
+            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view', 'departments.manage'],
         ),
         'Academic Administrator': (
             'Course management, registration oversight, and announcements',
-            ['dashboard.view', 'courses.manage', 'registration.manage', 'announcements.manage'],
+            ['dashboard.view', 'courses.manage', 'registration.manage', 'announcements.manage', 'departments.manage'],
         ),
     }
     for name, (description, codes) in roles.items():
