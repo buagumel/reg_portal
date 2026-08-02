@@ -71,6 +71,17 @@ Tracks completed milestones against `doc/t.txt` (Student Registration Workflow).
 - Spec: `docs/superpowers/specs/2026-08-01-payment-module-design.md`
 - Out of scope (deferred): Admin UI for managing `PaymentCategory` (Admin Portal not started), gating Add/Drop or course submission on `payment_status`.
 
+## Admin Portal — Foundation (Auth, RBAC, Layout, Dashboard, Audit Logging) — Complete
+
+- New models: `AdminRole`, `Permission`, `RolePermission`, `AdminUser`, `AdminAuditLog` — a fully separate admin identity from `User` (the dead `User.is_admin` column is untouched). Loaded by the existing shared `LoginManager` via a prefixed id (`admin:<id>`), so one `user_loader` distinguishes student and admin sessions.
+- Admin auth under `/admin/...`: login, logout, Remember Me, forgot-password/OTP-verify/reset (reusing the existing `onboarding_helpers` OTP session mechanism), first-login forced password change, and a 15-minute idle session timeout scoped only to admin sessions.
+- RBAC: two seeded roles (Super Administrator, Academic Administrator) over a 7-code permission catalog, enforced by `@admin_required`/`@permission_required(code)` decorators — proven end-to-end via 6 permission-gated Quick Action stub routes (navigation only, no feature logic yet) and a real "Access Denied" page on an unauthorized direct hit.
+- Reusable admin layout (`templates/admin/base_admin.html`): sidebar, top bar, profile menu, notification indicator, breadcrumbs, search UI, responsive collapse, light/dark theme toggle — replaces the previous fully-mocked, unreachable `admin_dashboard.html`.
+- Live dashboard: 7 summary cards backed by real queries (Total/Active Students, Current Semester Registrations, Total Payments, Active Courses, Departments, and a literal "Not yet available" placeholder for Support Tickets, since that module doesn't exist), plus a real activity feed merged from existing registration/payment/course/notification/admin-login data — no new event-logging system needed.
+- `services/admin_audit.py`: every admin login/login-failure/logout/password-change/reset writes an `AdminAuditLog` row.
+- Spec: `docs/superpowers/specs/2026-08-01-admin-foundation-design.md`
+- Out of scope (deferred): MFA, admin self-service account management, real-time push, charts, Student Management, Payments admin UI, Course Management, Registration Oversight, Reports, Support Tickets.
+
 ## Next milestone
 
-Admin Portal — not yet started.
+Admin Student Management — not yet started.
