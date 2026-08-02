@@ -77,7 +77,10 @@ login_manager.login_message = "Please log in to access this page."
 @login_manager.user_loader
 def load_user(idn):
     if idn.startswith('admin:'):
-        return AdminUser.query.get(int(idn.split(':', 1)[1]))
+        try:
+            return AdminUser.query.get(int(idn.split(':', 1)[1]))
+        except (ValueError, IndexError):
+            return None
     return db.get_or_404(User, idn)
 
 @app.before_request
@@ -122,6 +125,11 @@ def enforce_admin_session_timeout():
         return redirect(url_for('admin_login'))
 
     session['admin_last_activity'] = now_ts
+
+    onboarding_exempt_endpoints = {'admin_force_password_change', 'admin_logout', 'static'}
+    if current_user.first_login and request.endpoint not in onboarding_exempt_endpoints:
+        return redirect(url_for('admin_force_password_change'))
+
     return None
 
 @app.context_processor
@@ -932,6 +940,8 @@ def admin_forgot_password():
     # non-matching emails straight back, revealing which emails are admins.
     code = start_otp_session(session, email)
 
+    branch_started_at = time.time()
+
     if admin_user:
         session['admin_reset_admin_id'] = admin_user.id
         try:
@@ -940,6 +950,17 @@ def admin_forgot_password():
             mail.send(msg)
         except Exception:
             app.logger.warning('Failed to send admin password reset email to %s', email)
+
+    # Pad the response to a fixed minimum duration so the presence/absence of
+    # the network-bound mail.send() call above can't be inferred from response
+    # timing — a flat sleep on only the non-match branch doesn't work, since
+    # mail.send() itself varies well beyond any small fixed delay. This isn't a
+    # perfect fix (a slow mail.send() can still exceed the floor), but it closes
+    # the channel for the common case without needing a background task queue.
+    MIN_RESPONSE_SECONDS = 1.5
+    elapsed = time.time() - branch_started_at
+    if elapsed < MIN_RESPONSE_SECONDS:
+        time.sleep(MIN_RESPONSE_SECONDS - elapsed)
 
     # Always redirect the same way regardless of whether the email matched
     # an account, so this endpoint never reveals which emails are admins.
@@ -1025,6 +1046,9 @@ def admin_force_password_change():
         if not current_user.first_login:
             return redirect(url_for('admin_dashboard'))
         return render_template('admin/admin_force_password_change.html')
+
+    if not current_user.first_login:
+        return jsonify({'success': False, 'message': 'Use the profile settings to change your password.'}), 403
 
     data = request.get_json()
     if not data:
