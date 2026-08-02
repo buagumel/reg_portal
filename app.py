@@ -47,6 +47,11 @@ from services.admin_auth import authenticate_admin, change_admin_password
 from services.admin_audit import log_admin_action
 from services.admin_permission import admin_required, permission_required, get_visible_quick_actions
 from services.admin_dashboard import get_dashboard_summary, get_activity_feed
+from services.admin_department import (
+    list_departments, get_department, get_department_detail,
+    create_department, update_department, set_department_status,
+)
+from services.admin_validation import is_department_code_unique
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -1086,6 +1091,106 @@ def admin_dashboard():
         'admin/admin_dashboard.html',
         summary=summary, activity_feed=activity_feed, quick_actions=quick_actions,
     )
+
+
+@app.route('/admin/departments')
+@permission_required('departments.manage')
+def admin_departments():
+    search = request.args.get('search', '').strip() or None
+    status = request.args.get('status', '').strip() or None
+    page = request.args.get('page', 1, type=int)
+    result = list_departments(search=search, status=status, page=page)
+    return render_template(
+        'admin/departments.html', result=result, search=search or '', status=status or '',
+    )
+
+
+@app.route('/admin/departments/new', methods=['GET', 'POST'])
+@permission_required('departments.manage')
+def admin_department_new():
+    if request.method == 'GET':
+        return render_template('admin/department_form.html', department=None)
+
+    name = request.form.get('name', '').strip()
+    code = request.form.get('code', '').strip().upper()
+    faculty = request.form.get('faculty', '').strip()
+    head_name = request.form.get('head_name', '').strip()
+
+    if not name or not code:
+        flash('Name and code are required.')
+        return render_template('admin/department_form.html', department=None, form=request.form)
+    if not is_department_code_unique(code):
+        flash(f'Department code "{code}" is already in use.')
+        return render_template('admin/department_form.html', department=None, form=request.form)
+
+    department = create_department(name, code, faculty, head_name)
+    log_admin_action(current_user, 'department_created', target_type='department', target_id=department.id,
+                      details=f'name={name} code={code}', ip_address=request.remote_addr)
+    flash(f'Department "{name}" created.')
+    return redirect(url_for('admin_departments'))
+
+
+@app.route('/admin/departments/<int:department_id>')
+@permission_required('departments.manage')
+def admin_department_detail(department_id):
+    detail = get_department_detail(department_id)
+    return render_template('admin/departments.html', detail=detail, result=None)
+
+
+@app.route('/admin/departments/<int:department_id>/edit', methods=['GET', 'POST'])
+@permission_required('departments.manage')
+def admin_department_edit(department_id):
+    department = get_department(department_id)
+    if request.method == 'GET':
+        return render_template('admin/department_form.html', department=department)
+
+    name = request.form.get('name', '').strip()
+    code = request.form.get('code', '').strip().upper()
+    faculty = request.form.get('faculty', '').strip()
+    head_name = request.form.get('head_name', '').strip()
+
+    if not name or not code:
+        flash('Name and code are required.')
+        return render_template('admin/department_form.html', department=department, form=request.form)
+    if not is_department_code_unique(code, exclude_id=department_id):
+        flash(f'Department code "{code}" is already in use.')
+        return render_template('admin/department_form.html', department=department, form=request.form)
+
+    update_department(department_id, name, code, faculty, head_name)
+    log_admin_action(current_user, 'department_updated', target_type='department', target_id=department_id,
+                      details=f'name={name} code={code}', ip_address=request.remote_addr)
+    flash(f'Department "{name}" updated.')
+    return redirect(url_for('admin_departments'))
+
+
+@app.route('/admin/departments/<int:department_id>/activate', methods=['POST'])
+@permission_required('departments.manage')
+def admin_department_activate(department_id):
+    set_department_status(department_id, 'active')
+    log_admin_action(current_user, 'department_status_changed', target_type='department', target_id=department_id,
+                      details='status=active', ip_address=request.remote_addr)
+    flash('Department activated.')
+    return redirect(url_for('admin_departments'))
+
+
+@app.route('/admin/departments/<int:department_id>/deactivate', methods=['POST'])
+@permission_required('departments.manage')
+def admin_department_deactivate(department_id):
+    set_department_status(department_id, 'inactive')
+    log_admin_action(current_user, 'department_status_changed', target_type='department', target_id=department_id,
+                      details='status=inactive', ip_address=request.remote_addr)
+    flash('Department deactivated.')
+    return redirect(url_for('admin_departments'))
+
+
+@app.route('/admin/departments/<int:department_id>/archive', methods=['POST'])
+@permission_required('departments.manage')
+def admin_department_archive(department_id):
+    set_department_status(department_id, 'archived')
+    log_admin_action(current_user, 'department_status_changed', target_type='department', target_id=department_id,
+                      details='status=archived', ip_address=request.remote_addr)
+    flash('Department archived.')
+    return redirect(url_for('admin_departments'))
 
 
 @app.route('/admin/sessions/new')
