@@ -53,3 +53,73 @@ def get_student_profile(student_id):
         'user': user, 'registration_history': registration_history, 'course_history': course_history,
         'payment_history': payment_items, 'payment_total': payment_total, 'activity_log': activity_log,
     }
+
+
+def create_student(reg_no, name, email=None, phone=None, department_id=None, programme_id=None,
+                    level=None, semester=None, session=None, nationality=None, state=None, lga=None,
+                    dob=None, gender=None, student_type=None):
+    import random
+    import string
+    from models import Department, Programme
+
+    department = Department.query.get(department_id) if department_id else None
+    programme = Programme.query.get(programme_id) if programme_id else None
+    temp_password = f'Temp{"".join(random.choices(string.digits, k=4))}!'
+
+    student = User(
+        reg_no=reg_no, name=name, email=email or None, phone=phone or None,
+        department=department.name if department else None, department_id=department_id,
+        course=programme.name if programme else None, programme_id=programme_id,
+        level=level or None, semester=semester or None, session=session or None,
+        nationality=nationality or None, state=state or None, lga=lga or None,
+        dob=dob, gender=gender or None, student_type=student_type or None,
+        first_login=True, onboarding_completed=False, email_verified=False, account_status='active',
+    )
+    student.set_password(temp_password)
+    db.session.add(student)
+    db.session.commit()
+    return student, temp_password
+
+
+def update_student(student_id, **fields):
+    from models import Department, Programme
+
+    student = get_student(student_id)
+    if fields.get('department_id'):
+        department = Department.query.get(fields['department_id'])
+        if department:
+            fields['department'] = department.name
+    if fields.get('programme_id'):
+        programme = Programme.query.get(fields['programme_id'])
+        if programme:
+            fields['course'] = programme.name
+    for key, value in fields.items():
+        setattr(student, key, value)
+    db.session.commit()
+    return student
+
+
+def set_account_status(student_id, status):
+    student = get_student(student_id)
+    student.account_status = status
+    db.session.commit()
+    return student
+
+
+def reset_student_password(student_id):
+    import random
+    import string
+
+    student = get_student(student_id)
+    temp_password = f'Temp{"".join(random.choices(string.digits, k=4))}!'
+    student.set_password(temp_password)
+    student.first_login = True
+    db.session.commit()
+    return temp_password
+
+
+def resend_verification(student_id):
+    student = get_student(student_id)
+    if not student.email:
+        return False, 'Student has no email on file yet — nothing to resend to.'
+    return True, None

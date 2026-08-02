@@ -62,7 +62,10 @@ from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 from services.course_import import import_courses_csv
 from models import CourseImportJob
-from services.admin_student import list_active_programmes, list_students, get_student, get_student_profile
+from services.admin_student import (
+    list_active_programmes, list_students, get_student, get_student_profile,
+    create_student, update_student, set_account_status, reset_student_password, resend_verification,
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -359,6 +362,19 @@ def login():
         ).first()
 
         if user and user.check_password(password):
+            if user.account_status != 'active':
+                status_messages = {
+                    'suspended': 'Your account has been suspended. Please contact administration.',
+                    'deactivated': 'Your account has been deactivated. Please contact administration.',
+                }
+                return render_template(
+                    'login.html',
+                    error=status_messages.get(user.account_status, 'Your account is not active. Please contact administration.'),
+                    studentId=identifier,
+                    password=password,
+                    remember=remember,
+                    show_password=show_password
+                )
             login_user(user, remember=remember)
             next_page = request.args.get('next')
             redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
@@ -1346,6 +1362,146 @@ def admin_students_data():
 def admin_student_profile(student_id):
     profile = get_student_profile(student_id)
     return render_template('admin/student_profile.html', **profile)
+
+
+@app.route('/admin/students/new', methods=['GET', 'POST'])
+@permission_required('students.manage')
+def admin_student_new():
+    departments = list_active_departments()
+    programmes = list_active_programmes()
+    if request.method == 'GET':
+        return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes)
+
+    from datetime import date
+
+    reg_no = request.form.get('reg_no', '').strip()
+    name = request.form.get('name', '').strip()
+    if not reg_no or not name:
+        flash('Registration number and name are required.')
+        return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
+    if User.query.filter_by(reg_no=reg_no).first():
+        flash(f'A student with registration number "{reg_no}" already exists.')
+        return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
+
+    dob_raw = request.form.get('dob') or None
+    student, temp_password = create_student(
+        reg_no=reg_no, name=name,
+        email=request.form.get('email', '').strip(), phone=request.form.get('phone', '').strip(),
+        department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
+        level=request.form.get('level', '').strip(), semester=request.form.get('semester', '').strip(),
+        session=request.form.get('session', '').strip(),
+        nationality=request.form.get('nationality', '').strip(), state=request.form.get('state', '').strip(),
+        lga=request.form.get('lga', '').strip(), dob=date.fromisoformat(dob_raw) if dob_raw else None,
+        gender=request.form.get('gender', '').strip(), student_type=request.form.get('student_type', '').strip(),
+    )
+    log_admin_action(current_user, 'student_created', target_type='user', target_id=student.id,
+                      details=f'reg_no={reg_no}', ip_address=request.remote_addr)
+    flash(f'Student "{name}" ({reg_no}) created. Temporary password: {temp_password}')
+    return redirect(url_for('admin_student_profile', student_id=student.id))
+
+
+@app.route('/admin/students/<int:student_id>/edit', methods=['GET', 'POST'])
+@permission_required('students.manage')
+def admin_student_edit(student_id):
+    student = get_student(student_id)
+    departments = list_active_departments()
+    programmes = list_active_programmes()
+    if request.method == 'GET':
+        return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes)
+
+    from datetime import date
+
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Name is required.')
+        return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes, form=request.form)
+
+    dob_raw = request.form.get('dob') or None
+    update_student(
+        student_id, name=name,
+        email=request.form.get('email', '').strip() or None, phone=request.form.get('phone', '').strip() or None,
+        department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
+        level=request.form.get('level', '').strip() or None, semester=request.form.get('semester', '').strip() or None,
+        session=request.form.get('session', '').strip() or None,
+        nationality=request.form.get('nationality', '').strip() or None, state=request.form.get('state', '').strip() or None,
+        lga=request.form.get('lga', '').strip() or None, dob=date.fromisoformat(dob_raw) if dob_raw else None,
+        gender=request.form.get('gender', '').strip() or None, student_type=request.form.get('student_type', '').strip() or None,
+    )
+    log_admin_action(current_user, 'student_updated', target_type='user', target_id=student_id,
+                      details=f'reg_no={student.reg_no}', ip_address=request.remote_addr)
+    flash(f'Student "{name}" updated.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/activate', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_activate(student_id):
+    set_account_status(student_id, 'active')
+    log_admin_action(current_user, 'student_status_changed', target_type='user', target_id=student_id,
+                      details='status=active', ip_address=request.remote_addr)
+    flash('Student account activated.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/suspend', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_suspend(student_id):
+    set_account_status(student_id, 'suspended')
+    log_admin_action(current_user, 'student_status_changed', target_type='user', target_id=student_id,
+                      details='status=suspended', ip_address=request.remote_addr)
+    flash('Student account suspended.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/deactivate', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_deactivate(student_id):
+    set_account_status(student_id, 'deactivated')
+    log_admin_action(current_user, 'student_status_changed', target_type='user', target_id=student_id,
+                      details='status=deactivated', ip_address=request.remote_addr)
+    flash('Student account deactivated.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/reset-password', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_reset_password(student_id):
+    temp_password = reset_student_password(student_id)
+    log_admin_action(current_user, 'student_password_reset', target_type='user', target_id=student_id,
+                      ip_address=request.remote_addr)
+    flash(f'Password reset. Temporary password: {temp_password}')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/resend-verification', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_resend_verification(student_id):
+    ok, error = resend_verification(student_id)
+    if not ok:
+        flash(error)
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    student = get_student(student_id)
+    try:
+        msg = Message('Complete Your Email Verification', recipients=[student.email])
+        msg.body = (
+            f'Hello {student.name},\n\n'
+            'An administrator noticed your email address on the Student Portal hasn\'t been verified yet. '
+            'Please log in and complete your onboarding to verify it.\n\n'
+            'If you did not request this, you can safely ignore this email.'
+        )
+        mail.send(msg)
+    except Exception:
+        app.logger.warning('Failed to send verification reminder to %s', student.email)
+
+    create_notification(
+        student, 'Verify your email', 'Please log in and complete your onboarding to verify your email address.',
+        category='profile', priority='medium',
+    )
+    log_admin_action(current_user, 'student_verification_resent', target_type='user', target_id=student_id,
+                      ip_address=request.remote_addr)
+    flash('Verification reminder sent.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
 @app.route('/admin/courses')
