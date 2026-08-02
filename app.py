@@ -1064,19 +1064,6 @@ def admin_dashboard():
     )
 
 
-# --- Temporary stub routes -------------------------------------------------
-# base_admin.html's sidebar and admin_permission.QUICK_ACTIONS both call
-# url_for() on these 6 endpoints unconditionally (not gated by whether the
-# admin actually has the permission), so they must exist for ANY admin page
-# extending base_admin.html to render at all -- without them, url_for()
-# raises a BuildError and the page 500s. The plan documents these as
-# out-of-scope for this milestone ("6 Quick Action routes render a literal
-# 'Coming soon' page") and assigns real ownership to Task 8. This mirrors
-# the same unplanned-but-necessary stub pattern Task 3 used for
-# admin_forgot_password: minimal, permission-gated, well-commented, and
-# meant to be REPLACED (not duplicated) once Task 8 lands. If Task 8 adds
-# a second `def admin_stub_courses` (etc.), Flask raises AssertionError
-# (duplicate endpoint) at import time -- replace these definitions in place.
 @app.route('/admin/sessions/new')
 @permission_required('sessions.manage')
 def admin_stub_sessions_new():
@@ -1086,32 +1073,31 @@ def admin_stub_sessions_new():
 @app.route('/admin/students/import')
 @permission_required('students.manage')
 def admin_stub_students_import():
-    return render_template('admin/coming_soon.html', feature_name='Student Management')
+    return render_template('admin/coming_soon.html', feature_name='Upload Students')
 
 
 @app.route('/admin/courses')
 @permission_required('courses.manage')
 def admin_stub_courses():
-    return render_template('admin/coming_soon.html', feature_name='Course Management')
+    return render_template('admin/coming_soon.html', feature_name='Manage Courses')
 
 
 @app.route('/admin/registration/open')
 @permission_required('registration.manage')
 def admin_stub_registration_open():
-    return render_template('admin/coming_soon.html', feature_name='Registration Oversight')
+    return render_template('admin/coming_soon.html', feature_name='Open Registration')
 
 
 @app.route('/admin/announcements/new')
 @permission_required('announcements.manage')
 def admin_stub_announcements_new():
-    return render_template('admin/coming_soon.html', feature_name='Announcements')
+    return render_template('admin/coming_soon.html', feature_name='Create Announcement')
 
 
 @app.route('/admin/reports')
 @permission_required('reports.view')
 def admin_stub_reports():
-    return render_template('admin/coming_soon.html', feature_name='Reports')
-# --- End temporary stub routes ---------------------------------------------
+    return render_template('admin/coming_soon.html', feature_name='Generate Reports')
 
 
 @app.route('/send-email-code', methods=['POST'])
