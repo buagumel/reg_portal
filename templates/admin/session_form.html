@@ -1,0 +1,53 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Sessions / {{ 'Edit' if session else 'New' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:520px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h2 style="margin-top:0;">{{ 'Edit Session' if session else 'New Session' }}</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Academic Year</label>
+            <input type="text" name="name" required placeholder="2026/2027" value="{{ form.name if form else (session.name if session else '') }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Start Date</label>
+            <input type="date" name="start_date" value="{{ session.start_date.isoformat() if session and session.start_date else '' }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">End Date</label>
+            <input type="date" name="end_date" value="{{ session.end_date.isoformat() if session and session.end_date else '' }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
+        <a href="{{ url_for('admin_sessions') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+</div>
+
+{% if session %}
+<div style="max-width:520px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h3 style="margin-top:0;">Clone This Session</h3>
+    <p style="color: var(--text-muted); font-size:0.9rem;">Copies this session's registration period configuration (credit limits, fees, department overrides) into a new draft session. Dates are not copied.</p>
+    <form method="POST" action="{{ url_for('admin_session_clone', session_id=session.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">New Academic Year</label>
+            <input type="text" name="new_name" required placeholder="2027/2028"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Start Date</label>
+            <input type="date" name="start_date" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">End Date</label>
+            <input type="date" name="end_date" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary-light); color: var(--primary-dark); border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;"><i class="fas fa-copy"></i> Clone</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

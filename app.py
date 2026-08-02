@@ -52,6 +52,9 @@ from services.admin_department import (
     create_department, update_department, set_department_status,
 )
 from services.admin_validation import is_department_code_unique
+from services.admin_session import (
+    list_sessions, get_session, create_session, update_session, archive_session, clone_session,
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -1193,10 +1196,94 @@ def admin_department_archive(department_id):
     return redirect(url_for('admin_departments'))
 
 
-@app.route('/admin/sessions/new')
+@app.route('/admin/sessions')
 @permission_required('sessions.manage')
-def admin_stub_sessions_new():
-    return render_template('admin/coming_soon.html', feature_name='Create Session')
+def admin_sessions():
+    sessions = list_sessions()
+    return render_template('admin/sessions.html', sessions=sessions)
+
+
+@app.route('/admin/sessions/new', methods=['GET', 'POST'])
+@permission_required('sessions.manage')
+def admin_sessions_new():
+    if request.method == 'GET':
+        return render_template('admin/session_form.html', session=None)
+
+    name = request.form.get('name', '').strip()
+    start_date = request.form.get('start_date') or None
+    end_date = request.form.get('end_date') or None
+    if not name:
+        flash('Session name is required.')
+        return render_template('admin/session_form.html', session=None, form=request.form)
+
+    from datetime import date
+    start_date = date.fromisoformat(start_date) if start_date else None
+    end_date = date.fromisoformat(end_date) if end_date else None
+
+    session_obj = create_session(name, start_date, end_date)
+    log_admin_action(current_user, 'session_created', target_type='academic_session', target_id=session_obj.id,
+                      details=f'name={name}', ip_address=request.remote_addr)
+    flash(f'Session "{name}" created.')
+    return redirect(url_for('admin_session_edit', session_id=session_obj.id))
+
+
+@app.route('/admin/sessions/<int:session_id>/edit', methods=['GET', 'POST'])
+@permission_required('sessions.manage')
+def admin_session_edit(session_id):
+    session_obj = get_session(session_id)
+    if request.method == 'GET':
+        return render_template('admin/session_form.html', session=session_obj)
+
+    name = request.form.get('name', '').strip()
+    start_date = request.form.get('start_date') or None
+    end_date = request.form.get('end_date') or None
+    if not name:
+        flash('Session name is required.')
+        return render_template('admin/session_form.html', session=session_obj, form=request.form)
+
+    from datetime import date
+    start_date = date.fromisoformat(start_date) if start_date else None
+    end_date = date.fromisoformat(end_date) if end_date else None
+
+    update_session(session_id, name, start_date, end_date)
+    log_admin_action(current_user, 'session_updated', target_type='academic_session', target_id=session_id,
+                      details=f'name={name}', ip_address=request.remote_addr)
+    flash(f'Session "{name}" updated.')
+    return redirect(url_for('admin_sessions'))
+
+
+@app.route('/admin/sessions/<int:session_id>/archive', methods=['POST'])
+@permission_required('sessions.manage')
+def admin_session_archive(session_id):
+    session_obj, error = archive_session(session_id)
+    if error:
+        flash(error)
+    else:
+        log_admin_action(current_user, 'session_archived', target_type='academic_session', target_id=session_id,
+                          ip_address=request.remote_addr)
+        flash(f'Session "{session_obj.name}" archived.')
+    return redirect(url_for('admin_sessions'))
+
+
+@app.route('/admin/sessions/<int:session_id>/clone', methods=['POST'])
+@permission_required('sessions.manage')
+def admin_session_clone(session_id):
+    new_name = request.form.get('new_name', '').strip()
+    start_date = request.form.get('start_date') or None
+    end_date = request.form.get('end_date') or None
+    if not new_name:
+        flash('New session name is required to clone.')
+        return redirect(url_for('admin_sessions'))
+
+    from datetime import date
+    start_date = date.fromisoformat(start_date) if start_date else None
+    end_date = date.fromisoformat(end_date) if end_date else None
+
+    new_session = clone_session(session_id, new_name, start_date, end_date)
+    log_admin_action(current_user, 'session_cloned', target_type='academic_session', target_id=new_session.id,
+                      details=f'cloned_from={session_id}', ip_address=request.remote_addr)
+    flash(f'Cloned into new session "{new_name}".')
+    return redirect(url_for('admin_session_edit', session_id=new_session.id))
 
 
 @app.route('/admin/students/import')
