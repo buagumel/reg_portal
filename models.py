@@ -253,3 +253,65 @@ class GatewayResponse(db.Model):
     payment_id = db.Column(db.Integer, db.ForeignKey('payments.id'), nullable=False)
     raw_payload = db.Column(db.Text, nullable=False)
     received_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class Permission(db.Model):
+    __tablename__ = 'permissions'
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+
+class AdminRole(db.Model):
+    __tablename__ = 'admin_roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    permissions = db.relationship('Permission', secondary='role_permissions', backref='roles')
+
+
+class RolePermission(db.Model):
+    __tablename__ = 'role_permissions'
+    id = db.Column(db.Integer, primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('admin_roles.id'), nullable=False)
+    permission_id = db.Column(db.Integer, db.ForeignKey('permissions.id'), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('role_id', 'permission_id'),)
+
+
+class AdminUser(db.Model, UserMixin):
+    __tablename__ = 'admin_users'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(250), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    name = db.Column(db.String(250), nullable=False)
+    role_id = db.Column(db.Integer, db.ForeignKey('admin_roles.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    first_login = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    last_login_ip = db.Column(db.String(45), nullable=True)
+
+    role = db.relationship('AdminRole')
+
+    def get_id(self):
+        return f'admin:{self.id}'
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+class AdminAuditLog(db.Model):
+    __tablename__ = 'admin_audit_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True)
+    action = db.Column(db.String(50), nullable=False)
+    target_type = db.Column(db.String(50), nullable=True)
+    target_id = db.Column(db.Integer, nullable=True)
+    details = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)

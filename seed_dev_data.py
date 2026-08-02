@@ -10,6 +10,7 @@ from models import (
     db, User, now_lagos,
     AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course,
     Notification, PaymentCategory, Payment,
+    AdminRole, Permission, AdminUser,
 )
 
 DEFAULT_PASSWORD = "Default@123"
@@ -71,6 +72,8 @@ def seed():
         seed_profile_extras()
         seed_payment_categories()
         seed_payments()
+        seed_admin_rbac()
+        seed_admin_users()
         print(f"\nDone. {created} student(s) created. Default password for first_login=True accounts: {DEFAULT_PASSWORD}")
 
 
@@ -344,6 +347,78 @@ def seed_payments():
         initiate_payment(gateway, p2, chiamaka)
 
     print('Seeded 3 demo payments for Chiamaka (1 successful, 1 pending, 1 cancelled)')
+
+
+def seed_admin_rbac():
+    permissions = [
+        ('dashboard.view', 'View the admin dashboard'),
+        ('sessions.manage', 'Create and manage academic sessions'),
+        ('students.manage', 'Bulk-import and manage student accounts'),
+        ('courses.manage', 'Manage the course catalog'),
+        ('registration.manage', 'Open/close registration periods'),
+        ('announcements.manage', 'Create system announcements'),
+        ('reports.view', 'View and generate reports'),
+    ]
+    perm_objs = {}
+    for code, description in permissions:
+        perm = Permission.query.filter_by(code=code).first()
+        if not perm:
+            perm = Permission(code=code, description=description)
+            db.session.add(perm)
+            db.session.commit()
+            print(f'Seeded permission: {code}')
+        else:
+            print(f'Skipping permission {code} (already exists)')
+        perm_objs[code] = perm
+
+    roles = {
+        'Super Administrator': (
+            'Complete system access',
+            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view'],
+        ),
+        'Academic Administrator': (
+            'Course management, registration oversight, and announcements',
+            ['dashboard.view', 'courses.manage', 'registration.manage', 'announcements.manage'],
+        ),
+    }
+    for name, (description, codes) in roles.items():
+        role = AdminRole.query.filter_by(name=name).first()
+        if not role:
+            role = AdminRole(name=name, description=description)
+            db.session.add(role)
+            db.session.commit()
+            print(f'Seeded admin role: {name}')
+        else:
+            print(f'Skipping admin role {name} (already exists)')
+
+        for code in codes:
+            if perm_objs[code] not in role.permissions:
+                role.permissions.append(perm_objs[code])
+        db.session.commit()
+
+
+def seed_admin_users():
+    super_role = AdminRole.query.filter_by(name='Super Administrator').first()
+    academic_role = AdminRole.query.filter_by(name='Academic Administrator').first()
+    if not super_role or not academic_role:
+        print('Skipping seed_admin_users (admin roles not seeded yet)')
+        return
+
+    admins = [
+        ('super.admin@jspict.edu.ng', 'Amina Super-Admin', super_role.id),
+        ('academic.admin@jspict.edu.ng', 'Bello Academic-Admin', academic_role.id),
+    ]
+    for email, name, role_id in admins:
+        if AdminUser.query.filter_by(email=email).first():
+            print(f'Skipping admin user {email} (already exists)')
+            continue
+        admin = AdminUser(email=email, name=name, role_id=role_id, is_active=True, first_login=True)
+        admin.set_password(DEFAULT_PASSWORD)
+        db.session.add(admin)
+        db.session.commit()
+        print(f'Seeded admin user: {email} ({name})')
+
+    print(f'Default password for seeded admin accounts: {DEFAULT_PASSWORD}')
 
 
 if __name__ == "__main__":

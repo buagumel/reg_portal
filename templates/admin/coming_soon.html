@@ -1,0 +1,12 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}{{ feature_name }}{% endblock %}
+
+{% block content %}
+<div style="text-align:center; padding: 4rem 2rem; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--border-color);">
+    <i class="fas fa-hammer" style="font-size: 3rem; color: var(--accent); margin-bottom: 1rem;"></i>
+    <h2>{{ feature_name }}</h2>
+    <p style="color: var(--text-muted);">This feature isn't built yet — it's coming in a future milestone.</p>
+    <a href="{{ url_for('admin_dashboard') }}" style="display:inline-block; margin-top:1rem; color: var(--primary-dark); font-weight:600;">Back to Dashboard</a>
+</div>
+{% endblock %}

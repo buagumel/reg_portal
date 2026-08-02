@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Reset Code | JSPICT Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_auth.css') }}">
+</head>
+<body>
+    <div class="giant-bg"></div>
+    <div class="login-container">
+        <div class="login-left">
+            <div class="school-logo">
+                <img class="school-logo-img" src="{{ url_for('static', filename='img/jspict-logo.png') }}" alt="JSPICT Logo">
+            </div>
+            <div class="school-name">JSPICT</div>
+            <div class="school-tagline">Jigawa State Polytechnic for Information Communication Technology, Kazaure</div>
+        </div>
+        <div class="login-right">
+            <div class="form-header">
+                <span class="admin-badge"><i class="fas fa-user-shield"></i> Admin Portal</span>
+                <h2>Enter reset code</h2>
+                <p>We've sent a 6-digit code to {{ email or 'your email' }} (if it matched an account). It expires in 5 minutes.</p>
+            </div>
+
+            <form id="verifyCodeForm">
+                <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+                <div class="input-group">
+                    <label>Reset Code</label>
+                    <div class="input-icon">
+                        <i class="fas fa-shield-halved"></i>
+                        <input type="text" id="code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required>
+                    </div>
+                </div>
+                <button type="submit" class="login-btn" id="verifyBtn">
+                    <i class="fas fa-check"></i> Verify code
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastMsg" class="alert-toast"></div>
+    <script type="module" src="{{ url_for('static', filename='js/admin/admin-verify-reset-code.js') }}"></script>
+</body>
+</html>
