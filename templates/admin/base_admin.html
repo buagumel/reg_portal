@@ -21,7 +21,7 @@
                 <li><a href="{{ url_for('admin_sessions') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_session') }}"><i class="fas fa-calendar-alt"></i> Sessions</a></li>
                 <li><a href="{{ url_for('admin_stub_students_import') }}"><i class="fas fa-users"></i> Students</a></li>
                 <li><a href="{{ url_for('admin_stub_courses') }}"><i class="fas fa-book"></i> Courses</a></li>
-                <li><a href="{{ url_for('admin_stub_registration_open') }}"><i class="fas fa-door-open"></i> Registration</a></li>
+                <li><a href="{{ url_for('admin_registration_open') }}" class="{{ 'active' if request.endpoint in ('admin_registration_open', 'admin_period_activate') }}"><i class="fas fa-door-open"></i> Registration</a></li>
                 <li><a href="{{ url_for('admin_stub_announcements_new') }}"><i class="fas fa-bullhorn"></i> Announcements</a></li>
                 <li><a href="{{ url_for('admin_stub_reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
                 <li><a href="{{ url_for('admin_logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>

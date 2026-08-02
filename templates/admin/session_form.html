@@ -49,5 +49,84 @@
         <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary-light); color: var(--primary-dark); border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;"><i class="fas fa-copy"></i> Clone</button>
     </form>
 </div>
+
+<div style="max-width:720px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-top:1.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin-top:0;">Registration Periods (Semesters)</h3>
+        <a href="{{ url_for('admin_period_new', session_id=session.id) }}" style="color: var(--primary-dark); font-weight:600;"><i class="fas fa-plus"></i> Add Period</a>
+    </div>
+    <table style="width:100%; border-collapse:collapse; margin-top:0.8rem;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.6rem;">Semester</th>
+                <th style="padding:0.6rem;">Opens</th>
+                <th style="padding:0.6rem;">Closes</th>
+                <th style="padding:0.6rem;">Active</th>
+                <th style="padding:0.6rem;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for period in periods %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.6rem;">{{ period.semester.name }}</td>
+                <td style="padding:0.6rem;">{{ period.opens_at.strftime('%d %b %Y') }}</td>
+                <td style="padding:0.6rem;">{{ period.closes_at.strftime('%d %b %Y') }}</td>
+                <td style="padding:0.6rem;">{% if period.is_active %}<span style="color: var(--success);"><i class="fas fa-check-circle"></i></span>{% endif %}</td>
+                <td style="padding:0.6rem; text-align:right;">
+                    <a href="{{ url_for('admin_period_edit', session_id=session.id, period_id=period.id) }}" style="color: var(--primary-dark); margin-right:0.6rem;">Edit</a>
+                    {% if not period.is_active %}
+                    <form method="POST" action="{{ url_for('admin_period_activate', session_id=session.id, period_id=period.id) }}" style="display:inline;" onsubmit="return confirm('Activate this period?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer;">Activate</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="padding:1.2rem; text-align:center; color: var(--text-muted);">No registration periods yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="max-width:720px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-top:1.5rem;">
+    <h3 style="margin-top:0;">Holidays &amp; Breaks</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:1rem;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.6rem;">Name</th>
+                <th style="padding:0.6rem;">Starts</th>
+                <th style="padding:0.6rem;">Ends</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for holiday in holidays %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.6rem;">{{ holiday.name }}</td>
+                <td style="padding:0.6rem;">{{ holiday.starts_on.strftime('%d %b %Y') }}</td>
+                <td style="padding:0.6rem;">{{ holiday.ends_on.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" style="padding:1.2rem; text-align:center; color: var(--text-muted);">No holidays configured.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <form method="POST" action="{{ url_for('admin_holiday_new', session_id=session.id) }}" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+            <label style="display:block; font-size:0.8rem; margin-bottom:0.2rem;">Name</label>
+            <input type="text" name="name" required placeholder="Mid-semester break" style="padding:0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);">
+        </div>
+        <div>
+            <label style="display:block; font-size:0.8rem; margin-bottom:0.2rem;">Starts</label>
+            <input type="date" name="starts_on" required style="padding:0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);">
+        </div>
+        <div>
+            <label style="display:block; font-size:0.8rem; margin-bottom:0.2rem;">Ends</label>
+            <input type="date" name="ends_on" required style="padding:0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);">
+        </div>
+        <button type="submit" style="padding:0.55rem 1rem; background: var(--primary-light); color: var(--primary-dark); border:none; border-radius:0.4rem; font-weight:600; cursor:pointer;">Add</button>
+    </form>
+</div>
 {% endif %}
 {% endblock %}

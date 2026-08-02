@@ -51,9 +51,11 @@ from services.admin_department import (
     list_departments, get_department, get_department_detail,
     create_department, update_department, set_department_status,
 )
-from services.admin_validation import is_department_code_unique
+from services.admin_validation import is_department_code_unique, validate_credit_range
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
+    list_semesters, list_periods, get_period, create_period, update_period, activate_period,
+    list_holidays, create_holiday, list_inactive_periods,
 )
 
 app = Flask(__name__)
@@ -1232,7 +1234,10 @@ def admin_sessions_new():
 def admin_session_edit(session_id):
     session_obj = get_session(session_id)
     if request.method == 'GET':
-        return render_template('admin/session_form.html', session=session_obj)
+        return render_template(
+            'admin/session_form.html', session=session_obj,
+            periods=list_periods(session_id), holidays=list_holidays(session_id),
+        )
 
     name = request.form.get('name', '').strip()
     start_date = request.form.get('start_date') or None
@@ -1298,10 +1303,126 @@ def admin_stub_courses():
     return render_template('admin/coming_soon.html', feature_name='Manage Courses')
 
 
+@app.route('/admin/sessions/<int:session_id>/periods/new', methods=['GET', 'POST'])
+@permission_required('sessions.manage')
+def admin_period_new(session_id):
+    session_obj = get_session(session_id)
+    semesters = list_semesters()
+    if request.method == 'GET':
+        return render_template('admin/period_form.html', session=session_obj, period=None, semesters=semesters)
+
+    from datetime import datetime
+
+    def parse_dt(value):
+        return datetime.fromisoformat(value) if value else None
+
+    semester_id = request.form.get('semester_id', type=int)
+    opens_at = parse_dt(request.form.get('opens_at') or None)
+    closes_at = parse_dt(request.form.get('closes_at') or None)
+    min_credits = request.form.get('min_credits', type=int)
+    max_credits = request.form.get('max_credits', type=int)
+    registration_fee = request.form.get('registration_fee', type=float) or 0
+
+    errors = validate_credit_range(min_credits, max_credits)
+    if not semester_id or not opens_at or not closes_at:
+        errors.append('Semester, opens-at, and closes-at are required.')
+    if errors:
+        for e in errors:
+            flash(e)
+        return render_template('admin/period_form.html', session=session_obj, period=None, semesters=semesters, form=request.form)
+
+    period = create_period(
+        session_id, semester_id, opens_at, closes_at, min_credits, max_credits, registration_fee,
+        late_registration_ends_at=parse_dt(request.form.get('late_registration_ends_at') or None),
+        late_registration_fee=request.form.get('late_registration_fee', type=float) or None,
+        exam_starts_at=parse_dt(request.form.get('exam_starts_at') or None),
+        exam_ends_at=parse_dt(request.form.get('exam_ends_at') or None),
+        result_release_at=parse_dt(request.form.get('result_release_at') or None),
+    )
+    log_admin_action(current_user, 'registration_period_created', target_type='registration_period', target_id=period.id,
+                      details=f'session_id={session_id} semester_id={semester_id}', ip_address=request.remote_addr)
+    flash('Registration period created.')
+    return redirect(url_for('admin_session_edit', session_id=session_id))
+
+
+@app.route('/admin/sessions/<int:session_id>/periods/<int:period_id>/edit', methods=['GET', 'POST'])
+@permission_required('sessions.manage')
+def admin_period_edit(session_id, period_id):
+    session_obj = get_session(session_id)
+    period = get_period(period_id)
+    semesters = list_semesters()
+    if request.method == 'GET':
+        return render_template('admin/period_form.html', session=session_obj, period=period, semesters=semesters)
+
+    from datetime import datetime
+
+    def parse_dt(value):
+        return datetime.fromisoformat(value) if value else None
+
+    semester_id = request.form.get('semester_id', type=int)
+    opens_at = parse_dt(request.form.get('opens_at') or None)
+    closes_at = parse_dt(request.form.get('closes_at') or None)
+    min_credits = request.form.get('min_credits', type=int)
+    max_credits = request.form.get('max_credits', type=int)
+    registration_fee = request.form.get('registration_fee', type=float) or 0
+
+    errors = validate_credit_range(min_credits, max_credits)
+    if not semester_id or not opens_at or not closes_at:
+        errors.append('Semester, opens-at, and closes-at are required.')
+    if errors:
+        for e in errors:
+            flash(e)
+        return render_template('admin/period_form.html', session=session_obj, period=period, semesters=semesters, form=request.form)
+
+    update_period(
+        period_id, semester_id=semester_id, opens_at=opens_at, closes_at=closes_at,
+        min_credits=min_credits, max_credits=max_credits, registration_fee=registration_fee,
+        late_registration_ends_at=parse_dt(request.form.get('late_registration_ends_at') or None),
+        late_registration_fee=request.form.get('late_registration_fee', type=float) or None,
+        exam_starts_at=parse_dt(request.form.get('exam_starts_at') or None),
+        exam_ends_at=parse_dt(request.form.get('exam_ends_at') or None),
+        result_release_at=parse_dt(request.form.get('result_release_at') or None),
+    )
+    log_admin_action(current_user, 'registration_period_updated', target_type='registration_period', target_id=period_id,
+                      ip_address=request.remote_addr)
+    flash('Registration period updated.')
+    return redirect(url_for('admin_session_edit', session_id=session_id))
+
+
+@app.route('/admin/sessions/<int:session_id>/periods/<int:period_id>/activate', methods=['POST'])
+@permission_required('registration.manage')
+def admin_period_activate(session_id, period_id):
+    activate_period(period_id)
+    log_admin_action(current_user, 'registration_period_activated', target_type='registration_period', target_id=period_id,
+                      ip_address=request.remote_addr)
+    flash('Registration period activated.')
+    return redirect(request.referrer or url_for('admin_sessions'))
+
+
+@app.route('/admin/sessions/<int:session_id>/holidays', methods=['POST'])
+@permission_required('sessions.manage')
+def admin_holiday_new(session_id):
+    from datetime import date
+
+    name = request.form.get('name', '').strip()
+    starts_on = request.form.get('starts_on')
+    ends_on = request.form.get('ends_on')
+    if not name or not starts_on or not ends_on:
+        flash('Holiday name, start date, and end date are required.')
+        return redirect(url_for('admin_session_edit', session_id=session_id))
+
+    holiday = create_holiday(session_id, name, date.fromisoformat(starts_on), date.fromisoformat(ends_on))
+    log_admin_action(current_user, 'holiday_created', target_type='academic_holiday', target_id=holiday.id,
+                      details=f'session_id={session_id} name={name}', ip_address=request.remote_addr)
+    flash(f'Holiday "{name}" added.')
+    return redirect(url_for('admin_session_edit', session_id=session_id))
+
+
 @app.route('/admin/registration/open')
 @permission_required('registration.manage')
-def admin_stub_registration_open():
-    return render_template('admin/coming_soon.html', feature_name='Open Registration')
+def admin_registration_open():
+    periods = list_inactive_periods()
+    return render_template('admin/registration_open.html', periods=periods)
 
 
 @app.route('/admin/announcements/new')
