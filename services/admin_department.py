@@ -49,3 +49,7 @@ def set_department_status(department_id, status):
     department.status = status
     db.session.commit()
     return department
+
+
+def list_active_departments():
+    return Department.query.filter_by(status='active').order_by(Department.name).all()

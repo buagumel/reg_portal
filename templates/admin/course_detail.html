@@ -1,0 +1,36 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Courses / {{ course.code }}{% endblock %}
+
+{% block content %}
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.8rem;">
+        <div>
+            <h2 style="margin-top:0; margin-bottom:0.3rem;">{{ course.code }} — {{ course.title }}</h2>
+            <p style="color: var(--text-muted); margin:0;">{{ course.department }} &middot; {{ course.level or 'Level not set' }} &middot; {{ course.semester.name }} &middot; {{ course.credits }} credits &middot; <span style="text-transform:capitalize;">{{ course.status }}</span></p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin_course_edit', course_id=course.id) }}" style="color: var(--primary-dark); font-weight:600; margin-right:1rem;">Edit</a>
+            {% if course.status != 'active' %}
+            <form method="POST" action="{{ url_for('admin_course_activate', course_id=course.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer; font-weight:600;">Activate</button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('admin_course_deactivate', course_id=course.id) }}" style="display:inline;" onsubmit="return confirm('Deactivate this course for the current offering?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background:none; border:none; color: var(--warning); cursor:pointer; font-weight:600;">Deactivate</button>
+            </form>
+            {% endif %}
+            {% if course.status != 'archived' %}
+            <form method="POST" action="{{ url_for('admin_course_archive', course_id=course.id) }}" style="display:inline; margin-left:0.8rem;" onsubmit="return confirm('Archive this course? This is meant to be permanent.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer; font-weight:600;">Archive</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% if course.description %}<p style="margin-top:1rem;">{{ course.description }}</p>{% endif %}
+    <p style="color: var(--text-muted); font-size:0.85rem;">Instructor: {{ course.instructor or 'Not assigned' }} &middot; Schedule: {{ course.schedule or 'Not set' }}</p>
+</div>
+{% endblock %}
