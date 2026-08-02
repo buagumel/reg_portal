@@ -1,0 +1,27 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Courses / Import{% endblock %}
+
+{% block content %}
+<div style="max-width:560px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">Import Courses (CSV)</h2>
+    <p style="color: var(--text-muted); font-size:0.85rem;">Required columns: <code>code, title, credits, department, semester, course_type</code>. Optional: <code>level, description, instructor, schedule, max_capacity</code>. <code>department</code> must match an existing department's name or code exactly; <code>semester</code> must match an existing semester's name (e.g. "First Semester"); <code>course_type</code> must be one of core/elective/lab.</p>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Academic Session</label>
+            <select name="academic_session_id" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                {% for sess in sessions %}
+                <option value="{{ sess.id }}">{{ sess.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">CSV File</label>
+            <input type="file" name="file" accept=".csv" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;"><i class="fas fa-upload"></i> Import</button>
+        <a href="{{ url_for('admin_courses') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+</div>
+{% endblock %}

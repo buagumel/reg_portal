@@ -60,6 +60,8 @@ from services.admin_session import (
 from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
+from services.course_import import import_courses_csv
+from models import CourseImportJob
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -1503,6 +1505,35 @@ def admin_course_archive(course_id):
                       details='status=archived', ip_address=request.remote_addr)
     flash('Course archived.')
     return redirect(url_for('admin_course_detail', course_id=course_id))
+
+
+@app.route('/admin/courses/import', methods=['GET', 'POST'])
+@permission_required('courses.manage')
+def admin_course_import():
+    if request.method == 'GET':
+        return render_template('admin/course_import.html', sessions=list_sessions())
+
+    academic_session_id = request.form.get('academic_session_id', type=int)
+    file_storage = request.files.get('file')
+    if not academic_session_id:
+        flash('Please choose an academic session.')
+        return redirect(url_for('admin_course_import'))
+
+    job = import_courses_csv(file_storage, current_user, academic_session_id)
+    log_admin_action(
+        current_user, 'course_import_completed', target_type='course_import_job', target_id=job.id,
+        details=f'created={job.created_count} updated={job.updated_count} skipped={job.skipped_count} '
+                f'duplicates={job.duplicate_count} errors={job.error_count}',
+        ip_address=request.remote_addr,
+    )
+    return redirect(url_for('admin_course_import_report', job_id=job.id))
+
+
+@app.route('/admin/courses/import/<int:job_id>')
+@permission_required('courses.manage')
+def admin_course_import_report(job_id):
+    job = CourseImportJob.query.get_or_404(job_id)
+    return render_template('admin/course_import_report.html', job=job)
 
 
 @app.route('/admin/sessions/<int:session_id>/periods/new', methods=['GET', 'POST'])
