@@ -21,25 +21,36 @@ def get_active_period():
     )
 
 
-def get_window_status(period):
+def get_window_status(period, student_registration=None):
     """Return 'not_yet_open', 'open', or 'closed' for the given period,
-    based on now_lagos() vs. period.opens_at / period.closes_at."""
+    based on now_lagos() vs. period.opens_at / period.closes_at. If
+    student_registration has a deadline_override set (Registration
+    Oversight's per-student deadline extension), that value replaces
+    period.closes_at for this one student only — every other student
+    keeps using the period's own closes_at unchanged. student_registration
+    defaults to None so every pre-Phase-3 call site keeps working exactly
+    as before."""
     now = now_lagos()
+    effective_closes_at = period.closes_at
+    if student_registration is not None and student_registration.deadline_override is not None:
+        effective_closes_at = student_registration.deadline_override
     if now < period.opens_at:
         return 'not_yet_open'
-    if now > period.closes_at:
+    if now > effective_closes_at:
         return 'closed'
     return 'open'
 
 
-def get_add_drop_window_status(period):
+def get_add_drop_window_status(period, student_registration=None):
     """Same three-value contract as get_window_status, but checks the
     period's add_drop_opens_at/add_drop_closes_at when both are set —
-    falls back to the main registration window (identical behavior to
-    get_window_status) when either is unset, so every existing period
-    that never configured this keeps working exactly as before."""
+    falls back to get_window_status (main window, including its own
+    deadline_override handling) when either is unset. A per-student
+    deadline_override does NOT affect an explicitly-configured add/drop
+    window — those are two independent override mechanisms; only the
+    fallback path inherits the extension."""
     if period.add_drop_opens_at is None or period.add_drop_closes_at is None:
-        return get_window_status(period)
+        return get_window_status(period, student_registration)
 
     now = now_lagos()
     if now < period.add_drop_opens_at:
@@ -205,7 +216,7 @@ def add_course(user, period, student_registration, course_id, admin_override=Fal
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
 
-    if get_add_drop_window_status(period) != 'open':
+    if get_add_drop_window_status(period, student_registration) != 'open':
         raise RegistrationError('Add/Drop is not currently open.')
 
     validate_course_eligible(course, user, period)
@@ -246,7 +257,7 @@ def drop_course(user, period, student_registration, course_id):
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
 
-    if get_add_drop_window_status(period) != 'open':
+    if get_add_drop_window_status(period, student_registration) != 'open':
         raise RegistrationError('Add/Drop is not currently open.')
 
     registered_course = RegisteredCourse.query.filter_by(
@@ -268,7 +279,7 @@ def submit_registration(user, period, student_registration):
     if student_registration.is_locked:
         raise RegistrationError('This registration is locked by an administrator.')
 
-    window_status = get_window_status(period)
+    window_status = get_window_status(period, student_registration)
     min_credits, max_credits, _ = get_credit_limits(period, user.department)
     validate_can_submit(student_registration, window_status, min_credits, max_credits)
 

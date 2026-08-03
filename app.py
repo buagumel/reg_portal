@@ -60,7 +60,10 @@ from services.admin_session import (
 )
 from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
 from services.admin_export import export_csv, export_excel, VALID_DATA_TYPES
-from services.admin_registration import list_periods_for_selector, get_oversight_metrics
+from services.admin_registration import (
+    list_periods_for_selector, get_oversight_metrics, admin_add_course, admin_drop_course,
+    set_registration_lock, extend_deadline, reopen_registration, approve_exception,
+)
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 from services.course_import import import_courses_csv, preview_courses_csv
@@ -1470,6 +1473,154 @@ def admin_student_new():
 
     flash(f'Student "{name}" ({reg_no}) created. Temporary password: {temp_password}')
     return redirect(url_for('admin_student_profile', student_id=student.id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/add-course', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_add_course(student_id):
+    student = get_student(student_id)
+    context = get_student_profile(student_id)['registration_context']
+    period, student_registration = context['period'], context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    course_id = request.form.get('course_id', type=int)
+    override_capacity = request.form.get('override_capacity') == 'on'
+
+    if period is None or student_registration is None:
+        flash('This student has no active registration to add a course to.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    try:
+        admin_add_course(student, period, student_registration, course_id, current_user, reason, override_capacity=override_capacity)
+    except RegistrationError as e:
+        flash(str(e))
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    log_admin_action(current_user, 'course_added_by_admin', target_type='student_registration', target_id=student_registration.id,
+                      details=f'course_id={course_id} reason={reason}', ip_address=request.remote_addr)
+    flash('Course added to student\'s registration.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/drop-course', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_drop_course(student_id):
+    student = get_student(student_id)
+    context = get_student_profile(student_id)['registration_context']
+    period, student_registration = context['period'], context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    course_id = request.form.get('course_id', type=int)
+
+    if period is None or student_registration is None:
+        flash('This student has no active registration to drop a course from.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    try:
+        admin_drop_course(student, period, student_registration, course_id, current_user, reason)
+    except RegistrationError as e:
+        flash(str(e))
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    log_admin_action(current_user, 'course_removed_by_admin', target_type='student_registration', target_id=student_registration.id,
+                      details=f'course_id={course_id} reason={reason}', ip_address=request.remote_addr)
+    flash('Course removed from student\'s registration.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/lock', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_lock(student_id):
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    locked = request.form.get('locked') == 'true'
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    set_registration_lock(student_registration, current_user, locked, reason)
+    log_admin_action(current_user, 'registration_locked' if locked else 'registration_unlocked',
+                      target_type='student_registration', target_id=student_registration.id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Registration {"locked" if locked else "unlocked"}.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/extend-deadline', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_extend_deadline(student_id):
+    from datetime import datetime
+
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    new_deadline_raw = request.form.get('new_deadline', '')
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason or not new_deadline_raw:
+        flash('A reason and a new deadline are required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    new_deadline = datetime.fromisoformat(new_deadline_raw)
+    extend_deadline(student_registration, current_user, new_deadline, reason)
+    log_admin_action(current_user, 'registration_deadline_extended', target_type='student_registration',
+                      target_id=student_registration.id, details=f'new_deadline={new_deadline_raw} reason={reason}',
+                      ip_address=request.remote_addr)
+    flash('Deadline extended for this student.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/reopen', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_reopen(student_id):
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    reopen_registration(student_registration, current_user, reason)
+    log_admin_action(current_user, 'registration_reopened', target_type='student_registration',
+                      target_id=student_registration.id, details=reason, ip_address=request.remote_addr)
+    flash('Registration reopened — the student can resume course selection.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/approve-exception', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_approve_exception(student_id):
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    approve_exception(student_registration, current_user, reason)
+    log_admin_action(current_user, 'registration_exception_approved', target_type='student_registration',
+                      target_id=student_registration.id, details=reason, ip_address=request.remote_addr)
+    flash('Exception recorded for this student\'s registration.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
 @app.route('/admin/students/<int:student_id>/edit', methods=['GET', 'POST'])

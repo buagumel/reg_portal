@@ -42,6 +42,8 @@ def get_student_profile(student_id):
     from services.registration import get_registration_history
     from services.course_history import get_courses_by_semester
     from services.payment import get_payment_history
+    from services.course import get_available_courses
+    from services.admin_registration import get_student_registration_context
 
     user = get_student(student_id)
     registration_history = get_registration_history(user)
@@ -49,9 +51,18 @@ def get_student_profile(student_id):
     payment_items, payment_total = get_payment_history(user, per_page=10)
     activity_log = AuditLog.query.filter_by(user_id=student_id).order_by(AuditLog.created_at.desc()).limit(20).all()
 
+    registration_context = get_student_registration_context(user)
+    student_registration = registration_context['student_registration']
+    available_courses = []
+    overrides = []
+    if registration_context['period'] is not None and student_registration is not None:
+        available_courses = get_available_courses(user, registration_context['period'], student_registration)
+        overrides = student_registration.overrides
+
     return {
         'user': user, 'registration_history': registration_history, 'course_history': course_history,
         'payment_history': payment_items, 'payment_total': payment_total, 'activity_log': activity_log,
+        'registration_context': registration_context, 'available_courses': available_courses, 'overrides': overrides,
     }
 
 
