@@ -60,7 +60,7 @@ from services.admin_session import (
 from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
-from services.course_import import import_courses_csv
+from services.course_import import import_courses_csv, preview_courses_csv
 from models import CourseImportJob
 from services.admin_student import (
     list_active_programmes, list_students, get_student, get_student_profile,
@@ -1791,6 +1791,16 @@ def admin_course_archive(course_id):
                       details='status=archived', ip_address=request.remote_addr)
     flash('Course archived.')
     return redirect(url_for('admin_course_detail', course_id=course_id))
+
+
+@app.route('/admin/courses/import/preview', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_import_preview():
+    file_storage = request.files.get('file')
+    summary, parse_error = preview_courses_csv(file_storage)
+    if parse_error:
+        return jsonify({'success': False, 'message': parse_error}), 400
+    return jsonify({'success': True, **summary})
 
 
 @app.route('/admin/courses/import', methods=['GET', 'POST'])
