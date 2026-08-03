@@ -8,6 +8,7 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf
 from extensions import mail, Message
 from models import (
     db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos, Programme,
+    RegistrationPeriod,
 )
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
@@ -59,6 +60,7 @@ from services.admin_session import (
 )
 from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
 from services.admin_export import export_csv, export_excel, VALID_DATA_TYPES
+from services.admin_registration import list_periods_for_selector, get_oversight_metrics
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 from services.course_import import import_courses_csv, preview_courses_csv
@@ -2058,6 +2060,39 @@ def admin_holiday_new(session_id):
 def admin_registration_open():
     periods = list_inactive_periods()
     return render_template('admin/registration_open.html', periods=periods)
+
+
+@app.route('/admin/registration/oversight')
+@permission_required('registration.manage')
+def admin_registration_oversight():
+    periods = list_periods_for_selector()
+    return render_template(
+        'admin/registration_oversight.html', periods=periods,
+        departments=list_active_departments(), programmes=list_active_programmes(),
+    )
+
+
+@app.route('/admin/registration/oversight/data')
+@permission_required('registration.manage')
+def admin_registration_oversight_data():
+    period_id = request.args.get('period_id', type=int)
+    period = get_period(period_id) if period_id else (
+        RegistrationPeriod.query.filter_by(is_active=True).order_by(RegistrationPeriod.id.desc()).first()
+    )
+    if period is None:
+        return jsonify({'success': False, 'message': 'No registration period selected or active.'}), 400
+
+    department_id = request.args.get('department_id', type=int)
+    programme_id = request.args.get('programme_id', type=int)
+    level = request.args.get('level', '').strip() or None
+    status = request.args.get('status', '').strip() or None
+
+    metrics = get_oversight_metrics(period, department_id=department_id, programme_id=programme_id, level=level, status=status)
+    return jsonify({
+        'success': True, 'period_id': period.id,
+        'session_name': period.academic_session.name, 'semester_name': period.semester.name,
+        **metrics,
+    })
 
 
 @app.route('/admin/announcements/new')
