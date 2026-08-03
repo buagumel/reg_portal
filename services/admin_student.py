@@ -140,3 +140,42 @@ def bulk_set_status(student_ids, status):
     )
     db.session.commit()
     return count
+
+
+def bulk_reset_password(student_ids):
+    """Resets each student's password to a fresh temp password. Returns a
+    list of {'reg_no', 'temp_password'} — the caller (route) is responsible
+    for getting this to the admin (client-side CSV download); it is never
+    written to a log or persisted anywhere in plaintext."""
+    results = []
+    for student_id in student_ids:
+        temp_password = reset_student_password(student_id)
+        student = get_student(student_id)
+        results.append({'reg_no': student.reg_no, 'temp_password': temp_password})
+    return results
+
+
+def bulk_assign_department(student_ids, department_id):
+    from models import Department
+
+    department = Department.query.get(department_id)
+    if department is None:
+        return 0
+    count = User.query.filter(User.id.in_(student_ids)).update(
+        {'department_id': department.id, 'department': department.name}, synchronize_session=False,
+    )
+    db.session.commit()
+    return count
+
+
+def bulk_assign_programme(student_ids, programme_id):
+    from models import Programme
+
+    programme = Programme.query.get(programme_id)
+    if programme is None:
+        return 0
+    count = User.query.filter(User.id.in_(student_ids)).update(
+        {'programme_id': programme.id, 'course': programme.name}, synchronize_session=False,
+    )
+    db.session.commit()
+    return count

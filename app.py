@@ -65,7 +65,7 @@ from models import CourseImportJob
 from services.admin_student import (
     list_active_programmes, list_students, get_student, get_student_profile,
     create_student, update_student, set_account_status, reset_student_password, resend_verification,
-    bulk_set_status,
+    bulk_set_status, bulk_reset_password, bulk_assign_department, bulk_assign_programme,
 )
 from services.student_import import import_students_csv, preview_students_csv
 from models import StudentImportJob
@@ -1602,6 +1602,88 @@ def admin_students_bulk_status():
     log_admin_action(current_user, 'student_bulk_status_changed', target_type='user', target_id=None,
                       details=f'status={status} count={count} ids={student_ids}', ip_address=request.remote_addr)
     return jsonify({'success': True, 'message': f'{count} student(s) updated to {status}.', 'count': count})
+
+
+@app.route('/admin/students/bulk-reset-password', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_reset_password():
+    data = request.get_json()
+    if not data or not data.get('student_ids'):
+        return jsonify({'success': False, 'message': 'student_ids is required.'}), 400
+
+    student_ids = data['student_ids']
+    results = bulk_reset_password(student_ids)
+    log_admin_action(current_user, 'student_bulk_password_reset', target_type='user', target_id=None,
+                      details=f'count={len(results)} ids={student_ids}', ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{len(results)} password(s) reset.', 'results': results})
+
+
+@app.route('/admin/students/bulk-resend-email', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_resend_email():
+    data = request.get_json()
+    if not data or not data.get('student_ids'):
+        return jsonify({'success': False, 'message': 'student_ids is required.'}), 400
+
+    student_ids = data['student_ids']
+    sent = skipped = 0
+    for student_id in student_ids:
+        ok, _ = resend_verification(student_id)
+        if not ok:
+            skipped += 1
+            continue
+        student = get_student(student_id)
+        try:
+            msg = Message('Complete Your Email Verification', recipients=[student.email])
+            msg.body = (
+                f'Hello {student.name},\n\n'
+                'An administrator noticed your email address on the Student Portal hasn\'t been verified yet. '
+                'Please log in and complete your onboarding to verify it.\n\n'
+                'If you did not request this, you can safely ignore this email.'
+            )
+            mail.send(msg)
+            sent += 1
+        except Exception:
+            app.logger.warning('Failed to send verification reminder to %s', student.email)
+            skipped += 1
+        create_notification(
+            student, 'Verify your email', 'Please log in and complete your onboarding to verify your email address.',
+            category='profile', priority='medium',
+        )
+
+    log_admin_action(current_user, 'student_bulk_verification_resent', target_type='user', target_id=None,
+                      details=f'sent={sent} skipped={skipped} ids={student_ids}', ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{sent} email(s) sent, {skipped} skipped (no email on file).'})
+
+
+@app.route('/admin/students/bulk-assign-department', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_assign_department():
+    data = request.get_json()
+    if not data or not data.get('student_ids') or not data.get('department_id'):
+        return jsonify({'success': False, 'message': 'student_ids and department_id are required.'}), 400
+
+    student_ids = data['student_ids']
+    count = bulk_assign_department(student_ids, data['department_id'])
+    log_admin_action(current_user, 'student_bulk_department_assigned', target_type='user', target_id=None,
+                      details=f'department_id={data["department_id"]} count={count} ids={student_ids}',
+                      ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{count} student(s) assigned.', 'count': count})
+
+
+@app.route('/admin/students/bulk-assign-programme', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_assign_programme():
+    data = request.get_json()
+    if not data or not data.get('student_ids') or not data.get('programme_id'):
+        return jsonify({'success': False, 'message': 'student_ids and programme_id are required.'}), 400
+
+    student_ids = data['student_ids']
+    count = bulk_assign_programme(student_ids, data['programme_id'])
+    log_admin_action(current_user, 'student_bulk_programme_assigned', target_type='user', target_id=None,
+                      details=f'programme_id={data["programme_id"]} count={count} ids={student_ids}',
+                      ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{count} student(s) assigned.', 'count': count})
 
 
 @app.route('/admin/courses')

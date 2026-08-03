@@ -37,11 +37,27 @@
     </div>
 </div>
 
-<div id="bulkBar" style="display:none; align-items:center; gap:0.8rem; background: var(--primary-light); border-radius:0.6rem; padding:0.6rem 1rem; margin-bottom:0.8rem;">
+<div id="bulkBar" style="display:none; align-items:center; gap:0.8rem; background: var(--primary-light); border-radius:0.6rem; padding:0.6rem 1rem; margin-bottom:0.8rem; flex-wrap:wrap;">
     <span id="bulkCount" style="font-weight:600; color: var(--primary-dark);"></span>
     <button id="bulkActivateBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--success); color:white; cursor:pointer;">Activate</button>
     <button id="bulkSuspendBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--warning); color:white; cursor:pointer;">Suspend</button>
     <button id="bulkDeactivateBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--danger); color:white; cursor:pointer;">Deactivate</button>
+    <button id="bulkResetPasswordBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Reset Password</button>
+    <button id="bulkResendEmailBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Resend Onboarding Email</button>
+    <select id="bulkDeptSelect" style="padding:0.4rem 0.6rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);">
+        <option value="">Assign department…</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}">{{ dept.name }}</option>
+        {% endfor %}
+    </select>
+    <button id="bulkAssignDeptBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Apply</button>
+    <select id="bulkProgSelect" style="padding:0.4rem 0.6rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);">
+        <option value="">Assign programme…</option>
+        {% for prog in programmes %}
+        <option value="{{ prog.id }}">{{ prog.name }}</option>
+        {% endfor %}
+    </select>
+    <button id="bulkAssignProgBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Apply</button>
 </div>
 
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
