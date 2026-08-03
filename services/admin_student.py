@@ -44,6 +44,7 @@ def get_student_profile(student_id):
     from services.payment import get_payment_history
     from services.course import get_available_courses
     from services.admin_registration import get_student_registration_context
+    from services.admin_onboarding import get_onboarding_timeline
 
     user = get_student(student_id)
     registration_history = get_registration_history(user)
@@ -59,10 +60,13 @@ def get_student_profile(student_id):
         available_courses = get_available_courses(user, registration_context['period'], student_registration)
         overrides = student_registration.overrides
 
+    onboarding_timeline = get_onboarding_timeline(user)
+
     return {
         'user': user, 'registration_history': registration_history, 'course_history': course_history,
         'payment_history': payment_items, 'payment_total': payment_total, 'activity_log': activity_log,
         'registration_context': registration_context, 'available_courses': available_courses, 'overrides': overrides,
+        'onboarding_timeline': onboarding_timeline,
     }
 
 

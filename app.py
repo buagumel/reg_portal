@@ -64,7 +64,10 @@ from services.admin_registration import (
     list_periods_for_selector, get_oversight_metrics, admin_add_course, admin_drop_course,
     set_registration_lock, extend_deadline, reopen_registration, approve_exception,
 )
-from services.admin_onboarding import get_onboarding_summary, get_onboarding_analytics
+from services.admin_onboarding import (
+    get_onboarding_summary, get_onboarding_analytics, reset_onboarding, manually_verify_email, mark_onboarding_complete,
+)
+from services.admin_permission import has_permission
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 from services.course_import import import_courses_csv, preview_courses_csv
@@ -1408,7 +1411,8 @@ def admin_students_data():
 @permission_required('students.manage')
 def admin_student_profile(student_id):
     profile = get_student_profile(student_id)
-    return render_template('admin/student_profile.html', **profile)
+    can_override_onboarding = has_permission(current_user, 'onboarding.override')
+    return render_template('admin/student_profile.html', can_override_onboarding=can_override_onboarding, **profile)
 
 
 @app.route('/admin/students/new', methods=['GET', 'POST'])
@@ -1626,6 +1630,54 @@ def admin_student_registration_approve_exception(student_id):
     log_admin_action(current_user, 'registration_exception_approved', target_type='student_registration',
                       target_id=student_registration.id, details=reason, ip_address=request.remote_addr)
     flash('Exception recorded for this student\'s registration.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/onboarding/reset', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_onboarding_reset(student_id):
+    student = get_student(student_id)
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    reset_onboarding(student)
+    log_admin_action(current_user, 'onboarding_reset', target_type='user', target_id=student_id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Onboarding reset for {student.name}.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/onboarding/verify-email', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_onboarding_verify_email(student_id):
+    student = get_student(student_id)
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    manually_verify_email(student)
+    log_admin_action(current_user, 'email_manually_verified', target_type='user', target_id=student_id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Email manually verified for {student.name}.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/onboarding/mark-complete', methods=['POST'])
+@permission_required('onboarding.override')
+def admin_student_onboarding_mark_complete(student_id):
+    student = get_student(student_id)
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    mark_onboarding_complete(student)
+    log_admin_action(current_user, 'onboarding_marked_complete', target_type='user', target_id=student_id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Onboarding marked complete for {student.name}.')
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 

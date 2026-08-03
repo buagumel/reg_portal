@@ -197,6 +197,60 @@
     {% endif %}
 </div>
 
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Onboarding Management</h3>
+    <p>
+        Status: <strong>{{ 'Completed' if user.onboarding_completed else 'Not completed' }}</strong> &middot;
+        Email Verified: <strong>{{ 'Yes' if user.email_verified else 'No' }}</strong> &middot;
+        Password Changed: <strong>{{ 'No (first login pending)' if user.first_login else 'Yes' }}</strong> &middot;
+        Last Login: <strong>{{ user.last_login_at.strftime('%d %b %Y, %I:%M %p') if user.last_login_at else 'Never' }}</strong>
+    </p>
+
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:1rem; margin-top:1rem;">
+        <form method="POST" action="{{ url_for('admin_student_resend_verification', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Resend Verification Email</label>
+            <p style="font-size:0.75rem; color: var(--text-muted); margin:0 0 0.4rem;">(Phase 2 action, no reason field — surfaced here alongside the other onboarding actions.)</p>
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Resend</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_student_onboarding_reset', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Reset Onboarding</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--warning); color:white; cursor:pointer;">Reset</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_student_onboarding_verify_email', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Manually Verify Email</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Verify</button>
+        </form>
+
+        {% if can_override_onboarding %}
+        <form method="POST" action="{{ url_for('admin_student_onboarding_mark_complete', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Mark Onboarding Complete <span style="color: var(--text-muted); font-weight:400;">(Super Admin)</span></label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--success); color:white; cursor:pointer;">Mark Complete</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div style="margin-top:1.2rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+        <h4 style="margin:0 0 0.5rem;">Onboarding Timeline</h4>
+        <ul style="list-style:none; padding:0; margin:0;">
+            {% for event in onboarding_timeline %}
+            <li style="padding:0.4rem 0; border-bottom:1px solid var(--border-color); font-size:0.85rem;">
+                <strong>{{ event.label }}</strong> — {{ event.timestamp.strftime('%d %b %Y, %I:%M %p') }}
+            </li>
+            {% endfor %}
+        </ul>
+        <p style="color: var(--text-muted); font-size:0.8rem; margin-top:0.6rem;">OTP History / Failed Verification Attempts: Not tracked.</p>
+    </div>
+</div>
+
 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
     <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
         <h3 style="margin-top:0;">Activity Log</h3>

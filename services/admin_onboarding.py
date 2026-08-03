@@ -60,3 +60,43 @@ def get_onboarding_analytics():
         'completion_by_department': [{'department': name, 'count': count} for name, count in by_department],
         'completion_by_session': [{'session': session_name, 'count': count} for session_name, count in by_session],
     }
+
+
+def get_onboarding_timeline(user):
+    """Assembled from data that already exists — not a stored timeline.
+    created_at/last_login_at/onboarding_completed_at plus this student's
+    own AuditLog rows (profile/password changes, already logged since the
+    Profile Management milestone)."""
+    from models import AuditLog
+
+    events = []
+    if user.created_at:
+        events.append({'label': 'Account created', 'timestamp': user.created_at})
+    if user.last_login_at:
+        events.append({'label': 'Most recent login', 'timestamp': user.last_login_at})
+    if user.onboarding_completed_at:
+        events.append({'label': 'Onboarding completed', 'timestamp': user.onboarding_completed_at})
+
+    for log in AuditLog.query.filter_by(user_id=user.id).order_by(AuditLog.created_at.desc()).limit(10).all():
+        events.append({'label': log.action.replace('_', ' ').title(), 'timestamp': log.created_at})
+
+    events.sort(key=lambda e: e['timestamp'], reverse=True)
+    return events
+
+
+def reset_onboarding(user):
+    user.onboarding_completed = False
+    db.session.commit()
+
+
+def manually_verify_email(user):
+    user.email_verified = True
+    db.session.commit()
+
+
+def mark_onboarding_complete(user):
+    from models import now_lagos
+
+    user.onboarding_completed = True
+    user.onboarding_completed_at = now_lagos()
+    db.session.commit()
