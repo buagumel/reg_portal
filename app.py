@@ -65,6 +65,7 @@ from models import CourseImportJob
 from services.admin_student import (
     list_active_programmes, list_students, get_student, get_student_profile,
     create_student, update_student, set_account_status, reset_student_password, resend_verification,
+    bulk_set_status,
 )
 from services.student_import import import_students_csv
 from models import StudentImportJob
@@ -1536,6 +1537,24 @@ def admin_student_resend_verification(student_id):
                       ip_address=request.remote_addr)
     flash('Verification reminder sent.')
     return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/bulk-status', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_status():
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Invalid request'}), 400
+
+    student_ids = data.get('student_ids', [])
+    status = data.get('status')
+    if not student_ids or status not in ('active', 'suspended', 'deactivated'):
+        return jsonify({'success': False, 'message': 'student_ids and a valid status are required.'}), 400
+
+    count = bulk_set_status(student_ids, status)
+    log_admin_action(current_user, 'student_bulk_status_changed', target_type='user', target_id=None,
+                      details=f'status={status} count={count} ids={student_ids}', ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{count} student(s) updated to {status}.', 'count': count})
 
 
 @app.route('/admin/courses')

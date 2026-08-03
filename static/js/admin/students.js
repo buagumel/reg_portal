@@ -1,4 +1,5 @@
 import { showToast } from '../shared/toast.js';
+import { postJson } from '../shared/api.js';
 
 const tableBody = document.getElementById('studentsTableBody');
 const searchInput = document.getElementById('searchInput');
@@ -125,5 +126,23 @@ document.querySelectorAll('[data-sort]').forEach((th) => {
     th.style.cursor = 'pointer';
     th.addEventListener('click', () => { state.sort = th.dataset.sort; state.page = 1; load(); });
 });
+
+const bulkActivateBtn = document.getElementById('bulkActivateBtn');
+const bulkSuspendBtn = document.getElementById('bulkSuspendBtn');
+const bulkDeactivateBtn = document.getElementById('bulkDeactivateBtn');
+
+async function runBulkStatus(status, label) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    if (!confirm(`${label} ${ids.length} selected student(s)?`)) return;
+
+    const result = await postJson('/admin/students/bulk-status', { student_ids: ids, status });
+    showToast(result.message || (result.success ? 'Updated.' : 'Could not update students.'), !result.success);
+    if (result.success) load();
+}
+
+bulkActivateBtn.addEventListener('click', () => runBulkStatus('active', 'Activate'));
+bulkSuspendBtn.addEventListener('click', () => runBulkStatus('suspended', 'Suspend'));
+bulkDeactivateBtn.addEventListener('click', () => runBulkStatus('deactivated', 'Deactivate'));
 
 load();

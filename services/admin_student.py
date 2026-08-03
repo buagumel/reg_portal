@@ -132,3 +132,11 @@ def resend_verification(student_id):
     if not student.email:
         return False, 'Student has no email on file yet — nothing to resend to.'
     return True, None
+
+
+def bulk_set_status(student_ids, status):
+    count = User.query.filter(User.id.in_(student_ids)).update(
+        {'account_status': status}, synchronize_session=False,
+    )
+    db.session.commit()
+    return count
