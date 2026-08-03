@@ -1969,6 +1969,8 @@ def admin_period_new(session_id):
         exam_starts_at=parse_dt(request.form.get('exam_starts_at') or None),
         exam_ends_at=parse_dt(request.form.get('exam_ends_at') or None),
         result_release_at=parse_dt(request.form.get('result_release_at') or None),
+        add_drop_opens_at=parse_dt(request.form.get('add_drop_opens_at') or None),
+        add_drop_closes_at=parse_dt(request.form.get('add_drop_closes_at') or None),
     )
     log_admin_action(current_user, 'registration_period_created', target_type='registration_period', target_id=period.id,
                       details=f'session_id={session_id} semester_id={semester_id}', ip_address=request.remote_addr)
@@ -2013,6 +2015,8 @@ def admin_period_edit(session_id, period_id):
         exam_starts_at=parse_dt(request.form.get('exam_starts_at') or None),
         exam_ends_at=parse_dt(request.form.get('exam_ends_at') or None),
         result_release_at=parse_dt(request.form.get('result_release_at') or None),
+        add_drop_opens_at=parse_dt(request.form.get('add_drop_opens_at') or None),
+        add_drop_closes_at=parse_dt(request.form.get('add_drop_closes_at') or None),
     )
     log_admin_action(current_user, 'registration_period_updated', target_type='registration_period', target_id=period_id,
                       ip_address=request.remote_addr)

@@ -32,6 +32,23 @@ def get_window_status(period):
     return 'open'
 
 
+def get_add_drop_window_status(period):
+    """Same three-value contract as get_window_status, but checks the
+    period's add_drop_opens_at/add_drop_closes_at when both are set —
+    falls back to the main registration window (identical behavior to
+    get_window_status) when either is unset, so every existing period
+    that never configured this keeps working exactly as before."""
+    if period.add_drop_opens_at is None or period.add_drop_closes_at is None:
+        return get_window_status(period)
+
+    now = now_lagos()
+    if now < period.add_drop_opens_at:
+        return 'not_yet_open'
+    if now > period.add_drop_closes_at:
+        return 'closed'
+    return 'open'
+
+
 def get_credit_limits(period, department):
     """Return (min_credits, max_credits, registration_fee) for a department,
     applying any DepartmentRegistrationRule override field-by-field over the
@@ -188,8 +205,8 @@ def add_course(user, period, student_registration, course_id, admin_override=Fal
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
 
-    if get_window_status(period) != 'open':
-        raise RegistrationError('Registration is not currently open.')
+    if get_add_drop_window_status(period) != 'open':
+        raise RegistrationError('Add/Drop is not currently open.')
 
     validate_course_eligible(course, user, period)
     validate_not_duplicate(student_registration, course)
@@ -229,8 +246,8 @@ def drop_course(user, period, student_registration, course_id):
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
 
-    if get_window_status(period) != 'open':
-        raise RegistrationError('Registration is not currently open.')
+    if get_add_drop_window_status(period) != 'open':
+        raise RegistrationError('Add/Drop is not currently open.')
 
     registered_course = RegisteredCourse.query.filter_by(
         student_registration_id=student_registration.id, course_id=course_id

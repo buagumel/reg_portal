@@ -76,6 +76,21 @@
                        style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
             </div>
         </fieldset>
+        <fieldset style="border: 1px solid var(--border-color); border-radius:0.6rem; padding:1rem; margin-bottom:1.5rem;">
+            <legend style="padding:0 0.5rem; color: var(--text-muted); font-size:0.85rem;">Add/Drop Window (optional — leave blank to use the main registration window above)</legend>
+            <div style="display:flex; gap:1rem;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Opens At</label>
+                    <input type="datetime-local" name="add_drop_opens_at" value="{{ period.add_drop_opens_at.strftime('%Y-%m-%dT%H:%M') if period and period.add_drop_opens_at else '' }}"
+                           style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Closes At</label>
+                    <input type="datetime-local" name="add_drop_closes_at" value="{{ period.add_drop_closes_at.strftime('%Y-%m-%dT%H:%M') if period and period.add_drop_closes_at else '' }}"
+                           style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                </div>
+            </div>
+        </fieldset>
         <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
         <a href="{{ url_for('admin_session_edit', session_id=session.id) }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
     </form>
