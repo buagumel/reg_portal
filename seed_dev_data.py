@@ -360,6 +360,7 @@ def seed_admin_rbac():
         ('announcements.manage', 'Create system announcements'),
         ('reports.view', 'View and generate reports'),
         ('departments.manage', 'Create, edit, and manage departments'),
+        ('onboarding.override', 'Manually mark a student\'s onboarding as complete, bypassing the onboarding wizard'),
     ]
     perm_objs = {}
     for code, description in permissions:
@@ -376,7 +377,7 @@ def seed_admin_rbac():
     roles = {
         'Super Administrator': (
             'Complete system access',
-            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view', 'departments.manage'],
+            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view', 'departments.manage', 'onboarding.override'],
         ),
         'Academic Administrator': (
             'Course management, registration oversight, and announcements',
