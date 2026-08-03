@@ -1,4 +1,4 @@
-from models import db, Course, Department, CoursePrerequisite, CourseCorequisite, CourseAssessmentComponent
+from models import db, Course, Department, CoursePrerequisite, CourseCorequisite, CourseAssessmentComponent, RegisteredCourse
 
 
 def list_courses(search=None, department_id=None, level=None, semester_id=None,
@@ -32,6 +32,17 @@ def list_courses(search=None, department_id=None, level=None, semester_id=None,
 
 def get_course(course_id):
     return Course.query.get_or_404(course_id)
+
+
+def get_enrollment_count(course_id):
+    """Current number of students registered for this course. Deliberately
+    a thin duplicate of services/registration.py's get_course_enrollment_count
+    rather than an import from it — services/admin_course.py is an
+    admin-only module and services/registration.py is student-facing; Phase
+    2 and Phase 3's own Global Constraints keep those two layers from
+    importing each other's internals to avoid coupling admin changes to
+    student-facing behavior."""
+    return RegisteredCourse.query.filter_by(course_id=course_id).count()
 
 
 def create_course(code, title, credits, department_id, level, course_type, academic_session_id, semester_id,

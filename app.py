@@ -58,7 +58,7 @@ from services.admin_session import (
     list_semesters, list_periods, get_period, create_period, update_period, activate_period,
     list_holidays, create_holiday, list_inactive_periods,
 )
-from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
+from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components, get_enrollment_count
 from services.admin_export import export_csv, export_excel, VALID_DATA_TYPES
 from services.admin_registration import (
     list_periods_for_selector, get_oversight_metrics, admin_add_course, admin_drop_course,
@@ -1871,12 +1871,19 @@ def admin_courses_data():
         search=search, department_id=department_id, level=level, semester_id=semester_id,
         min_credits=min_credits, max_credits=max_credits, status=status, page=page, sort=sort,
     )
-    return jsonify({
-        'success': True,
-        'courses': [{
+    def course_json(c):
+        enrolled = get_enrollment_count(c.id)
+        remaining = (c.max_capacity - enrolled) if c.max_capacity is not None else None
+        return {
             'id': c.id, 'code': c.code, 'title': c.title, 'department': c.department,
             'level': c.level or '—', 'semester': c.semester.name, 'credits': c.credits, 'status': c.status,
-        } for c in result['items']],
+            'enrolled': enrolled, 'max_capacity': c.max_capacity if c.max_capacity is not None else '—',
+            'remaining': remaining if remaining is not None else '—',
+        }
+
+    return jsonify({
+        'success': True,
+        'courses': [course_json(c) for c in result['items']],
         'total': result['total'], 'page': result['page'], 'per_page': result['per_page'],
     })
 
@@ -1928,7 +1935,8 @@ def admin_course_new():
 def admin_course_detail(course_id):
     detail = get_course_detail(course_id)
     other_courses = list_courses_for_picker(exclude_id=course_id)
-    return render_template('admin/course_detail.html', other_courses=other_courses, **detail)
+    enrolled = get_enrollment_count(course_id)
+    return render_template('admin/course_detail.html', other_courses=other_courses, enrolled=enrolled, **detail)
 
 
 @app.route('/admin/courses/<int:course_id>/prerequisites', methods=['POST'])
