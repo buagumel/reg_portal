@@ -7,7 +7,7 @@ worktree-admin-phase2-core-academic
 Admin Portal Phase 2 – Core Academic Data
 
 ## Last Commit
-a9d4867 feat: add bulk student status action (activate/suspend/deactivate) wired to the directory's bulk-select bar
+4592058 docs: record Admin Portal Phase 2 (Core Academic Data) as complete
 
 ## Completed
 - Task 1: Data model — Department, Programme, CoursePrerequisite/Corequisite, CourseAssessmentComponent, AcademicHoliday, Student/Course import job+error tables; first real Alembic migration + backfill
@@ -22,20 +22,22 @@ a9d4867 feat: add bulk student status action (activate/suspend/deactivate) wired
 - Task 10: Student account management + manual creation
 - Task 11: Student CSV import + admission-portal interface stub
 - Task 12: Bulk Student Status Action (activate/suspend/deactivate via directory's bulk-select bar)
+- Task 13: Whole-milestone smoke test (all 6 real Phase 2 routes return 200 with no coming-soon fallback; Announcements/Reports confirmed still intentional Phase 3+ stubs), schema check (all 10 new tables present), `DEVELOPMENT_PROGRESS.md` updated to record Phase 2 as complete
+
+Admin Portal Phase 2 (Core Academic Data) is now fully complete — all 13 plan tasks done, working tree clean.
 
 ## In Progress
-- Task 13: Whole-milestone smoke test and DEVELOPMENT_PROGRESS.md update
+- None
 
 ## Next
-- Task 13: run whole-milestone smoke test + schema check, update `DEVELOPMENT_PROGRESS.md` to record Phase 2 as complete, commit
-- After Task 13: merge `worktree-admin-phase2-core-academic` into `main` (same flow as Admin Foundation's `013e49e`)
-- Then: Admin Portal Phase 3 (Registration Oversight, Bulk Operations, Student Onboarding Management) — pending approval
+- Merge `worktree-admin-phase2-core-academic` into `main` (same flow as Admin Foundation's `013e49e`) — awaiting user approval/action, not yet done
+- Then: Admin Portal Phase 3 (Registration Oversight, Bulk Operations, Student Onboarding Management) — not yet started, pending approval
 
 ## Blockers
 - None
 
 ## Ready To Merge
-- No (Task 13 not yet committed)
+- Yes — all 13 Phase 2 tasks complete, smoke test and schema check pass, working tree clean. Merge into `main` has not been performed yet; do so only when explicitly requested.
 
 ## Notes
 - This worktree lives at `.claude/worktrees/admin-phase2-core-academic` on branch `worktree-admin-phase2-core-academic`, diverged from `main` at commit `c4b4232`. Do not switch this worktree to `main` or create a new worktree/branch for this milestone.
