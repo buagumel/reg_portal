@@ -22,7 +22,7 @@ from services.student_profile import get_profile_display
 from services.registration import (
     get_registration_status_context, register_student, get_registration_history,
     get_active_period, RegistrationError,
-    add_course, drop_course, submit_registration, get_add_drop_context,
+    add_course, drop_course, submit_registration, get_add_drop_context, get_effective_add_drop_deadline,
 )
 from services.course import get_available_courses
 from services.course_history import get_courses_by_semester
@@ -768,6 +768,7 @@ def add_drop_data():
 
     available = get_available_courses(current_user, period, student_registration)
     selected = RegisteredCourse.query.filter_by(student_registration_id=student_registration.id).all()
+    effective_deadline = get_effective_add_drop_deadline(period, student_registration)
 
     def course_json(c):
         return {'id': c.id, 'code': c.code, 'title': c.title, 'credits': c.credits, 'type': c.course_type}
@@ -776,8 +777,8 @@ def add_drop_data():
         'success': True,
         'session': period.academic_session.name,
         'semester': period.semester.name,
-        'deadline': period.closes_at.strftime('%d %b %Y'),
-        'closes_at_iso': period.closes_at.isoformat(),
+        'deadline': effective_deadline.strftime('%d %b %Y'),
+        'closes_at_iso': effective_deadline.isoformat(),
         'min_credits': context['min_credits'],
         'max_credits': context['max_credits'],
         'credits_registered': student_registration.credits_registered,
@@ -1504,7 +1505,7 @@ def admin_student_registration_add_course(student_id):
         return redirect(url_for('admin_student_profile', student_id=student_id))
 
     log_admin_action(current_user, 'course_added_by_admin', target_type='student_registration', target_id=student_registration.id,
-                      details=f'course_id={course_id} reason={reason}', ip_address=request.remote_addr)
+                      details=f'course_id={course_id} override_capacity={override_capacity} reason={reason}', ip_address=request.remote_addr)
     flash('Course added to student\'s registration.')
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
@@ -2293,7 +2294,7 @@ def admin_registration_oversight():
 @permission_required('registration.manage')
 def admin_registration_oversight_data():
     period_id = request.args.get('period_id', type=int)
-    period = get_period(period_id) if period_id else (
+    period = RegistrationPeriod.query.get(period_id) if period_id else (
         RegistrationPeriod.query.filter_by(is_active=True).order_by(RegistrationPeriod.id.desc()).first()
     )
     if period is None:

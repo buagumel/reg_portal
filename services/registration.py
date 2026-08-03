@@ -41,21 +41,37 @@ def get_window_status(period, student_registration=None):
     return 'open'
 
 
+def get_effective_add_drop_deadline(period, student_registration=None):
+    """The actual datetime add/drop closes for this student: the configured
+    add/drop window's close if set, else the main registration window's
+    close — extended by a per-student deadline_override if that override is
+    later than whichever base close applies. This is the single source of
+    truth both get_add_drop_window_status and the /add_drop/data route use,
+    so the enforced deadline and the displayed deadline can never drift
+    apart."""
+    base_close = period.add_drop_closes_at if period.add_drop_closes_at is not None else period.closes_at
+    if student_registration is not None and student_registration.deadline_override is not None:
+        return max(base_close, student_registration.deadline_override)
+    return base_close
+
+
 def get_add_drop_window_status(period, student_registration=None):
     """Same three-value contract as get_window_status, but checks the
     period's add_drop_opens_at/add_drop_closes_at when both are set —
     falls back to get_window_status (main window, including its own
     deadline_override handling) when either is unset. A per-student
-    deadline_override does NOT affect an explicitly-configured add/drop
-    window — those are two independent override mechanisms; only the
-    fallback path inherits the extension."""
+    deadline_override, when set, extends whichever close time applies
+    (add/drop's own, or the main window's via the fallback) — the override
+    always means "this student gets more time," regardless of which window
+    is currently governing add/drop."""
     if period.add_drop_opens_at is None or period.add_drop_closes_at is None:
         return get_window_status(period, student_registration)
 
     now = now_lagos()
+    effective_closes_at = get_effective_add_drop_deadline(period, student_registration)
     if now < period.add_drop_opens_at:
         return 'not_yet_open'
-    if now > period.add_drop_closes_at:
+    if now > effective_closes_at:
         return 'closed'
     return 'open'
 
@@ -105,7 +121,7 @@ def get_registration_status_context(user):
 
     return {
         'period': period,
-        'window_status': get_window_status(period),
+        'window_status': get_window_status(period, existing_registration),
         'min_credits': min_credits,
         'max_credits': max_credits,
         'registration_fee': registration_fee,

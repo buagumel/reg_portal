@@ -90,7 +90,8 @@ def admin_add_course(user, period, student_registration, course_id, admin_user, 
     from services.registration import add_course
 
     add_course(user, period, student_registration, course_id, admin_override=override_capacity)
-    record_override(student_registration, admin_user, 'course_added_by_admin', reason)
+    action = 'capacity_overridden' if override_capacity else 'course_added_by_admin'
+    record_override(student_registration, admin_user, action, reason)
 
 
 def admin_drop_course(user, period, student_registration, course_id, admin_user, reason):

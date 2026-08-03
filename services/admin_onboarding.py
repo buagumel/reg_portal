@@ -16,7 +16,7 @@ def get_onboarding_summary(department_id=None, programme_id=None, session=None):
     not_logged_in = query.filter(User.last_login_at.is_(None)).count()
     password_not_changed = query.filter(User.first_login.is_(True)).count()
     profile_incomplete = query.filter(User.onboarding_completed.is_(False)).count()
-    email_not_verified = query.filter(User.email_verified.is_(False)).count()
+    email_not_verified = query.filter(User.email_verified.isnot(True)).count()
     onboarding_completed = query.filter(User.onboarding_completed.is_(True)).count()
     completion_percentage = round((onboarding_completed / total) * 100, 1) if total else 0.0
 
@@ -86,6 +86,7 @@ def get_onboarding_timeline(user):
 
 def reset_onboarding(user):
     user.onboarding_completed = False
+    user.onboarding_completed_at = None
     db.session.commit()
 
 

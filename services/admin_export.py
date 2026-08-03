@@ -59,6 +59,7 @@ def export_csv(data_type, student_ids=None):
     if headers is None:
         return None
     output = io.StringIO()
+    output.write('﻿')  # UTF-8 BOM so Excel on Windows reads non-ASCII characters correctly
     writer = csv.writer(output)
     writer.writerow(headers)
     writer.writerows(rows)

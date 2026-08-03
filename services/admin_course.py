@@ -35,13 +35,12 @@ def get_course(course_id):
 
 
 def get_enrollment_count(course_id):
-    """Current number of students registered for this course. Deliberately
-    a thin duplicate of services/registration.py's get_course_enrollment_count
-    rather than an import from it — services/admin_course.py is an
-    admin-only module and services/registration.py is student-facing; Phase
-    2 and Phase 3's own Global Constraints keep those two layers from
-    importing each other's internals to avoid coupling admin changes to
-    student-facing behavior."""
+    """Current number of students registered for this course. A one-line
+    duplicate of services/registration.py's get_course_enrollment_count —
+    trivial enough that a shared import isn't worth the cross-module
+    coupling for a single COUNT query. (Other admin services in this
+    codebase do import from services/registration.py where the logic is
+    non-trivial — e.g. add_course/drop_course — this one just isn't.)"""
     return RegisteredCourse.query.filter_by(course_id=course_id).count()
 
 

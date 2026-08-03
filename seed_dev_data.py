@@ -381,7 +381,7 @@ def seed_admin_rbac():
         ),
         'Academic Administrator': (
             'Course management, registration oversight, and announcements',
-            ['dashboard.view', 'courses.manage', 'registration.manage', 'announcements.manage', 'departments.manage'],
+            ['dashboard.view', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'departments.manage'],
         ),
     }
     for name, (description, codes) in roles.items():
