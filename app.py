@@ -1572,7 +1572,12 @@ def admin_student_registration_extend_deadline(student_id):
         flash('A reason and a new deadline are required.')
         return redirect(url_for('admin_student_profile', student_id=student_id))
 
-    new_deadline = datetime.fromisoformat(new_deadline_raw)
+    try:
+        new_deadline = datetime.fromisoformat(new_deadline_raw)
+    except ValueError:
+        flash('Invalid deadline format.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
     extend_deadline(student_registration, current_user, new_deadline, reason)
     log_admin_action(current_user, 'registration_deadline_extended', target_type='student_registration',
                       target_id=student_registration.id, details=f'new_deadline={new_deadline_raw} reason={reason}',
