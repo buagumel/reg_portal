@@ -1449,6 +1449,22 @@ def admin_student_new():
     )
     log_admin_action(current_user, 'student_created', target_type='user', target_id=student.id,
                       details=f'reg_no={reg_no}', ip_address=request.remote_addr)
+
+    if student.email:
+        try:
+            msg = Message('Welcome to the Student Portal — Complete Your Onboarding', recipients=[student.email])
+            msg.body = (
+                f'Hello {student.name},\n\n'
+                'An administrator has created your Student Portal account. Use the credentials below to log in '
+                'and complete your onboarding:\n\n'
+                f'Registration Number: {student.reg_no}\n'
+                f'Temporary Password: {temp_password}\n\n'
+                'You will be asked to set a new password and complete your profile on first login.'
+            )
+            mail.send(msg)
+        except Exception:
+            app.logger.warning('Failed to send onboarding email to %s', student.email)
+
     flash(f'Student "{name}" ({reg_no}) created. Temporary password: {temp_password}')
     return redirect(url_for('admin_student_profile', student_id=student.id))
 
