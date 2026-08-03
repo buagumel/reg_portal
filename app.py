@@ -67,7 +67,7 @@ from services.admin_student import (
     create_student, update_student, set_account_status, reset_student_password, resend_verification,
     bulk_set_status,
 )
-from services.student_import import import_students_csv
+from services.student_import import import_students_csv, preview_students_csv
 from models import StudentImportJob
 
 app = Flask(__name__)
@@ -1317,6 +1317,16 @@ def admin_session_clone(session_id):
                       details=f'cloned_from={session_id}', ip_address=request.remote_addr)
     flash(f'Cloned into new session "{new_name}".')
     return redirect(url_for('admin_session_edit', session_id=new_session.id))
+
+
+@app.route('/admin/students/import/preview', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_import_preview():
+    file_storage = request.files.get('file')
+    summary, parse_error = preview_students_csv(file_storage)
+    if parse_error:
+        return jsonify({'success': False, 'message': parse_error}), 400
+    return jsonify({'success': True, **summary})
 
 
 @app.route('/admin/students/import', methods=['GET', 'POST'])
