@@ -1,0 +1,22 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Students / Import{% endblock %}
+
+{% block content %}
+<div style="max-width:560px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">Import Students (CSV)</h2>
+    <p style="color: var(--text-muted); font-size:0.85rem;">Required columns: <code>reg_no, name</code>. Optional: <code>email, phone, department, programme, level, semester, session, nationality, state, lga, gender, student_type</code>. <code>department</code>/<code>programme</code>, if provided, must match an existing name or code exactly. Existing registration numbers are updated in place; unchanged rows are skipped; repeated reg_no values within the same file are counted as duplicates.</p>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">CSV File</label>
+            <input type="file" name="file" accept=".csv" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;"><i class="fas fa-upload"></i> Import</button>
+        <a href="{{ url_for('admin_students') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+    <p style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+        <a href="{{ url_for('admin_student_admission_portal') }}" style="color: var(--text-muted);"><i class="fas fa-plug"></i> Or fetch admitted students from the admission portal</a>
+    </p>
+</div>
+{% endblock %}

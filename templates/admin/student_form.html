@@ -1,0 +1,134 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Students / {{ 'Edit' if student else 'New' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:680px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">{{ 'Edit Student' if student else 'New Student' }}</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Registration Number</label>
+                {% if student %}
+                <input type="text" value="{{ student.reg_no }}" disabled style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-muted); box-sizing:border-box;">
+                {% else %}
+                <input type="text" name="reg_no" required value="{{ form.reg_no if form else '' }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                {% endif %}
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Full Name</label>
+                <input type="text" name="name" required value="{{ form.name if form else (student.name if student else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Email</label>
+                <input type="email" name="email" value="{{ form.email if form else (student.email if student and student.email else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Phone</label>
+                <input type="text" name="phone" value="{{ form.phone if form else (student.phone if student and student.phone else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Department</label>
+                <select name="department_id" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                    <option value="">Not set</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {{ 'selected' if student and student.department_id == dept.id }}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Programme</label>
+                <select name="programme_id" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                    <option value="">Not set</option>
+                    {% for prog in programmes %}
+                    <option value="{{ prog.id }}" {{ 'selected' if student and student.programme_id == prog.id }}>{{ prog.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Level</label>
+                <input type="text" name="level" value="{{ form.level if form else (student.level if student and student.level else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Semester</label>
+                <input type="text" name="semester" value="{{ form.semester if form else (student.semester if student and student.semester else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Session</label>
+                <input type="text" name="session" value="{{ form.session if form else (student.session if student and student.session else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Nationality</label>
+                <input type="text" name="nationality" value="{{ form.nationality if form else (student.nationality if student and student.nationality else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">State</label>
+                <input type="text" name="state" value="{{ form.state if form else (student.state if student and student.state else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">LGA</label>
+                <input type="text" name="lga" value="{{ form.lga if form else (student.lga if student and student.lga else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Date of Birth</label>
+                <input type="date" name="dob" value="{{ student.dob.isoformat() if student and student.dob else '' }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Gender</label>
+                <input type="text" name="gender" value="{{ form.gender if form else (student.gender if student and student.gender else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Student Type</label>
+                <input type="text" name="student_type" placeholder="National / International" value="{{ form.student_type if form else (student.student_type if student and student.student_type else '') }}" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
+        <a href="{{ url_for('admin_students') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+</div>
+
+{% if student %}
+<div style="max-width:680px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-top:1.5rem;">
+    <h3 style="margin-top:0;">Account Management</h3>
+    <div style="display:flex; gap:0.8rem; flex-wrap:wrap;">
+        {% if student.account_status != 'active' %}
+        <form method="POST" action="{{ url_for('admin_student_activate', student_id=student.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--success); color:white; cursor:pointer;">Activate</button>
+        </form>
+        {% endif %}
+        {% if student.account_status != 'suspended' %}
+        <form method="POST" action="{{ url_for('admin_student_suspend', student_id=student.id) }}" onsubmit="return confirm('Suspend this account? The student will be unable to log in.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--warning); color:white; cursor:pointer;">Suspend</button>
+        </form>
+        {% endif %}
+        {% if student.account_status != 'deactivated' %}
+        <form method="POST" action="{{ url_for('admin_student_deactivate', student_id=student.id) }}" onsubmit="return confirm('Deactivate this account? The student will be unable to log in.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--danger); color:white; cursor:pointer;">Deactivate</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('admin_student_reset_password', student_id=student.id) }}" onsubmit="return confirm('Reset this student\'s password to a new temporary one?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary-light); color: var(--primary-dark); cursor:pointer;">Reset Password</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_student_resend_verification', student_id=student.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary-light); color: var(--primary-dark); cursor:pointer;">Resend Verification</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

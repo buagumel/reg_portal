@@ -10,7 +10,7 @@ from models import (
     db, User, now_lagos,
     AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course,
     Notification, PaymentCategory, Payment,
-    AdminRole, Permission, AdminUser,
+    AdminRole, Permission, AdminUser, Programme,
 )
 
 DEFAULT_PASSWORD = "Default@123"
@@ -74,6 +74,7 @@ def seed():
         seed_payments()
         seed_admin_rbac()
         seed_admin_users()
+        seed_programmes()
         print(f"\nDone. {created} student(s) created. Default password for first_login=True accounts: {DEFAULT_PASSWORD}")
 
 
@@ -358,6 +359,7 @@ def seed_admin_rbac():
         ('registration.manage', 'Open/close registration periods'),
         ('announcements.manage', 'Create system announcements'),
         ('reports.view', 'View and generate reports'),
+        ('departments.manage', 'Create, edit, and manage departments'),
     ]
     perm_objs = {}
     for code, description in permissions:
@@ -374,11 +376,11 @@ def seed_admin_rbac():
     roles = {
         'Super Administrator': (
             'Complete system access',
-            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view'],
+            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view', 'departments.manage'],
         ),
         'Academic Administrator': (
             'Course management, registration oversight, and announcements',
-            ['dashboard.view', 'courses.manage', 'registration.manage', 'announcements.manage'],
+            ['dashboard.view', 'courses.manage', 'registration.manage', 'announcements.manage', 'departments.manage'],
         ),
     }
     for name, (description, codes) in roles.items():
@@ -395,6 +397,23 @@ def seed_admin_rbac():
             if perm_objs[code] not in role.permissions:
                 role.permissions.append(perm_objs[code])
         db.session.commit()
+
+
+def seed_programmes():
+    programmes = [
+        ('Certificate in Foundation Skills', 'CIFS', 'international', 'One-term foundational program for new students.'),
+        ('International Diploma', 'INTLDIP', 'international', 'First or Second Semester.'),
+        ('Advanced Diploma', 'ADVDIP', 'international', 'First or Second Semester.'),
+        ('National Diploma', 'ND', 'nd', 'Annual rotation — ND1 and ND2, First and Second Semester.'),
+        ('Higher National Diploma', 'HND', 'hnd', 'Annual rotation — HND1 and HND2, First and Second Semester.'),
+    ]
+    for name, code, program_type, description in programmes:
+        if Programme.query.filter_by(code=code).first():
+            print(f'Skipping programme {code} (already exists)')
+            continue
+        db.session.add(Programme(name=name, code=code, program_type=program_type, description=description))
+        db.session.commit()
+        print(f'Seeded programme: {name} ({code})')
 
 
 def seed_admin_users():

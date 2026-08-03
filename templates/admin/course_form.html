@@ -1,0 +1,95 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Courses / {{ 'Edit' if course else 'New' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:640px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">{{ 'Edit Course' if course else 'New Course' }}</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Course Code</label>
+                <input type="text" name="code" required value="{{ form.code if form else (course.code if course else '') }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box; text-transform:uppercase;">
+            </div>
+            <div style="flex:2;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Title</label>
+                <input type="text" name="title" required value="{{ form.title if form else (course.title if course else '') }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Description</label>
+            <textarea name="description" rows="3" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">{{ form.description if form else (course.description if course and course.description else '') }}</textarea>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Department</label>
+                <select name="department_id" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {{ 'selected' if course and course.department_id == dept.id }}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Credits</label>
+                <input type="number" name="credits" required value="{{ form.credits if form else (course.credits if course else '') }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Max Capacity</label>
+                <input type="number" name="max_capacity" value="{{ form.max_capacity if form else (course.max_capacity if course and course.max_capacity else '') }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Level</label>
+                <input type="text" name="level" placeholder="e.g. ND1, Year 1" value="{{ form.level if form else (course.level if course and course.level else '') }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Course Type</label>
+                <select name="course_type" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                    {% for value, label in [('core', 'Core'), ('elective', 'Elective'), ('lab', 'Lab')] %}
+                    <option value="{{ value }}" {{ 'selected' if course and course.course_type == value }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Academic Session</label>
+                <select name="academic_session_id" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                    {% for sess in sessions %}
+                    <option value="{{ sess.id }}" {{ 'selected' if course and course.academic_session_id == sess.id }}>{{ sess.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Semester</label>
+                <select name="semester_id" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                    {% for sem in semesters %}
+                    <option value="{{ sem.id }}" {{ 'selected' if course and course.semester_id == sem.id }}>{{ sem.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Instructor <span style="font-weight:400; color: var(--text-muted); font-size:0.8rem;">(placeholder)</span></label>
+                <input type="text" name="instructor" value="{{ form.instructor if form else (course.instructor if course and course.instructor else '') }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Schedule <span style="font-weight:400; color: var(--text-muted); font-size:0.8rem;">(placeholder)</span></label>
+                <input type="text" name="schedule" placeholder="e.g. Mon/Wed 10:00-11:30" value="{{ form.schedule if form else (course.schedule if course and course.schedule else '') }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
+        <a href="{{ url_for('admin_courses') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+</div>
+{% endblock %}

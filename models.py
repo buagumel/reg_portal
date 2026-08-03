@@ -49,6 +49,10 @@ class User(db.Model, UserMixin):
     emergency_contact = db.Column(db.String(150), nullable=True)
     blood_group = db.Column(db.String(5), nullable=True)
     updated_at = db.Column(db.DateTime, default=now_lagos, onupdate=now_lagos, nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    programme_id = db.Column(db.Integer, db.ForeignKey('programmes.id'), nullable=True)
+    account_status = db.Column(db.String(20), nullable=False, default='active', server_default='active')
+    created_at = db.Column(db.DateTime, nullable=True, default=now_lagos)
 
 
     def set_password(self, password):
@@ -75,7 +79,10 @@ class User(db.Model, UserMixin):
         if self.dob is None:
             return ''
         return f"{ordinal(self.dob.day)} {self.dob.strftime('%b')} {self.dob.year}"
-    
+
+    department_ref = db.relationship('Department', foreign_keys=[department_id])
+    programme = db.relationship('Programme', foreign_keys=[programme_id])
+
 class Payment(db.Model):
     __tablename__ = 'payments'
     id = db.Column(db.Integer, primary_key=True)
@@ -99,6 +106,9 @@ class AcademicSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), unique=True, nullable=False)
     is_current = db.Column(db.Boolean, default=False, nullable=False)
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='draft', server_default='draft')
 
 
 class Semester(db.Model):
@@ -120,6 +130,11 @@ class RegistrationPeriod(db.Model):
     registration_fee = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     is_active = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+    late_registration_ends_at = db.Column(db.DateTime, nullable=True)
+    late_registration_fee = db.Column(db.Numeric(10, 2), nullable=True)
+    exam_starts_at = db.Column(db.DateTime, nullable=True)
+    exam_ends_at = db.Column(db.DateTime, nullable=True)
+    result_release_at = db.Column(db.DateTime, nullable=True)
 
     academic_session = db.relationship('AcademicSession')
     semester = db.relationship('Semester')
@@ -169,11 +184,15 @@ class Course(db.Model):
     description = db.Column(db.Text, nullable=True)
     instructor = db.Column(db.String(150), nullable=True)
     schedule = db.Column(db.String(200), nullable=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='active', server_default='active')
+    max_capacity = db.Column(db.Integer, nullable=True)
 
     __table_args__ = (db.UniqueConstraint('code', 'academic_session_id', 'semester_id'),)
 
     academic_session = db.relationship('AcademicSession')
     semester = db.relationship('Semester')
+    department_ref = db.relationship('Department', foreign_keys=[department_id])
 
 
 class RegisteredCourse(db.Model):
@@ -315,3 +334,122 @@ class AdminAuditLog(db.Model):
     details = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class Department(db.Model):
+    __tablename__ = 'departments'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    code = db.Column(db.String(20), unique=True, nullable=False)
+    faculty = db.Column(db.String(150), nullable=True)
+    head_name = db.Column(db.String(150), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='active')
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class Programme(db.Model):
+    __tablename__ = 'programmes'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    code = db.Column(db.String(20), unique=True, nullable=False)
+    program_type = db.Column(db.String(20), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='active')
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class CoursePrerequisite(db.Model):
+    __tablename__ = 'course_prerequisites'
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    prerequisite_course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('course_id', 'prerequisite_course_id'),)
+
+    course = db.relationship('Course', foreign_keys=[course_id])
+    prerequisite_course = db.relationship('Course', foreign_keys=[prerequisite_course_id])
+
+
+class CourseCorequisite(db.Model):
+    __tablename__ = 'course_corequisites'
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    corequisite_course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('course_id', 'corequisite_course_id'),)
+
+    course = db.relationship('Course', foreign_keys=[course_id])
+    corequisite_course = db.relationship('Course', foreign_keys=[corequisite_course_id])
+
+
+class CourseAssessmentComponent(db.Model):
+    __tablename__ = 'course_assessment_components'
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    weight_percent = db.Column(db.Integer, nullable=False)
+
+    course = db.relationship('Course', backref='assessment_components')
+
+
+class AcademicHoliday(db.Model):
+    __tablename__ = 'academic_holidays'
+    id = db.Column(db.Integer, primary_key=True)
+    academic_session_id = db.Column(db.Integer, db.ForeignKey('academic_sessions.id'), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    starts_on = db.Column(db.Date, nullable=False)
+    ends_on = db.Column(db.Date, nullable=False)
+
+    academic_session = db.relationship('AcademicSession', backref='holidays')
+
+
+class StudentImportJob(db.Model):
+    __tablename__ = 'student_import_jobs'
+    id = db.Column(db.Integer, primary_key=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='processing')
+    created_count = db.Column(db.Integer, nullable=False, default=0)
+    updated_count = db.Column(db.Integer, nullable=False, default=0)
+    skipped_count = db.Column(db.Integer, nullable=False, default=0)
+    duplicate_count = db.Column(db.Integer, nullable=False, default=0)
+    error_count = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+
+class StudentImportError(db.Model):
+    __tablename__ = 'student_import_errors'
+    id = db.Column(db.Integer, primary_key=True)
+    import_job_id = db.Column(db.Integer, db.ForeignKey('student_import_jobs.id'), nullable=False)
+    row_number = db.Column(db.Integer, nullable=False)
+    raw_row = db.Column(db.Text, nullable=False)
+    reason = db.Column(db.String(300), nullable=False)
+
+    import_job = db.relationship('StudentImportJob', backref='errors')
+
+
+class CourseImportJob(db.Model):
+    __tablename__ = 'course_import_jobs'
+    id = db.Column(db.Integer, primary_key=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='processing')
+    created_count = db.Column(db.Integer, nullable=False, default=0)
+    updated_count = db.Column(db.Integer, nullable=False, default=0)
+    skipped_count = db.Column(db.Integer, nullable=False, default=0)
+    duplicate_count = db.Column(db.Integer, nullable=False, default=0)
+    error_count = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+
+class CourseImportError(db.Model):
+    __tablename__ = 'course_import_errors'
+    id = db.Column(db.Integer, primary_key=True)
+    import_job_id = db.Column(db.Integer, db.ForeignKey('course_import_jobs.id'), nullable=False)
+    row_number = db.Column(db.Integer, nullable=False)
+    raw_row = db.Column(db.Text, nullable=False)
+    reason = db.Column(db.String(300), nullable=False)
+
+    import_job = db.relationship('CourseImportJob', backref='errors')

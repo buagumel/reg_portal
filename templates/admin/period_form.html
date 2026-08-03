@@ -1,0 +1,83 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Sessions / {{ session.name }} / {{ 'Edit Period' if period else 'New Period' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:560px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">{{ 'Edit Registration Period' if period else 'New Registration Period' }}</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Semester</label>
+            <select name="semester_id" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                {% for sem in semesters %}
+                <option value="{{ sem.id }}" {{ 'selected' if period and period.semester_id == sem.id }}>{{ sem.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Opens At</label>
+                <input type="datetime-local" name="opens_at" required value="{{ period.opens_at.strftime('%Y-%m-%dT%H:%M') if period else '' }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Closes At</label>
+                <input type="datetime-local" name="closes_at" required value="{{ period.closes_at.strftime('%Y-%m-%dT%H:%M') if period else '' }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Min Credits</label>
+                <input type="number" name="min_credits" required value="{{ period.min_credits if period else '' }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Max Credits</label>
+                <input type="number" name="max_credits" required value="{{ period.max_credits if period else '' }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Registration Fee</label>
+                <input type="number" step="0.01" name="registration_fee" value="{{ period.registration_fee if period else '0' }}"
+                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </div>
+        <fieldset style="border: 1px solid var(--border-color); border-radius:0.6rem; padding:1rem; margin-bottom:1.5rem;">
+            <legend style="padding:0 0.5rem; color: var(--text-muted); font-size:0.85rem;">Late Registration, Exams &amp; Results (optional)</legend>
+            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Late Registration Ends</label>
+                    <input type="datetime-local" name="late_registration_ends_at" value="{{ period.late_registration_ends_at.strftime('%Y-%m-%dT%H:%M') if period and period.late_registration_ends_at else '' }}"
+                           style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Late Fee</label>
+                    <input type="number" step="0.01" name="late_registration_fee" value="{{ period.late_registration_fee if period and period.late_registration_fee else '' }}"
+                           style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                </div>
+            </div>
+            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Exam Starts</label>
+                    <input type="datetime-local" name="exam_starts_at" value="{{ period.exam_starts_at.strftime('%Y-%m-%dT%H:%M') if period and period.exam_starts_at else '' }}"
+                           style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Exam Ends</label>
+                    <input type="datetime-local" name="exam_ends_at" value="{{ period.exam_ends_at.strftime('%Y-%m-%dT%H:%M') if period and period.exam_ends_at else '' }}"
+                           style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                </div>
+            </div>
+            <div>
+                <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Result Release</label>
+                <input type="datetime-local" name="result_release_at" value="{{ period.result_release_at.strftime('%Y-%m-%dT%H:%M') if period and period.result_release_at else '' }}"
+                       style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            </div>
+        </fieldset>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
+        <a href="{{ url_for('admin_session_edit', session_id=session.id) }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+</div>
+{% endblock %}

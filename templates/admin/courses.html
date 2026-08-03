@@ -1,0 +1,63 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Courses{% endblock %}
+
+{% block content %}
+<input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.8rem;">
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+        <input type="text" id="searchInput" placeholder="Search code, title, description" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <button id="searchBtn" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary); color:white; cursor:pointer;">Search</button>
+        <select id="departmentFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+        <select id="semesterFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All semesters</option>
+            {% for sem in semesters %}
+            <option value="{{ sem.id }}">{{ sem.name }}</option>
+            {% endfor %}
+        </select>
+        <select id="statusFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="archived">Archived</option>
+        </select>
+    </div>
+    <div>
+        <a href="{{ url_for('admin_course_import') }}" style="padding:0.6rem 1.2rem; background: var(--primary-light); color: var(--primary-dark); border-radius:0.5rem; text-decoration:none; font-weight:600; margin-right:0.6rem;"><i class="fas fa-file-import"></i> Import CSV</a>
+        <a href="{{ url_for('admin_course_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Course</a>
+    </div>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th data-sort="code" style="padding:0.8rem;">Code</th>
+                <th data-sort="title" style="padding:0.8rem;">Title</th>
+                <th style="padding:0.8rem;">Department</th>
+                <th style="padding:0.8rem;">Level</th>
+                <th style="padding:0.8rem;">Semester</th>
+                <th data-sort="credits" style="padding:0.8rem;">Credits</th>
+                <th data-sort="status" style="padding:0.8rem;">Status</th>
+            </tr>
+        </thead>
+        <tbody id="coursesTableBody">
+            <tr><td colspan="7" style="text-align:center; padding:2rem; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
+    <span id="paginationInfo" style="color: var(--text-muted); font-size:0.85rem;"></span>
+    <div id="pageButtons" style="display:flex; gap:0.4rem;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/admin/courses.js') }}"></script>
+{% endblock %}

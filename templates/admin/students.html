@@ -1,0 +1,76 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Students{% endblock %}
+
+{% block content %}
+<input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.8rem;">
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+        <input type="text" id="searchInput" placeholder="Search reg. number or name" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <button id="searchBtn" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary); color:white; cursor:pointer;">Search</button>
+        <select id="departmentFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+        <select id="programmeFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All programmes</option>
+            {% for prog in programmes %}
+            <option value="{{ prog.id }}">{{ prog.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" id="levelFilter" placeholder="Level" style="width:100px; padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <input type="text" id="semesterFilter" placeholder="Semester" style="width:120px; padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <select id="statusFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="deactivated">Deactivated</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:0.3rem; font-size:0.85rem; color: var(--text-muted);">From <input type="date" id="enrolledFrom" style="padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);"></label>
+        <label style="display:flex; align-items:center; gap:0.3rem; font-size:0.85rem; color: var(--text-muted);">To <input type="date" id="enrolledTo" style="padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);"></label>
+    </div>
+    <div>
+        <a href="{{ url_for('admin_students_import') }}" style="padding:0.6rem 1.2rem; background: var(--primary-light); color: var(--primary-dark); border-radius:0.5rem; text-decoration:none; font-weight:600; margin-right:0.6rem;"><i class="fas fa-file-import"></i> Import CSV</a>
+        <a href="{{ url_for('admin_student_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Student</a>
+    </div>
+</div>
+
+<div id="bulkBar" style="display:none; align-items:center; gap:0.8rem; background: var(--primary-light); border-radius:0.6rem; padding:0.6rem 1rem; margin-bottom:0.8rem;">
+    <span id="bulkCount" style="font-weight:600; color: var(--primary-dark);"></span>
+    <button id="bulkActivateBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--success); color:white; cursor:pointer;">Activate</button>
+    <button id="bulkSuspendBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--warning); color:white; cursor:pointer;">Suspend</button>
+    <button id="bulkDeactivateBtn" style="padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background: var(--danger); color:white; cursor:pointer;">Deactivate</button>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.8rem;"><input type="checkbox" id="selectAll"></th>
+                <th style="padding:0.8rem;"></th>
+                <th data-sort="reg_no" style="padding:0.8rem;">Reg. Number</th>
+                <th data-sort="name" style="padding:0.8rem;">Name</th>
+                <th style="padding:0.8rem;">Department</th>
+                <th style="padding:0.8rem;">Programme</th>
+                <th style="padding:0.8rem;">Level</th>
+                <th style="padding:0.8rem;">Semester</th>
+                <th data-sort="status" style="padding:0.8rem;">Status</th>
+            </tr>
+        </thead>
+        <tbody id="studentsTableBody">
+            <tr><td colspan="9" style="text-align:center; padding:2rem; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
+    <span id="paginationInfo" style="color: var(--text-muted); font-size:0.85rem;"></span>
+    <div id="pageButtons" style="display:flex; gap:0.4rem;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/admin/students.js') }}"></script>
+{% endblock %}
