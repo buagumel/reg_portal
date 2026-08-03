@@ -1,0 +1,64 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Student Onboarding{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <select id="departmentFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <option value="">All departments</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}">{{ dept.name }}</option>
+        {% endfor %}
+    </select>
+    <select id="programmeFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <option value="">All programmes</option>
+        {% for prog in programmes %}
+        <option value="{{ prog.id }}">{{ prog.name }}</option>
+        {% endfor %}
+    </select>
+    <input type="text" id="sessionFilter" placeholder="Session (e.g. 2025/2026)" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+</div>
+
+<div id="bucketGrid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:1rem; margin-bottom:1.5rem;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="bNotLoggedIn" style="font-size:1.4rem; font-weight:700; color: var(--danger);">—</div>
+        <div style="color: var(--text-muted); font-size:0.8rem;">Not Logged In</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="bPasswordNotChanged" style="font-size:1.4rem; font-weight:700; color: var(--warning);">—</div>
+        <div style="color: var(--text-muted); font-size:0.8rem;">Password Not Changed</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="bProfileIncomplete" style="font-size:1.4rem; font-weight:700; color: var(--warning);">—</div>
+        <div style="color: var(--text-muted); font-size:0.8rem;">Profile Incomplete</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="bEmailNotVerified" style="font-size:1.4rem; font-weight:700; color: var(--danger);">—</div>
+        <div style="color: var(--text-muted); font-size:0.8rem;">Email Not Verified</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="bCompleted" style="font-size:1.4rem; font-weight:700; color: var(--success);">—</div>
+        <div style="color: var(--text-muted); font-size:0.8rem;">Onboarding Completed</div>
+    </div>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Completion Rate: <span id="completionRate">—</span></h3>
+    <p style="color: var(--text-muted);">Average Completion Time: <span id="avgCompletionTime">—</span></p>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Completion by Department</h3>
+        <ul id="byDepartmentList" style="list-style:none; padding:0; margin:0;"></ul>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Completion by Session</h3>
+        <ul id="bySessionList" style="list-style:none; padding:0; margin:0;"></ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/admin/onboarding.js') }}"></script>
+{% endblock %}

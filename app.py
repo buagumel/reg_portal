@@ -64,6 +64,7 @@ from services.admin_registration import (
     list_periods_for_selector, get_oversight_metrics, admin_add_course, admin_drop_course,
     set_registration_lock, extend_deadline, reopen_registration, approve_exception,
 )
+from services.admin_onboarding import get_onboarding_summary, get_onboarding_analytics
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 from services.course_import import import_courses_csv, preview_courses_csv
@@ -2257,6 +2258,26 @@ def admin_registration_oversight_data():
         'session_name': period.academic_session.name, 'semester_name': period.semester.name,
         **metrics,
     })
+
+
+@app.route('/admin/onboarding')
+@permission_required('students.manage')
+def admin_onboarding_dashboard():
+    return render_template(
+        'admin/onboarding_dashboard.html', departments=list_active_departments(), programmes=list_active_programmes(),
+    )
+
+
+@app.route('/admin/onboarding/data')
+@permission_required('students.manage')
+def admin_onboarding_dashboard_data():
+    department_id = request.args.get('department_id', type=int)
+    programme_id = request.args.get('programme_id', type=int)
+    session_value = request.args.get('session', '').strip() or None
+
+    summary = get_onboarding_summary(department_id=department_id, programme_id=programme_id, session=session_value)
+    analytics = get_onboarding_analytics()
+    return jsonify({'success': True, **summary, 'analytics': analytics})
 
 
 @app.route('/admin/announcements/new')
