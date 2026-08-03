@@ -130,6 +130,12 @@ document.querySelectorAll('[data-sort]').forEach((th) => {
 const bulkActivateBtn = document.getElementById('bulkActivateBtn');
 const bulkSuspendBtn = document.getElementById('bulkSuspendBtn');
 const bulkDeactivateBtn = document.getElementById('bulkDeactivateBtn');
+const bulkResetPasswordBtn = document.getElementById('bulkResetPasswordBtn');
+const bulkResendEmailBtn = document.getElementById('bulkResendEmailBtn');
+const bulkDeptSelect = document.getElementById('bulkDeptSelect');
+const bulkAssignDeptBtn = document.getElementById('bulkAssignDeptBtn');
+const bulkProgSelect = document.getElementById('bulkProgSelect');
+const bulkAssignProgBtn = document.getElementById('bulkAssignProgBtn');
 
 async function runBulkStatus(status, label) {
     const ids = getSelectedIds();
@@ -144,5 +150,86 @@ async function runBulkStatus(status, label) {
 bulkActivateBtn.addEventListener('click', () => runBulkStatus('active', 'Activate'));
 bulkSuspendBtn.addEventListener('click', () => runBulkStatus('suspended', 'Suspend'));
 bulkDeactivateBtn.addEventListener('click', () => runBulkStatus('deactivated', 'Deactivate'));
+
+function downloadCsv(filename, rows) {
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+bulkResetPasswordBtn.addEventListener('click', async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Reset passwords for ${ids.length} selected student(s)? This cannot be undone.`)) return;
+
+    const result = await postJson('/admin/students/bulk-reset-password', { student_ids: ids });
+    showToast(result.message || (result.success ? 'Passwords reset.' : 'Could not reset passwords.'), !result.success);
+    if (result.success) {
+        downloadCsv('reset-passwords.csv', [['reg_no', 'temp_password'], ...result.results.map((r) => [r.reg_no, r.temp_password])]);
+    }
+});
+
+bulkResendEmailBtn.addEventListener('click', async () => {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Resend onboarding email to ${ids.length} selected student(s)?`)) return;
+
+    const result = await postJson('/admin/students/bulk-resend-email', { student_ids: ids });
+    showToast(result.message || (result.success ? 'Sent.' : 'Could not send emails.'), !result.success);
+});
+
+bulkAssignDeptBtn.addEventListener('click', async () => {
+    const ids = getSelectedIds();
+    const departmentId = bulkDeptSelect.value;
+    if (ids.length === 0 || !departmentId) return;
+    if (!confirm(`Assign ${ids.length} selected student(s) to this department?`)) return;
+
+    const result = await postJson('/admin/students/bulk-assign-department', { student_ids: ids, department_id: Number(departmentId) });
+    showToast(result.message || (result.success ? 'Assigned.' : 'Could not assign department.'), !result.success);
+    if (result.success) load();
+});
+
+bulkAssignProgBtn.addEventListener('click', async () => {
+    const ids = getSelectedIds();
+    const programmeId = bulkProgSelect.value;
+    if (ids.length === 0 || !programmeId) return;
+    if (!confirm(`Assign ${ids.length} selected student(s) to this programme?`)) return;
+
+    const result = await postJson('/admin/students/bulk-assign-programme', { student_ids: ids, programme_id: Number(programmeId) });
+    showToast(result.message || (result.success ? 'Assigned.' : 'Could not assign programme.'), !result.success);
+    if (result.success) load();
+});
+
+const bulkExportCsvBtn = document.getElementById('bulkExportCsvBtn');
+const bulkExportXlsxBtn = document.getElementById('bulkExportXlsxBtn');
+
+async function runBulkExport(format) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+
+    const csrf = document.getElementById('csrf_token').value;
+    const response = await fetch('/admin/students/bulk-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({ student_ids: ids, format }),
+    });
+    if (!response.ok) {
+        showToast('Could not export students.', true);
+        return;
+    }
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `students.${format}`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+bulkExportCsvBtn.addEventListener('click', () => runBulkExport('csv'));
+bulkExportXlsxBtn.addEventListener('click', () => runBulkExport('xlsx'));
 
 load();

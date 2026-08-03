@@ -53,6 +53,8 @@ class User(db.Model, UserMixin):
     programme_id = db.Column(db.Integer, db.ForeignKey('programmes.id'), nullable=True)
     account_status = db.Column(db.String(20), nullable=False, default='active', server_default='active')
     created_at = db.Column(db.DateTime, nullable=True, default=now_lagos)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    onboarding_completed_at = db.Column(db.DateTime, nullable=True)
 
 
     def set_password(self, password):
@@ -135,6 +137,8 @@ class RegistrationPeriod(db.Model):
     exam_starts_at = db.Column(db.DateTime, nullable=True)
     exam_ends_at = db.Column(db.DateTime, nullable=True)
     result_release_at = db.Column(db.DateTime, nullable=True)
+    add_drop_opens_at = db.Column(db.DateTime, nullable=True)
+    add_drop_closes_at = db.Column(db.DateTime, nullable=True)
 
     academic_session = db.relationship('AcademicSession')
     semester = db.relationship('Semester')
@@ -164,6 +168,8 @@ class StudentRegistration(db.Model):
     courses_submitted = db.Column(db.Boolean, default=False, nullable=False)
     registered_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
     updated_at = db.Column(db.DateTime, default=now_lagos, onupdate=now_lagos, nullable=False)
+    is_locked = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
+    deadline_override = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'registration_period_id'),)
 
@@ -453,3 +459,16 @@ class CourseImportError(db.Model):
     reason = db.Column(db.String(300), nullable=False)
 
     import_job = db.relationship('CourseImportJob', backref='errors')
+
+
+class RegistrationOverride(db.Model):
+    __tablename__ = 'registration_overrides'
+    id = db.Column(db.Integer, primary_key=True)
+    student_registration_id = db.Column(db.Integer, db.ForeignKey('student_registrations.id'), nullable=False)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=False)
+    action = db.Column(db.String(50), nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+    student_registration = db.relationship('StudentRegistration', backref='overrides')
+    admin_user = db.relationship('AdminUser')

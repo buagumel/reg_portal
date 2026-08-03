@@ -42,6 +42,9 @@ def get_student_profile(student_id):
     from services.registration import get_registration_history
     from services.course_history import get_courses_by_semester
     from services.payment import get_payment_history
+    from services.course import get_available_courses
+    from services.admin_registration import get_student_registration_context
+    from services.admin_onboarding import get_onboarding_timeline
 
     user = get_student(student_id)
     registration_history = get_registration_history(user)
@@ -49,9 +52,21 @@ def get_student_profile(student_id):
     payment_items, payment_total = get_payment_history(user, per_page=10)
     activity_log = AuditLog.query.filter_by(user_id=student_id).order_by(AuditLog.created_at.desc()).limit(20).all()
 
+    registration_context = get_student_registration_context(user)
+    student_registration = registration_context['student_registration']
+    available_courses = []
+    overrides = []
+    if registration_context['period'] is not None and student_registration is not None:
+        available_courses = get_available_courses(user, registration_context['period'], student_registration)
+        overrides = student_registration.overrides
+
+    onboarding_timeline = get_onboarding_timeline(user)
+
     return {
         'user': user, 'registration_history': registration_history, 'course_history': course_history,
         'payment_history': payment_items, 'payment_total': payment_total, 'activity_log': activity_log,
+        'registration_context': registration_context, 'available_courses': available_courses, 'overrides': overrides,
+        'onboarding_timeline': onboarding_timeline,
     }
 
 
@@ -137,6 +152,49 @@ def resend_verification(student_id):
 def bulk_set_status(student_ids, status):
     count = User.query.filter(User.id.in_(student_ids)).update(
         {'account_status': status}, synchronize_session=False,
+    )
+    db.session.commit()
+    return count
+
+
+def bulk_reset_password(student_ids):
+    """Resets each student's password to a fresh temp password. Returns a
+    list of {'reg_no', 'temp_password'} for students that still exist —
+    silently skips any student_id that no longer exists (e.g. deleted
+    between page load and the bulk action) rather than aborting the whole
+    batch with an unhandled 404. Never written to a log or persisted
+    anywhere in plaintext."""
+    results = []
+    for student_id in student_ids:
+        student = User.query.get(student_id)
+        if student is None:
+            continue
+        temp_password = reset_student_password(student_id)
+        results.append({'reg_no': student.reg_no, 'temp_password': temp_password})
+    return results
+
+
+def bulk_assign_department(student_ids, department_id):
+    from models import Department
+
+    department = Department.query.get(department_id)
+    if department is None:
+        return 0
+    count = User.query.filter(User.id.in_(student_ids)).update(
+        {'department_id': department.id, 'department': department.name}, synchronize_session=False,
+    )
+    db.session.commit()
+    return count
+
+
+def bulk_assign_programme(student_ids, programme_id):
+    from models import Programme
+
+    programme = Programme.query.get(programme_id)
+    if programme is None:
+        return 0
+    count = User.query.filter(User.id.in_(student_ids)).update(
+        {'programme_id': programme.id, 'course': programme.name}, synchronize_session=False,
     )
     db.session.commit()
     return count

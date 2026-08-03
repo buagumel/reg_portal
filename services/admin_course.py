@@ -1,4 +1,4 @@
-from models import db, Course, Department, CoursePrerequisite, CourseCorequisite, CourseAssessmentComponent
+from models import db, Course, Department, CoursePrerequisite, CourseCorequisite, CourseAssessmentComponent, RegisteredCourse
 
 
 def list_courses(search=None, department_id=None, level=None, semester_id=None,
@@ -32,6 +32,16 @@ def list_courses(search=None, department_id=None, level=None, semester_id=None,
 
 def get_course(course_id):
     return Course.query.get_or_404(course_id)
+
+
+def get_enrollment_count(course_id):
+    """Current number of students registered for this course. A one-line
+    duplicate of services/registration.py's get_course_enrollment_count —
+    trivial enough that a shared import isn't worth the cross-module
+    coupling for a single COUNT query. (Other admin services in this
+    codebase do import from services/registration.py where the logic is
+    non-trivial — e.g. add_course/drop_course — this one just isn't.)"""
+    return RegisteredCourse.query.filter_by(course_id=course_id).count()
 
 
 def create_course(code, title, credits, department_id, level, course_type, academic_session_id, semester_id,

@@ -1,6 +1,25 @@
 from models import Department, Programme, Course, Semester
 
 
+LEVELS_BY_PROGRAM_TYPE = {
+    'nd': ['ND 1', 'ND 2'],
+    'hnd': ['HND 1', 'HND 2'],
+    'international': ['First Semester', 'Second Semester'],
+}
+
+
+def valid_levels_for_programme(programme):
+    """Returns the list of acceptable `level` strings for this programme, or
+    None if there's no constraint to apply (unset programme, CIFS's one-term
+    program with no level split, or an unrecognized program_type — never
+    block on something we can't classify)."""
+    if programme is None:
+        return None
+    if programme.code == 'CIFS':
+        return None
+    return LEVELS_BY_PROGRAM_TYPE.get(programme.program_type)
+
+
 def is_department_code_unique(code, exclude_id=None):
     query = Department.query.filter(Department.code == code)
     if exclude_id is not None:

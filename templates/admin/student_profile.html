@@ -103,6 +103,154 @@
     {% endif %}
 </div>
 
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Registration Management</h3>
+    {% set period = registration_context.period %}
+    {% set sr = registration_context.student_registration %}
+    {% if not period or not sr %}
+    <p style="color: var(--text-muted);">No active registration for this student in the current period.</p>
+    {% else %}
+    <p>
+        <strong>{{ period.academic_session.name }} {{ period.semester.name }}</strong> &middot;
+        Status: <span style="text-transform:capitalize;">{{ sr.status }}</span> &middot;
+        Payment: <span style="text-transform:capitalize;">{{ sr.payment_status }}</span> &middot;
+        Credits: {{ sr.credits_registered }} &middot;
+        Submitted: {{ 'Yes' if sr.courses_submitted else 'No' }} &middot;
+        Locked: <strong style="color: {{ 'var(--danger)' if sr.is_locked else 'var(--success)' }};">{{ 'Yes' if sr.is_locked else 'No' }}</strong>
+        {% if sr.deadline_override %} &middot; Deadline override: {{ sr.deadline_override.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
+    </p>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:1rem;">
+        <form method="POST" action="{{ url_for('admin_student_registration_add_course', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Add Course</label>
+            <select name="course_id" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem;">
+                {% for c in available_courses %}
+                <option value="{{ c.id }}">{{ c.code }} — {{ c.title }} ({{ c.credits }} cr)</option>
+                {% endfor %}
+            </select>
+            <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; margin-bottom:0.4rem;"><input type="checkbox" name="override_capacity"> Override capacity limit</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--success); color:white; cursor:pointer;">Add</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_student_registration_drop_course', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Remove Course</label>
+            <select name="course_id" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem;">
+                {% for rc in sr.registered_courses %}
+                <option value="{{ rc.course.id }}">{{ rc.course.code }} — {{ rc.course.title }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--danger); color:white; cursor:pointer;">Remove</button>
+        </form>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:1rem;">
+        <form method="POST" action="{{ url_for('admin_student_registration_lock', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="locked" value="{{ 'false' if sr.is_locked else 'true' }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">{{ 'Unlock Registration' if sr.is_locked else 'Lock Registration' }}</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: {{ 'var(--success)' if sr.is_locked else 'var(--warning)' }}; color:white; cursor:pointer;">{{ 'Unlock' if sr.is_locked else 'Lock' }}</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_student_registration_extend_deadline', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Extend Deadline</label>
+            <input type="datetime-local" name="new_deadline" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Extend</button>
+        </form>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:1rem;">
+        <form method="POST" action="{{ url_for('admin_student_registration_reopen', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Reopen Submitted Registration</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" {{ 'disabled' if not sr.courses_submitted }} style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer; opacity:{{ '0.5' if not sr.courses_submitted else '1' }};">Reopen</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_student_registration_approve_exception', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Approve Registration Exception (general)</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Record</button>
+        </form>
+    </div>
+
+    {% if overrides %}
+    <div style="margin-top:1.2rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+        <h4 style="margin:0 0 0.5rem;">Override History</h4>
+        <ul style="list-style:none; padding:0; margin:0;">
+            {% for o in overrides|sort(attribute='created_at', reverse=True) %}
+            <li style="padding:0.4rem 0; border-bottom:1px solid var(--border-color); font-size:0.85rem;">
+                <strong style="text-transform:capitalize;">{{ o.action.replace('_', ' ') }}</strong> by {{ o.admin_user.name }} — {{ o.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                <div style="color: var(--text-muted);">{{ o.reason }}</div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Onboarding Management</h3>
+    <p>
+        Status: <strong>{{ 'Completed' if user.onboarding_completed else 'Not completed' }}</strong> &middot;
+        Email Verified: <strong>{{ 'Yes' if user.email_verified else 'No' }}</strong> &middot;
+        Password Changed: <strong>{{ 'No (first login pending)' if user.first_login else 'Yes' }}</strong> &middot;
+        Last Login: <strong>{{ user.last_login_at.strftime('%d %b %Y, %I:%M %p') if user.last_login_at else 'Never' }}</strong>
+    </p>
+
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:1rem; margin-top:1rem;">
+        <form method="POST" action="{{ url_for('admin_student_resend_verification', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Resend Verification Email</label>
+            <p style="font-size:0.75rem; color: var(--text-muted); margin:0 0 0.4rem;">(Phase 2 action, no reason field — surfaced here alongside the other onboarding actions.)</p>
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Resend</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_student_onboarding_reset', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Reset Onboarding</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--warning); color:white; cursor:pointer;">Reset</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_student_onboarding_verify_email', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Manually Verify Email</label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Verify</button>
+        </form>
+
+        {% if can_override_onboarding %}
+        <form method="POST" action="{{ url_for('admin_student_onboarding_mark_complete', student_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Mark Onboarding Complete <span style="color: var(--text-muted); font-weight:400;">(Super Admin)</span></label>
+            <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
+            <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--success); color:white; cursor:pointer;">Mark Complete</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div style="margin-top:1.2rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+        <h4 style="margin:0 0 0.5rem;">Onboarding Timeline</h4>
+        <ul style="list-style:none; padding:0; margin:0;">
+            {% for event in onboarding_timeline %}
+            <li style="padding:0.4rem 0; border-bottom:1px solid var(--border-color); font-size:0.85rem;">
+                <strong>{{ event.label }}</strong> — {{ event.timestamp.strftime('%d %b %Y, %I:%M %p') }}
+            </li>
+            {% endfor %}
+        </ul>
+        <p style="color: var(--text-muted); font-size:0.8rem; margin-top:0.6rem;">OTP History / Failed Verification Attempts: Not tracked.</p>
+    </div>
+</div>
+
 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
     <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
         <h3 style="margin-top:0;">Activity Log</h3>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, abort
 from flask_login import login_user, LoginManager, current_user, logout_user, login_required
 import os
 import time
@@ -7,7 +7,8 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from extensions import mail, Message
 from models import (
-    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser,
+    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos, Programme,
+    RegistrationPeriod,
 )
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
@@ -21,7 +22,7 @@ from services.student_profile import get_profile_display
 from services.registration import (
     get_registration_status_context, register_student, get_registration_history,
     get_active_period, RegistrationError,
-    add_course, drop_course, submit_registration, get_add_drop_context,
+    add_course, drop_course, submit_registration, get_add_drop_context, get_effective_add_drop_deadline,
 )
 from services.course import get_available_courses
 from services.course_history import get_courses_by_semester
@@ -51,23 +52,32 @@ from services.admin_department import (
     list_departments, get_department, get_department_detail,
     create_department, update_department, set_department_status,
 )
-from services.admin_validation import is_department_code_unique, validate_credit_range
+from services.admin_validation import is_department_code_unique, validate_credit_range, valid_levels_for_programme
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
     list_semesters, list_periods, get_period, create_period, update_period, activate_period,
     list_holidays, create_holiday, list_inactive_periods,
 )
-from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
+from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components, get_enrollment_count
+from services.admin_export import export_csv, export_excel, VALID_DATA_TYPES
+from services.admin_registration import (
+    list_periods_for_selector, get_oversight_metrics, admin_add_course, admin_drop_course,
+    set_registration_lock, extend_deadline, reopen_registration, approve_exception,
+)
+from services.admin_onboarding import (
+    get_onboarding_summary, get_onboarding_analytics, reset_onboarding, manually_verify_email, mark_onboarding_complete,
+)
+from services.admin_permission import has_permission
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
-from services.course_import import import_courses_csv
+from services.course_import import import_courses_csv, preview_courses_csv
 from models import CourseImportJob
 from services.admin_student import (
     list_active_programmes, list_students, get_student, get_student_profile,
     create_student, update_student, set_account_status, reset_student_password, resend_verification,
-    bulk_set_status,
+    bulk_set_status, bulk_reset_password, bulk_assign_department, bulk_assign_programme,
 )
-from services.student_import import import_students_csv
+from services.student_import import import_students_csv, preview_students_csv
 from models import StudentImportJob
 
 app = Flask(__name__)
@@ -331,6 +341,7 @@ def onboarding_complete():
         return jsonify({'success': False, 'message': 'Please verify your email before completing onboarding.'}), 400
 
     current_user.onboarding_completed = True
+    current_user.onboarding_completed_at = now_lagos()
     db.session.commit()
 
     create_notification(
@@ -378,6 +389,8 @@ def login():
                     remember=remember,
                     show_password=show_password
                 )
+            user.last_login_at = now_lagos()
+            db.session.commit()
             login_user(user, remember=remember)
             next_page = request.args.get('next')
             redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
@@ -755,6 +768,7 @@ def add_drop_data():
 
     available = get_available_courses(current_user, period, student_registration)
     selected = RegisteredCourse.query.filter_by(student_registration_id=student_registration.id).all()
+    effective_deadline = get_effective_add_drop_deadline(period, student_registration)
 
     def course_json(c):
         return {'id': c.id, 'code': c.code, 'title': c.title, 'credits': c.credits, 'type': c.course_type}
@@ -763,8 +777,8 @@ def add_drop_data():
         'success': True,
         'session': period.academic_session.name,
         'semester': period.semester.name,
-        'deadline': period.closes_at.strftime('%d %b %Y'),
-        'closes_at_iso': period.closes_at.isoformat(),
+        'deadline': effective_deadline.strftime('%d %b %Y'),
+        'closes_at_iso': effective_deadline.isoformat(),
         'min_credits': context['min_credits'],
         'max_credits': context['max_credits'],
         'credits_registered': student_registration.credits_registered,
@@ -1316,6 +1330,16 @@ def admin_session_clone(session_id):
     return redirect(url_for('admin_session_edit', session_id=new_session.id))
 
 
+@app.route('/admin/students/import/preview', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_import_preview():
+    file_storage = request.files.get('file')
+    summary, parse_error = preview_students_csv(file_storage)
+    if parse_error:
+        return jsonify({'success': False, 'message': parse_error}), 400
+    return jsonify({'success': True, **summary})
+
+
 @app.route('/admin/students/import', methods=['GET', 'POST'])
 @permission_required('students.manage')
 def admin_students_import():
@@ -1388,7 +1412,8 @@ def admin_students_data():
 @permission_required('students.manage')
 def admin_student_profile(student_id):
     profile = get_student_profile(student_id)
-    return render_template('admin/student_profile.html', **profile)
+    can_override_onboarding = has_permission(current_user, 'onboarding.override')
+    return render_template('admin/student_profile.html', can_override_onboarding=can_override_onboarding, **profile)
 
 
 @app.route('/admin/students/new', methods=['GET', 'POST'])
@@ -1414,12 +1439,21 @@ def admin_student_new():
         flash(f'A student with email "{email}" already exists.')
         return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
 
+    programme_id = request.form.get('programme_id', type=int)
+    level = request.form.get('level', '').strip()
+    if programme_id and level:
+        programme = Programme.query.get(programme_id)
+        valid_levels = valid_levels_for_programme(programme)
+        if valid_levels is not None and level not in valid_levels:
+            flash(f'"{level}" is not a valid level for {programme.name} (expected one of: {", ".join(valid_levels)}).')
+            return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
+
     dob_raw = request.form.get('dob') or None
     student, temp_password = create_student(
         reg_no=reg_no, name=name,
         email=email, phone=request.form.get('phone', '').strip(),
-        department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
-        level=request.form.get('level', '').strip(), semester=request.form.get('semester', '').strip(),
+        department_id=request.form.get('department_id', type=int), programme_id=programme_id,
+        level=level, semester=request.form.get('semester', '').strip(),
         session=request.form.get('session', '').strip(),
         nationality=request.form.get('nationality', '').strip(), state=request.form.get('state', '').strip(),
         lga=request.form.get('lga', '').strip(), dob=date.fromisoformat(dob_raw) if dob_raw else None,
@@ -1427,8 +1461,225 @@ def admin_student_new():
     )
     log_admin_action(current_user, 'student_created', target_type='user', target_id=student.id,
                       details=f'reg_no={reg_no}', ip_address=request.remote_addr)
+
+    if student.email:
+        try:
+            msg = Message('Welcome to the Student Portal — Complete Your Onboarding', recipients=[student.email])
+            msg.body = (
+                f'Hello {student.name},\n\n'
+                'An administrator has created your Student Portal account. Use the credentials below to log in '
+                'and complete your onboarding:\n\n'
+                f'Registration Number: {student.reg_no}\n'
+                f'Temporary Password: {temp_password}\n\n'
+                'You will be asked to set a new password and complete your profile on first login.'
+            )
+            mail.send(msg)
+        except Exception:
+            app.logger.warning('Failed to send onboarding email to %s', student.email)
+
     flash(f'Student "{name}" ({reg_no}) created. Temporary password: {temp_password}')
     return redirect(url_for('admin_student_profile', student_id=student.id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/add-course', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_add_course(student_id):
+    student = get_student(student_id)
+    context = get_student_profile(student_id)['registration_context']
+    period, student_registration = context['period'], context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    course_id = request.form.get('course_id', type=int)
+    override_capacity = request.form.get('override_capacity') == 'on'
+
+    if period is None or student_registration is None:
+        flash('This student has no active registration to add a course to.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    try:
+        admin_add_course(student, period, student_registration, course_id, current_user, reason, override_capacity=override_capacity)
+    except RegistrationError as e:
+        flash(str(e))
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    log_admin_action(current_user, 'course_added_by_admin', target_type='student_registration', target_id=student_registration.id,
+                      details=f'course_id={course_id} override_capacity={override_capacity} reason={reason}', ip_address=request.remote_addr)
+    flash('Course added to student\'s registration.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/drop-course', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_drop_course(student_id):
+    student = get_student(student_id)
+    context = get_student_profile(student_id)['registration_context']
+    period, student_registration = context['period'], context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    course_id = request.form.get('course_id', type=int)
+
+    if period is None or student_registration is None:
+        flash('This student has no active registration to drop a course from.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    try:
+        admin_drop_course(student, period, student_registration, course_id, current_user, reason)
+    except RegistrationError as e:
+        flash(str(e))
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    log_admin_action(current_user, 'course_removed_by_admin', target_type='student_registration', target_id=student_registration.id,
+                      details=f'course_id={course_id} reason={reason}', ip_address=request.remote_addr)
+    flash('Course removed from student\'s registration.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/lock', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_lock(student_id):
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    locked = request.form.get('locked') == 'true'
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    set_registration_lock(student_registration, current_user, locked, reason)
+    log_admin_action(current_user, 'registration_locked' if locked else 'registration_unlocked',
+                      target_type='student_registration', target_id=student_registration.id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Registration {"locked" if locked else "unlocked"}.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/extend-deadline', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_extend_deadline(student_id):
+    from datetime import datetime
+
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+    new_deadline_raw = request.form.get('new_deadline', '')
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason or not new_deadline_raw:
+        flash('A reason and a new deadline are required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    try:
+        new_deadline = datetime.fromisoformat(new_deadline_raw)
+    except ValueError:
+        flash('Invalid deadline format.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    extend_deadline(student_registration, current_user, new_deadline, reason)
+    log_admin_action(current_user, 'registration_deadline_extended', target_type='student_registration',
+                      target_id=student_registration.id, details=f'new_deadline={new_deadline_raw} reason={reason}',
+                      ip_address=request.remote_addr)
+    flash('Deadline extended for this student.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/reopen', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_reopen(student_id):
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    reopen_registration(student_registration, current_user, reason)
+    log_admin_action(current_user, 'registration_reopened', target_type='student_registration',
+                      target_id=student_registration.id, details=reason, ip_address=request.remote_addr)
+    flash('Registration reopened — the student can resume course selection.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/registration/approve-exception', methods=['POST'])
+@permission_required('registration.manage')
+def admin_student_registration_approve_exception(student_id):
+    context = get_student_profile(student_id)['registration_context']
+    student_registration = context['student_registration']
+    reason = request.form.get('reason', '').strip()
+
+    if student_registration is None:
+        flash('This student has no active registration.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    approve_exception(student_registration, current_user, reason)
+    log_admin_action(current_user, 'registration_exception_approved', target_type='student_registration',
+                      target_id=student_registration.id, details=reason, ip_address=request.remote_addr)
+    flash('Exception recorded for this student\'s registration.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/onboarding/reset', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_onboarding_reset(student_id):
+    student = get_student(student_id)
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    reset_onboarding(student)
+    log_admin_action(current_user, 'onboarding_reset', target_type='user', target_id=student_id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Onboarding reset for {student.name}.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/onboarding/verify-email', methods=['POST'])
+@permission_required('students.manage')
+def admin_student_onboarding_verify_email(student_id):
+    student = get_student(student_id)
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    manually_verify_email(student)
+    log_admin_action(current_user, 'email_manually_verified', target_type='user', target_id=student_id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Email manually verified for {student.name}.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
+
+
+@app.route('/admin/students/<int:student_id>/onboarding/mark-complete', methods=['POST'])
+@permission_required('onboarding.override')
+def admin_student_onboarding_mark_complete(student_id):
+    student = get_student(student_id)
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('A reason is required.')
+        return redirect(url_for('admin_student_profile', student_id=student_id))
+
+    mark_onboarding_complete(student)
+    log_admin_action(current_user, 'onboarding_marked_complete', target_type='user', target_id=student_id,
+                      details=reason, ip_address=request.remote_addr)
+    flash(f'Onboarding marked complete for {student.name}.')
+    return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
 @app.route('/admin/students/<int:student_id>/edit', methods=['GET', 'POST'])
@@ -1451,12 +1702,21 @@ def admin_student_edit(student_id):
         flash(f'A student with email "{email}" already exists.')
         return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes, form=request.form)
 
+    programme_id = request.form.get('programme_id', type=int)
+    level = request.form.get('level', '').strip() or None
+    if programme_id and level:
+        programme = Programme.query.get(programme_id)
+        valid_levels = valid_levels_for_programme(programme)
+        if valid_levels is not None and level not in valid_levels:
+            flash(f'"{level}" is not a valid level for {programme.name} (expected one of: {", ".join(valid_levels)}).')
+            return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes, form=request.form)
+
     dob_raw = request.form.get('dob') or None
     update_student(
         student_id, name=name,
         email=email, phone=request.form.get('phone', '').strip() or None,
-        department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
-        level=request.form.get('level', '').strip() or None, semester=request.form.get('semester', '').strip() or None,
+        department_id=request.form.get('department_id', type=int), programme_id=programme_id,
+        level=level, semester=request.form.get('semester', '').strip() or None,
         session=request.form.get('session', '').strip() or None,
         nationality=request.form.get('nationality', '').strip() or None, state=request.form.get('state', '').strip() or None,
         lga=request.form.get('lga', '').strip() or None, dob=date.fromisoformat(dob_raw) if dob_raw else None,
@@ -1557,6 +1817,91 @@ def admin_students_bulk_status():
     return jsonify({'success': True, 'message': f'{count} student(s) updated to {status}.', 'count': count})
 
 
+@app.route('/admin/students/bulk-reset-password', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_reset_password():
+    data = request.get_json()
+    if not data or not data.get('student_ids'):
+        return jsonify({'success': False, 'message': 'student_ids is required.'}), 400
+
+    student_ids = data['student_ids']
+    results = bulk_reset_password(student_ids)
+    log_admin_action(current_user, 'student_bulk_password_reset', target_type='user', target_id=None,
+                      details=f'count={len(results)} ids={student_ids}', ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{len(results)} password(s) reset.', 'results': results})
+
+
+@app.route('/admin/students/bulk-resend-email', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_resend_email():
+    data = request.get_json()
+    if not data or not data.get('student_ids'):
+        return jsonify({'success': False, 'message': 'student_ids is required.'}), 400
+
+    student_ids = data['student_ids']
+    sent = skipped = 0
+    for student_id in student_ids:
+        student = User.query.get(student_id)
+        if student is None:
+            skipped += 1
+            continue
+        ok, _ = resend_verification(student_id)
+        if not ok:
+            skipped += 1
+            continue
+        try:
+            msg = Message('Complete Your Email Verification', recipients=[student.email])
+            msg.body = (
+                f'Hello {student.name},\n\n'
+                'An administrator noticed your email address on the Student Portal hasn\'t been verified yet. '
+                'Please log in and complete your onboarding to verify it.\n\n'
+                'If you did not request this, you can safely ignore this email.'
+            )
+            mail.send(msg)
+            sent += 1
+        except Exception:
+            app.logger.warning('Failed to send verification reminder to %s', student.email)
+            skipped += 1
+        create_notification(
+            student, 'Verify your email', 'Please log in and complete your onboarding to verify your email address.',
+            category='profile', priority='medium',
+        )
+
+    log_admin_action(current_user, 'student_bulk_verification_resent', target_type='user', target_id=None,
+                      details=f'sent={sent} skipped={skipped} ids={student_ids}', ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{sent} email(s) sent, {skipped} skipped (no email on file).'})
+
+
+@app.route('/admin/students/bulk-assign-department', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_assign_department():
+    data = request.get_json()
+    if not data or not data.get('student_ids') or not data.get('department_id'):
+        return jsonify({'success': False, 'message': 'student_ids and department_id are required.'}), 400
+
+    student_ids = data['student_ids']
+    count = bulk_assign_department(student_ids, data['department_id'])
+    log_admin_action(current_user, 'student_bulk_department_assigned', target_type='user', target_id=None,
+                      details=f'department_id={data["department_id"]} count={count} ids={student_ids}',
+                      ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{count} student(s) assigned.', 'count': count})
+
+
+@app.route('/admin/students/bulk-assign-programme', methods=['POST'])
+@permission_required('students.manage')
+def admin_students_bulk_assign_programme():
+    data = request.get_json()
+    if not data or not data.get('student_ids') or not data.get('programme_id'):
+        return jsonify({'success': False, 'message': 'student_ids and programme_id are required.'}), 400
+
+    student_ids = data['student_ids']
+    count = bulk_assign_programme(student_ids, data['programme_id'])
+    log_admin_action(current_user, 'student_bulk_programme_assigned', target_type='user', target_id=None,
+                      details=f'programme_id={data["programme_id"]} count={count} ids={student_ids}',
+                      ip_address=request.remote_addr)
+    return jsonify({'success': True, 'message': f'{count} student(s) assigned.', 'count': count})
+
+
 @app.route('/admin/courses')
 @permission_required('courses.manage')
 def admin_courses():
@@ -1580,12 +1925,19 @@ def admin_courses_data():
         search=search, department_id=department_id, level=level, semester_id=semester_id,
         min_credits=min_credits, max_credits=max_credits, status=status, page=page, sort=sort,
     )
-    return jsonify({
-        'success': True,
-        'courses': [{
+    def course_json(c):
+        enrolled = get_enrollment_count(c.id)
+        remaining = (c.max_capacity - enrolled) if c.max_capacity is not None else None
+        return {
             'id': c.id, 'code': c.code, 'title': c.title, 'department': c.department,
             'level': c.level or '—', 'semester': c.semester.name, 'credits': c.credits, 'status': c.status,
-        } for c in result['items']],
+            'enrolled': enrolled, 'max_capacity': c.max_capacity if c.max_capacity is not None else '—',
+            'remaining': remaining if remaining is not None else '—',
+        }
+
+    return jsonify({
+        'success': True,
+        'courses': [course_json(c) for c in result['items']],
         'total': result['total'], 'page': result['page'], 'per_page': result['per_page'],
     })
 
@@ -1637,7 +1989,8 @@ def admin_course_new():
 def admin_course_detail(course_id):
     detail = get_course_detail(course_id)
     other_courses = list_courses_for_picker(exclude_id=course_id)
-    return render_template('admin/course_detail.html', other_courses=other_courses, **detail)
+    enrolled = get_enrollment_count(course_id)
+    return render_template('admin/course_detail.html', other_courses=other_courses, enrolled=enrolled, **detail)
 
 
 @app.route('/admin/courses/<int:course_id>/prerequisites', methods=['POST'])
@@ -1762,6 +2115,16 @@ def admin_course_archive(course_id):
     return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
+@app.route('/admin/courses/import/preview', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_import_preview():
+    file_storage = request.files.get('file')
+    summary, parse_error = preview_courses_csv(file_storage)
+    if parse_error:
+        return jsonify({'success': False, 'message': parse_error}), 400
+    return jsonify({'success': True, **summary})
+
+
 @app.route('/admin/courses/import', methods=['GET', 'POST'])
 @permission_required('courses.manage')
 def admin_course_import():
@@ -1826,6 +2189,8 @@ def admin_period_new(session_id):
         exam_starts_at=parse_dt(request.form.get('exam_starts_at') or None),
         exam_ends_at=parse_dt(request.form.get('exam_ends_at') or None),
         result_release_at=parse_dt(request.form.get('result_release_at') or None),
+        add_drop_opens_at=parse_dt(request.form.get('add_drop_opens_at') or None),
+        add_drop_closes_at=parse_dt(request.form.get('add_drop_closes_at') or None),
     )
     log_admin_action(current_user, 'registration_period_created', target_type='registration_period', target_id=period.id,
                       details=f'session_id={session_id} semester_id={semester_id}', ip_address=request.remote_addr)
@@ -1870,6 +2235,8 @@ def admin_period_edit(session_id, period_id):
         exam_starts_at=parse_dt(request.form.get('exam_starts_at') or None),
         exam_ends_at=parse_dt(request.form.get('exam_ends_at') or None),
         result_release_at=parse_dt(request.form.get('result_release_at') or None),
+        add_drop_opens_at=parse_dt(request.form.get('add_drop_opens_at') or None),
+        add_drop_closes_at=parse_dt(request.form.get('add_drop_closes_at') or None),
     )
     log_admin_action(current_user, 'registration_period_updated', target_type='registration_period', target_id=period_id,
                       ip_address=request.remote_addr)
@@ -1913,10 +2280,106 @@ def admin_registration_open():
     return render_template('admin/registration_open.html', periods=periods)
 
 
+@app.route('/admin/registration/oversight')
+@permission_required('registration.manage')
+def admin_registration_oversight():
+    periods = list_periods_for_selector()
+    return render_template(
+        'admin/registration_oversight.html', periods=periods,
+        departments=list_active_departments(), programmes=list_active_programmes(),
+    )
+
+
+@app.route('/admin/registration/oversight/data')
+@permission_required('registration.manage')
+def admin_registration_oversight_data():
+    period_id = request.args.get('period_id', type=int)
+    period = RegistrationPeriod.query.get(period_id) if period_id else (
+        RegistrationPeriod.query.filter_by(is_active=True).order_by(RegistrationPeriod.id.desc()).first()
+    )
+    if period is None:
+        return jsonify({'success': False, 'message': 'No registration period selected or active.'}), 400
+
+    department_id = request.args.get('department_id', type=int)
+    programme_id = request.args.get('programme_id', type=int)
+    level = request.args.get('level', '').strip() or None
+    status = request.args.get('status', '').strip() or None
+
+    metrics = get_oversight_metrics(period, department_id=department_id, programme_id=programme_id, level=level, status=status)
+    return jsonify({
+        'success': True, 'period_id': period.id,
+        'session_name': period.academic_session.name, 'semester_name': period.semester.name,
+        **metrics,
+    })
+
+
+@app.route('/admin/onboarding')
+@permission_required('students.manage')
+def admin_onboarding_dashboard():
+    return render_template(
+        'admin/onboarding_dashboard.html', departments=list_active_departments(), programmes=list_active_programmes(),
+    )
+
+
+@app.route('/admin/onboarding/data')
+@permission_required('students.manage')
+def admin_onboarding_dashboard_data():
+    department_id = request.args.get('department_id', type=int)
+    programme_id = request.args.get('programme_id', type=int)
+    session_value = request.args.get('session', '').strip() or None
+
+    summary = get_onboarding_summary(department_id=department_id, programme_id=programme_id, session=session_value)
+    analytics = get_onboarding_analytics()
+    return jsonify({'success': True, **summary, 'analytics': analytics})
+
+
 @app.route('/admin/announcements/new')
 @permission_required('announcements.manage')
 def admin_stub_announcements_new():
     return render_template('admin/coming_soon.html', feature_name='Create Announcement')
+
+
+@app.route('/admin/export')
+@permission_required('reports.view')
+def admin_export_center():
+    return render_template('admin/export_center.html')
+
+
+@app.route('/admin/export/<data_type>/<fmt>')
+@permission_required('reports.view')
+def admin_export_download(data_type, fmt):
+    if data_type not in VALID_DATA_TYPES:
+        abort(404)
+    if fmt == 'csv':
+        response = export_csv(data_type)
+    elif fmt == 'xlsx':
+        response = export_excel(data_type)
+    else:
+        abort(404)
+    log_admin_action(current_user, 'data_exported', target_type=data_type, details=f'format={fmt}',
+                      ip_address=request.remote_addr)
+    return response
+
+
+@app.route('/admin/students/bulk-export', methods=['POST'])
+@permission_required('reports.view')
+def admin_students_bulk_export():
+    data = request.get_json()
+    if not data or not data.get('student_ids') or not data.get('format'):
+        return jsonify({'success': False, 'message': 'student_ids and format are required.'}), 400
+
+    fmt = data['format']
+    student_ids = data['student_ids']
+    if fmt == 'csv':
+        response = export_csv('students', student_ids=student_ids)
+    elif fmt == 'xlsx':
+        response = export_excel('students', student_ids=student_ids)
+    else:
+        return jsonify({'success': False, 'message': 'format must be csv or xlsx.'}), 400
+
+    log_admin_action(current_user, 'student_bulk_exported', target_type='user', target_id=None,
+                      details=f'format={fmt} count={len(student_ids)} ids={student_ids}', ip_address=request.remote_addr)
+    return response
 
 
 @app.route('/admin/reports')

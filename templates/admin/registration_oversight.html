@@ -1,0 +1,67 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Registration / Oversight{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.8rem;">
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+        <select id="periodSelect" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            {% for p in periods %}
+            <option value="{{ p.id }}" {{ 'selected' if p.is_active }}>{{ p.academic_session.name }} — {{ p.semester.name }}{{ ' (active)' if p.is_active else '' }}</option>
+            {% endfor %}
+        </select>
+        <select id="departmentFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+        <select id="programmeFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All programmes</option>
+            {% for prog in programmes %}
+            <option value="{{ prog.id }}">{{ prog.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" id="levelFilter" placeholder="Level" style="width:100px; padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <select id="statusFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All statuses</option>
+            <option value="registered">Registered</option>
+        </select>
+    </div>
+</div>
+
+<div id="metricsGrid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:1rem; margin-bottom:1.5rem;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="mTotalEligible" style="font-size:1.6rem; font-weight:700;">—</div>
+        <div style="color: var(--text-muted); font-size:0.85rem;">Total Eligible Students</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="mRegistered" style="font-size:1.6rem; font-weight:700; color: var(--success);">—</div>
+        <div style="color: var(--text-muted); font-size:0.85rem;">Registered Students</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="mPending" style="font-size:1.6rem; font-weight:700; color: var(--warning);">—</div>
+        <div style="color: var(--text-muted); font-size:0.85rem;">Pending (Payment)</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="mIncomplete" style="font-size:1.6rem; font-weight:700; color: var(--danger);">—</div>
+        <div style="color: var(--text-muted); font-size:0.85rem;">Incomplete (Courses)</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="mCompletion" style="font-size:1.6rem; font-weight:700; color: var(--primary-dark);">—</div>
+        <div style="color: var(--text-muted); font-size:0.85rem;">Completion %</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem;">
+        <div id="mCredits" style="font-size:1.6rem; font-weight:700;">—</div>
+        <div style="color: var(--text-muted); font-size:0.85rem;">Total Registered Credits</div>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.2rem; grid-column: span 2;">
+        <div id="mCountdown" style="font-size:1.6rem; font-weight:700;">—</div>
+        <div style="color: var(--text-muted); font-size:0.85rem;">Time Remaining Until Deadline</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/admin/registration_oversight.js') }}"></script>
+{% endblock %}

@@ -92,13 +92,15 @@ def get_period(period_id):
 
 def create_period(session_id, semester_id, opens_at, closes_at, min_credits, max_credits, registration_fee,
                    late_registration_ends_at=None, late_registration_fee=None,
-                   exam_starts_at=None, exam_ends_at=None, result_release_at=None):
+                   exam_starts_at=None, exam_ends_at=None, result_release_at=None,
+                   add_drop_opens_at=None, add_drop_closes_at=None):
     period = RegistrationPeriod(
         academic_session_id=session_id, semester_id=semester_id,
         opens_at=opens_at, closes_at=closes_at,
         min_credits=min_credits, max_credits=max_credits, registration_fee=registration_fee,
         late_registration_ends_at=late_registration_ends_at, late_registration_fee=late_registration_fee,
         exam_starts_at=exam_starts_at, exam_ends_at=exam_ends_at, result_release_at=result_release_at,
+        add_drop_opens_at=add_drop_opens_at, add_drop_closes_at=add_drop_closes_at,
         is_active=False,
     )
     db.session.add(period)

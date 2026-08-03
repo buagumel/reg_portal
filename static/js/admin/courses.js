@@ -25,7 +25,7 @@ async function getJson(url) {
 
 function renderRows(courses) {
     if (courses.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2rem; color: var(--text-muted);">No courses found.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem; color: var(--text-muted);">No courses found.</td></tr>';
         return;
     }
     tableBody.innerHTML = courses.map((c) => `
@@ -36,6 +36,8 @@ function renderRows(courses) {
             <td>${escapeHtml(c.level)}</td>
             <td>${escapeHtml(c.semester)}</td>
             <td>${c.credits}</td>
+            <td>${c.enrolled} / ${c.max_capacity}${c.remaining !== '—' ? ` (${c.remaining} left)` : ''}</td>
+            <td>—</td>
             <td style="text-transform:capitalize;">${escapeHtml(c.status)}</td>
         </tr>
     `).join('');

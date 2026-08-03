@@ -3,20 +3,26 @@
 {% block breadcrumbs %}Students / Import{% endblock %}
 
 {% block content %}
-<div style="max-width:560px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+<div style="max-width:720px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h2 style="margin-top:0;">Import Students (CSV)</h2>
-    <p style="color: var(--text-muted); font-size:0.85rem;">Required columns: <code>reg_no, name</code>. Optional: <code>email, phone, department, programme, level, semester, session, nationality, state, lga, gender, student_type</code>. <code>department</code>/<code>programme</code>, if provided, must match an existing name or code exactly. Existing registration numbers are updated in place; unchanged rows are skipped; repeated reg_no values within the same file are counted as duplicates.</p>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div style="margin-bottom:1.5rem;">
+    <p style="color: var(--text-muted); font-size:0.85rem;">Required columns: <code>reg_no, name</code>. Optional: <code>email, phone, department, programme, level, semester, session, nationality, state, lga, gender, student_type</code>. <code>department</code>/<code>programme</code>, if provided, must match an existing name or code exactly, and <code>level</code> (if a programme is given) must be valid for that programme's type. Existing registration numbers are updated in place; unchanged rows are skipped; repeated reg_no/email values within the same file are counted as duplicates.</p>
+    <form method="POST" enctype="multipart/form-data" id="importForm">
+        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:1rem;">
             <label style="display:block; margin-bottom:0.3rem; font-weight:600;">CSV File</label>
-            <input type="file" name="file" accept=".csv" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+            <input type="file" name="file" id="fileInput" accept=".csv" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
         </div>
-        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;"><i class="fas fa-upload"></i> Import</button>
+        <button type="button" id="previewBtn" style="padding:0.7rem 1.5rem; background: var(--primary-light); color: var(--primary-dark); border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;"><i class="fas fa-eye"></i> Preview</button>
+        <button type="submit" id="confirmBtn" disabled style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer; opacity:0.5;"><i class="fas fa-upload"></i> Confirm Import</button>
         <a href="{{ url_for('admin_students') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
     </form>
+    <div id="previewResult" style="margin-top:1.5rem;"></div>
     <p style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
         <a href="{{ url_for('admin_student_admission_portal') }}" style="color: var(--text-muted);"><i class="fas fa-plug"></i> Or fetch admitted students from the admission portal</a>
     </p>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/admin/student_import.js') }}"></script>
 {% endblock %}
