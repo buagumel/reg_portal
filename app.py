@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from extensions import mail, Message
 from models import (
-    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos,
+    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos, Programme,
 )
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
@@ -51,7 +51,7 @@ from services.admin_department import (
     list_departments, get_department, get_department_detail,
     create_department, update_department, set_department_status,
 )
-from services.admin_validation import is_department_code_unique, validate_credit_range
+from services.admin_validation import is_department_code_unique, validate_credit_range, valid_levels_for_programme
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
     list_semesters, list_periods, get_period, create_period, update_period, activate_period,
@@ -1417,12 +1417,21 @@ def admin_student_new():
         flash(f'A student with email "{email}" already exists.')
         return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
 
+    programme_id = request.form.get('programme_id', type=int)
+    level = request.form.get('level', '').strip()
+    if programme_id and level:
+        programme = Programme.query.get(programme_id)
+        valid_levels = valid_levels_for_programme(programme)
+        if valid_levels is not None and level not in valid_levels:
+            flash(f'"{level}" is not a valid level for {programme.name} (expected one of: {", ".join(valid_levels)}).')
+            return render_template('admin/student_form.html', student=None, departments=departments, programmes=programmes, form=request.form)
+
     dob_raw = request.form.get('dob') or None
     student, temp_password = create_student(
         reg_no=reg_no, name=name,
         email=email, phone=request.form.get('phone', '').strip(),
-        department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
-        level=request.form.get('level', '').strip(), semester=request.form.get('semester', '').strip(),
+        department_id=request.form.get('department_id', type=int), programme_id=programme_id,
+        level=level, semester=request.form.get('semester', '').strip(),
         session=request.form.get('session', '').strip(),
         nationality=request.form.get('nationality', '').strip(), state=request.form.get('state', '').strip(),
         lga=request.form.get('lga', '').strip(), dob=date.fromisoformat(dob_raw) if dob_raw else None,
@@ -1454,12 +1463,21 @@ def admin_student_edit(student_id):
         flash(f'A student with email "{email}" already exists.')
         return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes, form=request.form)
 
+    programme_id = request.form.get('programme_id', type=int)
+    level = request.form.get('level', '').strip() or None
+    if programme_id and level:
+        programme = Programme.query.get(programme_id)
+        valid_levels = valid_levels_for_programme(programme)
+        if valid_levels is not None and level not in valid_levels:
+            flash(f'"{level}" is not a valid level for {programme.name} (expected one of: {", ".join(valid_levels)}).')
+            return render_template('admin/student_form.html', student=student, departments=departments, programmes=programmes, form=request.form)
+
     dob_raw = request.form.get('dob') or None
     update_student(
         student_id, name=name,
         email=email, phone=request.form.get('phone', '').strip() or None,
-        department_id=request.form.get('department_id', type=int), programme_id=request.form.get('programme_id', type=int),
-        level=request.form.get('level', '').strip() or None, semester=request.form.get('semester', '').strip() or None,
+        department_id=request.form.get('department_id', type=int), programme_id=programme_id,
+        level=level, semester=request.form.get('semester', '').strip() or None,
         session=request.form.get('session', '').strip() or None,
         nationality=request.form.get('nationality', '').strip() or None, state=request.form.get('state', '').strip() or None,
         lga=request.form.get('lga', '').strip() or None, dob=date.fromisoformat(dob_raw) if dob_raw else None,
