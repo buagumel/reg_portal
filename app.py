@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from extensions import mail, Message
 from models import (
-    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser,
+    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos,
 )
 from constants_file import (
     SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
@@ -331,6 +331,7 @@ def onboarding_complete():
         return jsonify({'success': False, 'message': 'Please verify your email before completing onboarding.'}), 400
 
     current_user.onboarding_completed = True
+    current_user.onboarding_completed_at = now_lagos()
     db.session.commit()
 
     create_notification(
@@ -378,6 +379,8 @@ def login():
                     remember=remember,
                     show_password=show_password
                 )
+            user.last_login_at = now_lagos()
+            db.session.commit()
             login_user(user, remember=remember)
             next_page = request.args.get('next')
             redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
