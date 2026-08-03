@@ -23,6 +23,7 @@
                 <li><a href="{{ url_for('admin_courses') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_course') }}"><i class="fas fa-book"></i> Courses</a></li>
                 <li><a href="{{ url_for('admin_registration_open') }}" class="{{ 'active' if request.endpoint in ('admin_registration_open', 'admin_period_activate') }}"><i class="fas fa-door-open"></i> Registration</a></li>
                 <li><a href="{{ url_for('admin_stub_announcements_new') }}"><i class="fas fa-bullhorn"></i> Announcements</a></li>
+                <li><a href="{{ url_for('admin_export_center') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_export') }}"><i class="fas fa-file-export"></i> Export</a></li>
                 <li><a href="{{ url_for('admin_stub_reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
                 <li><a href="{{ url_for('admin_logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>

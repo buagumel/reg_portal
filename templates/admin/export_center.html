@@ -1,0 +1,30 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Export{% endblock %}
+
+{% block content %}
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">Export Data</h2>
+    <p style="color: var(--text-muted); font-size:0.85rem;">Download a full snapshot of each dataset. PDF export isn't built yet.</p>
+    <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.6rem;">Dataset</th>
+                <th style="padding:0.6rem;">Formats</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key, label in [('students', 'Students'), ('registrations', 'Registrations'), ('courses', 'Courses'), ('departments', 'Departments'), ('payments', 'Payments')] %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.6rem; font-weight:600;">{{ label }}</td>
+                <td style="padding:0.6rem;">
+                    <a href="{{ url_for('admin_export_download', data_type=key, fmt='csv') }}" style="margin-right:0.8rem; color: var(--primary-dark); font-weight:600;"><i class="fas fa-file-csv"></i> CSV</a>
+                    <a href="{{ url_for('admin_export_download', data_type=key, fmt='xlsx') }}" style="margin-right:0.8rem; color: var(--primary-dark); font-weight:600;"><i class="fas fa-file-excel"></i> Excel</a>
+                    <span style="color: var(--text-muted); cursor:not-allowed;" title="Coming soon"><i class="fas fa-file-pdf"></i> PDF</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

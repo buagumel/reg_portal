@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, abort
 from flask_login import login_user, LoginManager, current_user, logout_user, login_required
 import os
 import time
@@ -58,6 +58,7 @@ from services.admin_session import (
     list_holidays, create_holiday, list_inactive_periods,
 )
 from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components
+from services.admin_export import export_csv, export_excel, VALID_DATA_TYPES
 from services.admin_department import list_active_departments
 from services.admin_validation import is_course_code_unique
 from services.course_import import import_courses_csv, preview_courses_csv
@@ -2059,6 +2060,49 @@ def admin_registration_open():
 @permission_required('announcements.manage')
 def admin_stub_announcements_new():
     return render_template('admin/coming_soon.html', feature_name='Create Announcement')
+
+
+@app.route('/admin/export')
+@permission_required('reports.view')
+def admin_export_center():
+    return render_template('admin/export_center.html')
+
+
+@app.route('/admin/export/<data_type>/<fmt>')
+@permission_required('reports.view')
+def admin_export_download(data_type, fmt):
+    if data_type not in VALID_DATA_TYPES:
+        abort(404)
+    if fmt == 'csv':
+        response = export_csv(data_type)
+    elif fmt == 'xlsx':
+        response = export_excel(data_type)
+    else:
+        abort(404)
+    log_admin_action(current_user, 'data_exported', target_type=data_type, details=f'format={fmt}',
+                      ip_address=request.remote_addr)
+    return response
+
+
+@app.route('/admin/students/bulk-export', methods=['POST'])
+@permission_required('reports.view')
+def admin_students_bulk_export():
+    data = request.get_json()
+    if not data or not data.get('student_ids') or not data.get('format'):
+        return jsonify({'success': False, 'message': 'student_ids and format are required.'}), 400
+
+    fmt = data['format']
+    student_ids = data['student_ids']
+    if fmt == 'csv':
+        response = export_csv('students', student_ids=student_ids)
+    elif fmt == 'xlsx':
+        response = export_excel('students', student_ids=student_ids)
+    else:
+        return jsonify({'success': False, 'message': 'format must be csv or xlsx.'}), 400
+
+    log_admin_action(current_user, 'student_bulk_exported', target_type='user', target_id=None,
+                      details=f'format={fmt} count={len(student_ids)} ids={student_ids}', ip_address=request.remote_addr)
+    return response
 
 
 @app.route('/admin/reports')

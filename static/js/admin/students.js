@@ -204,4 +204,32 @@ bulkAssignProgBtn.addEventListener('click', async () => {
     if (result.success) load();
 });
 
+const bulkExportCsvBtn = document.getElementById('bulkExportCsvBtn');
+const bulkExportXlsxBtn = document.getElementById('bulkExportXlsxBtn');
+
+async function runBulkExport(format) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+
+    const csrf = document.getElementById('csrf_token').value;
+    const response = await fetch('/admin/students/bulk-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({ student_ids: ids, format }),
+    });
+    if (!response.ok) {
+        showToast('Could not export students.', true);
+        return;
+    }
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `students.${format}`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+bulkExportCsvBtn.addEventListener('click', () => runBulkExport('csv'));
+bulkExportXlsxBtn.addEventListener('click', () => runBulkExport('xlsx'));
+
 load();
