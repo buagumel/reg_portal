@@ -166,12 +166,24 @@ def _recompute_credits(student_registration):
     student_registration.credits_registered = total
 
 
-def add_course(user, period, student_registration, course_id):
+def get_course_enrollment_count(course_id):
+    """Current number of students registered for this course (this exact
+    Course row, already scoped to one session/semester by its own unique
+    constraint)."""
+    return RegisteredCourse.query.filter_by(course_id=course_id).count()
+
+
+def add_course(user, period, student_registration, course_id, admin_override=False):
     """Validate and add a course to the student's registration. Raises
-    RegistrationError on any business-rule violation."""
+    RegistrationError on any business-rule violation. admin_override=True
+    (only ever passed by the admin Registration Oversight action) bypasses
+    the capacity check — every other check still applies."""
     course = Course.query.get(course_id)
     if course is None:
         raise RegistrationError('Course not found.')
+
+    if student_registration.is_locked:
+        raise RegistrationError('This registration is locked by an administrator.')
 
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
@@ -184,6 +196,11 @@ def add_course(user, period, student_registration, course_id):
 
     _, max_credits, _ = get_credit_limits(period, user.department)
     validate_credit_ceiling(student_registration.credits_registered, course.credits, max_credits)
+
+    if not admin_override and course.max_capacity is not None:
+        current_enrollment = get_course_enrollment_count(course.id)
+        if current_enrollment >= course.max_capacity:
+            raise RegistrationError(f'{course.code} is at full capacity ({course.max_capacity}).')
 
     registered_course = RegisteredCourse(
         student_registration_id=student_registration.id,
@@ -204,8 +221,11 @@ def add_course(user, period, student_registration, course_id):
 
 def drop_course(user, period, student_registration, course_id):
     """Remove a course from the student's registration. Raises
-    RegistrationError if not found, already submitted, or the registration
-    window is no longer open."""
+    RegistrationError if not found, already submitted, locked, or the
+    registration window is no longer open."""
+    if student_registration.is_locked:
+        raise RegistrationError('This registration is locked by an administrator.')
+
     if student_registration.courses_submitted:
         raise RegistrationError('Course selection has already been submitted.')
 
@@ -228,6 +248,9 @@ def drop_course(user, period, student_registration, course_id):
 def submit_registration(user, period, student_registration):
     """Validate and finalize the student's course selection. Raises
     RegistrationError on any business-rule violation."""
+    if student_registration.is_locked:
+        raise RegistrationError('This registration is locked by an administrator.')
+
     window_status = get_window_status(period)
     min_credits, max_credits, _ = get_credit_limits(period, user.department)
     validate_can_submit(student_registration, window_status, min_credits, max_credits)
