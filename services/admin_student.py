@@ -144,13 +144,17 @@ def bulk_set_status(student_ids, status):
 
 def bulk_reset_password(student_ids):
     """Resets each student's password to a fresh temp password. Returns a
-    list of {'reg_no', 'temp_password'} — the caller (route) is responsible
-    for getting this to the admin (client-side CSV download); it is never
-    written to a log or persisted anywhere in plaintext."""
+    list of {'reg_no', 'temp_password'} for students that still exist —
+    silently skips any student_id that no longer exists (e.g. deleted
+    between page load and the bulk action) rather than aborting the whole
+    batch with an unhandled 404. Never written to a log or persisted
+    anywhere in plaintext."""
     results = []
     for student_id in student_ids:
+        student = User.query.get(student_id)
+        if student is None:
+            continue
         temp_password = reset_student_password(student_id)
-        student = get_student(student_id)
         results.append({'reg_no': student.reg_no, 'temp_password': temp_password})
     return results
 

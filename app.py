@@ -1628,11 +1628,14 @@ def admin_students_bulk_resend_email():
     student_ids = data['student_ids']
     sent = skipped = 0
     for student_id in student_ids:
+        student = User.query.get(student_id)
+        if student is None:
+            skipped += 1
+            continue
         ok, _ = resend_verification(student_id)
         if not ok:
             skipped += 1
             continue
-        student = get_student(student_id)
         try:
             msg = Message('Complete Your Email Verification', recipients=[student.email])
             msg.body = (
