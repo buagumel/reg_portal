@@ -60,11 +60,11 @@ from services.admin_programme import (
 )
 from services.admin_validation import (
     is_department_code_unique, is_programme_code_unique, validate_credit_range, valid_levels_for_programme,
-    LEVELS_BY_PROGRAM_TYPE,
+    LEVELS_BY_PROGRAM_TYPE, is_session_name_unique,
 )
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
-    list_semesters, list_periods, get_period, create_period, update_period, activate_period,
+    list_semesters, list_semesters_for_programme, list_periods, get_period, create_period, update_period, activate_period,
     list_holidays, create_holiday, list_inactive_periods,
 )
 from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components, get_enrollment_count
@@ -1372,30 +1372,38 @@ def admin_programme_archive(programme_id):
 @app.route('/admin/sessions')
 @permission_required('sessions.manage')
 def admin_sessions():
-    sessions = list_sessions()
-    return render_template('admin/sessions.html', sessions=sessions)
+    programme_id = request.args.get('programme_id', type=int)
+    sessions = list_sessions(programme_id=programme_id)
+    return render_template(
+        'admin/sessions.html', sessions=sessions,
+        programmes=list_active_programmes(), selected_programme_id=programme_id,
+    )
 
 
 @app.route('/admin/sessions/new', methods=['GET', 'POST'])
 @permission_required('sessions.manage')
 def admin_sessions_new():
     if request.method == 'GET':
-        return render_template('admin/session_form.html', session=None)
+        return render_template('admin/session_form.html', session=None, programmes=list_active_programmes())
 
     name = request.form.get('name', '').strip()
     start_date = request.form.get('start_date') or None
     end_date = request.form.get('end_date') or None
+    programme_id = request.form.get('programme_id', type=int) or None
     if not name:
         flash('Session name is required.')
-        return render_template('admin/session_form.html', session=None, form=request.form)
+        return render_template('admin/session_form.html', session=None, form=request.form, programmes=list_active_programmes())
+    if not is_session_name_unique(name, programme_id):
+        flash(f'A session named "{name}" already exists for this programme.')
+        return render_template('admin/session_form.html', session=None, form=request.form, programmes=list_active_programmes())
 
     from datetime import date
     start_date = date.fromisoformat(start_date) if start_date else None
     end_date = date.fromisoformat(end_date) if end_date else None
 
-    session_obj = create_session(name, start_date, end_date)
+    session_obj = create_session(name, start_date, end_date, programme_id=programme_id)
     log_admin_action(current_user, 'session_created', target_type='academic_session', target_id=session_obj.id,
-                      details=f'name={name}', ip_address=request.remote_addr)
+                      details=f'name={name} programme_id={programme_id}', ip_address=request.remote_addr)
     flash(f'Session "{name}" created.')
     return redirect(url_for('admin_session_edit', session_id=session_obj.id))
 
@@ -1406,24 +1414,28 @@ def admin_session_edit(session_id):
     session_obj = get_session(session_id)
     if request.method == 'GET':
         return render_template(
-            'admin/session_form.html', session=session_obj,
+            'admin/session_form.html', session=session_obj, programmes=list_active_programmes(),
             periods=list_periods(session_id), holidays=list_holidays(session_id),
         )
 
     name = request.form.get('name', '').strip()
     start_date = request.form.get('start_date') or None
     end_date = request.form.get('end_date') or None
+    programme_id = request.form.get('programme_id', type=int) or None
     if not name:
         flash('Session name is required.')
-        return render_template('admin/session_form.html', session=session_obj, form=request.form)
+        return render_template('admin/session_form.html', session=session_obj, form=request.form, programmes=list_active_programmes())
+    if not is_session_name_unique(name, programme_id, exclude_id=session_id):
+        flash(f'A session named "{name}" already exists for this programme.')
+        return render_template('admin/session_form.html', session=session_obj, form=request.form, programmes=list_active_programmes())
 
     from datetime import date
     start_date = date.fromisoformat(start_date) if start_date else None
     end_date = date.fromisoformat(end_date) if end_date else None
 
-    update_session(session_id, name, start_date, end_date)
+    update_session(session_id, name, start_date, end_date, programme_id=programme_id)
     log_admin_action(current_user, 'session_updated', target_type='academic_session', target_id=session_id,
-                      details=f'name={name}', ip_address=request.remote_addr)
+                      details=f'name={name} programme_id={programme_id}', ip_address=request.remote_addr)
     flash(f'Session "{name}" updated.')
     return redirect(url_for('admin_sessions'))
 
@@ -2290,7 +2302,7 @@ def admin_course_import_report(job_id):
 @permission_required('sessions.manage')
 def admin_period_new(session_id):
     session_obj = get_session(session_id)
-    semesters = list_semesters()
+    semesters = list_semesters_for_programme(session_obj.programme)
     if request.method == 'GET':
         return render_template('admin/period_form.html', session=session_obj, period=None, semesters=semesters)
 
@@ -2335,7 +2347,7 @@ def admin_period_new(session_id):
 def admin_period_edit(session_id, period_id):
     session_obj = get_session(session_id)
     period = get_period(period_id)
-    semesters = list_semesters()
+    semesters = list_semesters_for_programme(session_obj.programme)
     if request.method == 'GET':
         return render_template('admin/period_form.html', session=session_obj, period=period, semesters=semesters)
 
