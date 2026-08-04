@@ -106,11 +106,16 @@ class Payment(db.Model):
 class AcademicSession(db.Model):
     __tablename__ = 'academic_sessions'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(20), unique=True, nullable=False)
+    name = db.Column(db.String(20), nullable=False)
     is_current = db.Column(db.Boolean, default=False, nullable=False)
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='draft', server_default='draft')
+    programme_id = db.Column(db.Integer, db.ForeignKey('programmes.id'), nullable=True)
+
+    __table_args__ = (db.UniqueConstraint('name', 'programme_id', name='uq_academic_sessions_name_programme_id'),)
+
+    programme = db.relationship('Programme')
 
 
 class Semester(db.Model):
@@ -118,6 +123,7 @@ class Semester(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     order = db.Column(db.Integer, nullable=False)
+    period_type = db.Column(db.String(20), nullable=False, default='semester', server_default='semester')
 
 
 class RegistrationPeriod(db.Model):
@@ -142,6 +148,10 @@ class RegistrationPeriod(db.Model):
 
     academic_session = db.relationship('AcademicSession')
     semester = db.relationship('Semester')
+
+    @property
+    def programme(self):
+        return self.academic_session.programme if self.academic_session else None
 
 
 class DepartmentRegistrationRule(db.Model):

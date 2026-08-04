@@ -13,6 +13,16 @@
                    style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
         </div>
         <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Programme (optional — leave blank for a shared/legacy session)</label>
+            <select name="programme_id" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                <option value="">— Shared / Legacy —</option>
+                {% set current_programme_id = form.get('programme_id', type=int) if form else (session.programme_id if session else none) %}
+                {% for prog in programmes %}
+                <option value="{{ prog.id }}" {{ 'selected' if current_programme_id == prog.id }}>{{ prog.name }} ({{ prog.code }}){{ ' — ' ~ prog.status if prog.status != 'active' }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:1rem;">
             <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Start Date</label>
             <input type="date" name="start_date" value="{{ session.start_date.isoformat() if session and session.start_date else '' }}"
                    style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">

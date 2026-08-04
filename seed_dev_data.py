@@ -74,6 +74,7 @@ def seed():
         seed_payments()
         seed_admin_rbac()
         seed_admin_users()
+        seed_term_semesters()
         seed_programmes()
         seed_programme_departments()
         print(f"\nDone. {created} student(s) created. Default password for first_login=True accounts: {DEFAULT_PASSWORD}")
@@ -417,6 +418,17 @@ def seed_programmes():
         db.session.add(Programme(name=name, code=code, program_type=program_type, description=description))
         db.session.commit()
         print(f'Seeded programme: {name} ({code})')
+
+
+def seed_term_semesters():
+    terms = [('Term 1', 1), ('Term 2', 2), ('Term 3', 3)]
+    for name, order in terms:
+        if Semester.query.filter_by(name=name).first():
+            print(f'Skipping semester {name} (already exists)')
+            continue
+        db.session.add(Semester(name=name, order=order, period_type='term'))
+        db.session.commit()
+        print(f'Seeded term: {name}')
 
 
 def seed_programme_departments():
