@@ -1,0 +1,50 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Programmes / {{ 'Edit' if programme else 'New' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:520px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">{{ 'Edit Programme' if programme else 'New Programme' }}</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Name</label>
+            <input type="text" name="name" required value="{{ form.name if form else (programme.name if programme else '') }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Code</label>
+            <input type="text" name="code" required value="{{ form.code if form else (programme.code if programme else '') }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box; text-transform:uppercase;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Programme Type</label>
+            <select name="program_type" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+                {% set current_type = form.program_type if form else (programme.program_type if programme else '') %}
+                <option value="nd" {{ 'selected' if current_type == 'nd' }}>ND</option>
+                <option value="hnd" {{ 'selected' if current_type == 'hnd' }}>HND</option>
+                <option value="international" {{ 'selected' if current_type == 'international' }}>International</option>
+            </select>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Description (optional)</label>
+            <input type="text" name="description" value="{{ form.description if form else (programme.description if programme else '') }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Duration (optional)</label>
+            <input type="text" name="duration" placeholder="e.g. 2 years" value="{{ form.duration if form else (programme.duration if programme else '') }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Calendar Structure</label>
+            {% set us = form.get('uses_semesters') if form else (programme.uses_semesters if programme else True) %}
+            {% set ut = form.get('uses_terms') if form else (programme.uses_terms if programme else False) %}
+            <label style="display:block;"><input type="checkbox" name="uses_semesters" {{ 'checked' if us }}> Uses Semesters</label>
+            <label style="display:block;"><input type="checkbox" name="uses_terms" {{ 'checked' if ut }}> Uses Terms</label>
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
+        <a href="{{ url_for('admin_programmes') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+</div>
+{% endblock %}
