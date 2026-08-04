@@ -113,7 +113,7 @@ class AcademicSession(db.Model):
     status = db.Column(db.String(20), nullable=False, default='draft', server_default='draft')
     programme_id = db.Column(db.Integer, db.ForeignKey('programmes.id'), nullable=True)
 
-    __table_args__ = (db.UniqueConstraint('name', 'programme_id'),)
+    __table_args__ = (db.UniqueConstraint('name', 'programme_id', name='uq_academic_sessions_name_programme_id'),)
 
     programme = db.relationship('Programme')
 

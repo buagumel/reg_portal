@@ -1467,11 +1467,15 @@ def admin_session_archive(session_id):
 @app.route('/admin/sessions/<int:session_id>/clone', methods=['POST'])
 @permission_required('sessions.manage')
 def admin_session_clone(session_id):
+    source_session = get_session(session_id)
     new_name = request.form.get('new_name', '').strip()
     start_date = request.form.get('start_date') or None
     end_date = request.form.get('end_date') or None
     if not new_name:
         flash('New session name is required to clone.')
+        return redirect(url_for('admin_sessions'))
+    if not is_session_name_unique(new_name, source_session.programme_id):
+        flash(f'A session named "{new_name}" already exists for this programme.')
         return redirect(url_for('admin_sessions'))
 
     from datetime import date
@@ -2315,7 +2319,7 @@ def admin_period_new(session_id):
     session_obj = get_session(session_id)
     semesters = list_semesters_for_programme(session_obj.programme)
     if request.method == 'GET':
-        return render_template('admin/period_form.html', session=session_obj, period=None, semesters=semesters)
+        return render_template('admin/period_form.html', session=session_obj, period=None, semesters=semesters, mismatched_semester_id=None)
 
     from datetime import datetime
 
@@ -2332,10 +2336,15 @@ def admin_period_new(session_id):
     errors = validate_credit_range(min_credits, max_credits)
     if not semester_id or not opens_at or not closes_at:
         errors.append('Semester, opens-at, and closes-at are required.')
+    elif semester_id not in {s.id for s in semesters}:
+        # Backstop against a crafted/stale request posting a semester_id outside
+        # what this session's Programme scope actually offers — see the matching
+        # comment in admin_period_edit for the full rationale.
+        errors.append('Selected semester is not valid for this session\'s programme.')
     if errors:
         for e in errors:
             flash(e)
-        return render_template('admin/period_form.html', session=session_obj, period=None, semesters=semesters, form=request.form)
+        return render_template('admin/period_form.html', session=session_obj, period=None, semesters=semesters, form=request.form, mismatched_semester_id=None)
 
     period = create_period(
         session_id, semester_id, opens_at, closes_at, min_credits, max_credits, registration_fee,
@@ -2358,9 +2367,24 @@ def admin_period_new(session_id):
 def admin_period_edit(session_id, period_id):
     session_obj = get_session(session_id)
     period = get_period(period_id)
+    # A RegistrationPeriod's semester_id can reference a Semester that's no
+    # longer in this session's Programme's filtered calendar shape (e.g. the
+    # session was scoped to a Programme, or the Programme's
+    # uses_semesters/uses_terms flags were toggled, after this period was
+    # already created against a different semester). If we dropped it from the
+    # dropdown, an admin who edits the period without touching the Semester
+    # field would have the browser silently default to selecting the *first*
+    # option — silently reassigning the period to a completely different
+    # semester on an otherwise-unrelated edit (e.g. date-only change). Union
+    # it back in (and label it distinctly in the template) so a no-op resubmit
+    # round-trips correctly. Same pattern as c797c91's session-Programme fix.
     semesters = list_semesters_for_programme(session_obj.programme)
+    mismatched_semester_id = None
+    if period.semester_id not in {s.id for s in semesters}:
+        semesters = semesters + [period.semester]
+        mismatched_semester_id = period.semester_id
     if request.method == 'GET':
-        return render_template('admin/period_form.html', session=session_obj, period=period, semesters=semesters)
+        return render_template('admin/period_form.html', session=session_obj, period=period, semesters=semesters, mismatched_semester_id=mismatched_semester_id)
 
     from datetime import datetime
 
@@ -2377,10 +2401,16 @@ def admin_period_edit(session_id, period_id):
     errors = validate_credit_range(min_credits, max_credits)
     if not semester_id or not opens_at or not closes_at:
         errors.append('Semester, opens-at, and closes-at are required.')
+    elif semester_id not in {s.id for s in semesters}:
+        # Backstop against a crafted/stale request posting a semester_id outside
+        # what's actually offered (the Programme-filtered set, plus the period's
+        # own current semester if it was unioned back in above) — don't just
+        # trust whatever the client posts even if the template ever regresses.
+        errors.append('Selected semester is not valid for this session\'s programme.')
     if errors:
         for e in errors:
             flash(e)
-        return render_template('admin/period_form.html', session=session_obj, period=period, semesters=semesters, form=request.form)
+        return render_template('admin/period_form.html', session=session_obj, period=period, semesters=semesters, form=request.form, mismatched_semester_id=mismatched_semester_id)
 
     update_period(
         period_id, semester_id=semester_id, opens_at=opens_at, closes_at=closes_at,
