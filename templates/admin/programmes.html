@@ -24,7 +24,7 @@
         {% for dept in all_departments %}
         <label style="display:block; margin-bottom:0.5rem;">
             <input type="checkbox" name="department_ids" value="{{ dept.id }}" {{ 'checked' if dept.id in linked_ids }}>
-            {{ dept.name }} ({{ dept.code }})
+            {{ dept.name }} ({{ dept.code }}){% if dept.status != 'active' %} <span style="color: var(--danger); font-weight:600;">({{ dept.status }})</span>{% endif %}
         </label>
         {% else %}
         <p style="color: var(--text-muted);">No active departments exist yet.</p>

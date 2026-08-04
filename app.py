@@ -56,8 +56,12 @@ from services.admin_programme import (
     list_programmes, get_programme, get_programme_detail,
     create_programme, update_programme, set_programme_status,
     get_programme_department_ids, set_programme_departments,
+    list_departments_for_programme_checkboxes,
 )
-from services.admin_validation import is_department_code_unique, is_programme_code_unique, validate_credit_range, valid_levels_for_programme
+from services.admin_validation import (
+    is_department_code_unique, is_programme_code_unique, validate_credit_range, valid_levels_for_programme,
+    LEVELS_BY_PROGRAM_TYPE,
+)
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
     list_semesters, list_periods, get_period, create_period, update_period, activate_period,
@@ -1272,6 +1276,9 @@ def admin_programme_new():
     if not name or not code or not program_type:
         flash('Name, code, and programme type are required.')
         return render_template('admin/programme_form.html', programme=None, form=request.form)
+    if program_type not in LEVELS_BY_PROGRAM_TYPE:
+        flash('Invalid programme type.')
+        return render_template('admin/programme_form.html', programme=None, form=request.form)
     if not is_programme_code_unique(code):
         flash(f'Programme code "{code}" is already in use.')
         return render_template('admin/programme_form.html', programme=None, form=request.form)
@@ -1287,8 +1294,8 @@ def admin_programme_new():
 @permission_required('programmes.manage')
 def admin_programme_detail(programme_id):
     detail = get_programme_detail(programme_id)
-    all_departments = list_active_departments()
     linked_ids = set(get_programme_department_ids(programme_id))
+    all_departments = list_departments_for_programme_checkboxes(programme_id)
     return render_template(
         'admin/programmes.html', detail=detail, result=None,
         all_departments=all_departments, linked_ids=linked_ids,
@@ -1313,6 +1320,9 @@ def admin_programme_edit(programme_id):
     if not name or not code or not program_type:
         flash('Name, code, and programme type are required.')
         return render_template('admin/programme_form.html', programme=programme, form=request.form)
+    if program_type not in LEVELS_BY_PROGRAM_TYPE:
+        flash('Invalid programme type.')
+        return render_template('admin/programme_form.html', programme=programme, form=request.form)
     if not is_programme_code_unique(code, exclude_id=programme_id):
         flash(f'Programme code "{code}" is already in use.')
         return render_template('admin/programme_form.html', programme=programme, form=request.form)
@@ -1327,7 +1337,11 @@ def admin_programme_edit(programme_id):
 @app.route('/admin/programmes/<int:programme_id>/departments', methods=['POST'])
 @permission_required('programmes.manage')
 def admin_programme_departments(programme_id):
-    department_ids = [int(v) for v in request.form.getlist('department_ids')]
+    try:
+        department_ids = [int(v) for v in request.form.getlist('department_ids')]
+    except ValueError:
+        flash('Invalid department selection.')
+        return redirect(url_for('admin_programme_detail', programme_id=programme_id))
     set_programme_departments(programme_id, department_ids)
     log_admin_action(current_user, 'programme_departments_updated', target_type='programme', target_id=programme_id,
                       details=f'department_ids={department_ids}', ip_address=request.remote_addr)
