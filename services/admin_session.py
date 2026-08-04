@@ -1,26 +1,30 @@
 from models import db, AcademicSession, RegistrationPeriod, AcademicHoliday, Semester
 
 
-def list_sessions():
-    return AcademicSession.query.order_by(AcademicSession.start_date.desc().nullslast(), AcademicSession.id.desc()).all()
+def list_sessions(programme_id=None):
+    query = AcademicSession.query
+    if programme_id is not None:
+        query = query.filter(AcademicSession.programme_id == programme_id)
+    return query.order_by(AcademicSession.start_date.desc().nullslast(), AcademicSession.id.desc()).all()
 
 
 def get_session(session_id):
     return AcademicSession.query.get_or_404(session_id)
 
 
-def create_session(name, start_date, end_date):
-    session_obj = AcademicSession(name=name, start_date=start_date, end_date=end_date, status='draft')
+def create_session(name, start_date, end_date, programme_id=None):
+    session_obj = AcademicSession(name=name, start_date=start_date, end_date=end_date, status='draft', programme_id=programme_id)
     db.session.add(session_obj)
     db.session.commit()
     return session_obj
 
 
-def update_session(session_id, name, start_date, end_date):
+def update_session(session_id, name, start_date, end_date, programme_id=None):
     session_obj = get_session(session_id)
     session_obj.name = name
     session_obj.start_date = start_date
     session_obj.end_date = end_date
+    session_obj.programme_id = programme_id
     db.session.commit()
     return session_obj
 
@@ -42,7 +46,7 @@ def clone_session(session_id, new_name, new_start_date, new_end_date):
     from models import DepartmentRegistrationRule
 
     source = get_session(session_id)
-    new_session = AcademicSession(name=new_name, start_date=new_start_date, end_date=new_end_date, status='draft')
+    new_session = AcademicSession(name=new_name, start_date=new_start_date, end_date=new_end_date, status='draft', programme_id=source.programme_id)
     db.session.add(new_session)
     db.session.flush()  # assigns new_session.id without committing yet
 
@@ -80,6 +84,23 @@ def clone_session(session_id, new_name, new_start_date, new_end_date):
 
 def list_semesters():
     return Semester.query.order_by(Semester.order).all()
+
+
+def list_semesters_for_programme(programme):
+    """Filter Semester rows by the programme's calendar shape. Returns every
+    Semester row if programme is None or has neither uses_semesters nor
+    uses_terms set — the same 'show everything' behavior as an unscoped
+    session has always had."""
+    if programme is None:
+        return list_semesters()
+    types = []
+    if programme.uses_semesters:
+        types.append('semester')
+    if programme.uses_terms:
+        types.append('term')
+    if not types:
+        return list_semesters()
+    return Semester.query.filter(Semester.period_type.in_(types)).order_by(Semester.order).all()
 
 
 def list_periods(session_id):
