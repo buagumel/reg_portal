@@ -1,0 +1,99 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Programmes{% endblock %}
+
+{% block content %}
+{% if detail %}
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+    <h2 style="margin-top:0;">{{ detail.programme.name }} <span style="font-size:0.9rem; color: var(--text-muted);">({{ detail.programme.code }})</span></h2>
+    <p style="color: var(--text-muted);">Type: {{ detail.programme.program_type }} &middot; Duration: {{ detail.programme.duration or 'Not set' }} &middot; Status: {{ detail.programme.status }}</p>
+    <p style="color: var(--text-muted);">Calendar: {{ 'Semesters' if detail.programme.uses_semesters else '' }}{{ ' & ' if detail.programme.uses_semesters and detail.programme.uses_terms else '' }}{{ 'Terms' if detail.programme.uses_terms else '' }}{{ 'Not configured' if not detail.programme.uses_semesters and not detail.programme.uses_terms else '' }}</p>
+    <div style="display:flex; gap:2rem; margin: 1rem 0;">
+        <div><div style="font-size:1.6rem; font-weight:700; color: var(--primary-dark);">{{ detail.student_count }}</div><div style="color: var(--text-muted); font-size:0.85rem;">Students</div></div>
+        <div><div style="font-size:1.6rem; font-weight:700; color: var(--primary-dark);">{{ detail.departments|length }}</div><div style="color: var(--text-muted); font-size:0.85rem;">Departments</div></div>
+    </div>
+    <a href="{{ url_for('admin_programme_edit', programme_id=detail.programme.id) }}" style="color: var(--primary-dark); font-weight:600;">Edit</a>
+    &nbsp;&middot;&nbsp;
+    <a href="{{ url_for('admin_programmes') }}" style="color: var(--text-muted);">Back to Programmes</a>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h3 style="margin-top:0;">Assigned Departments</h3>
+    <form method="POST" action="{{ url_for('admin_programme_departments', programme_id=detail.programme.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% for dept in all_departments %}
+        <label style="display:block; margin-bottom:0.5rem;">
+            <input type="checkbox" name="department_ids" value="{{ dept.id }}" {{ 'checked' if dept.id in linked_ids }}>
+            {{ dept.name }} ({{ dept.code }}){% if dept.status != 'active' %} <span style="color: var(--danger); font-weight:600;">({{ dept.status }})</span>{% endif %}
+        </label>
+        {% else %}
+        <p style="color: var(--text-muted);">No active departments exist yet.</p>
+        {% endfor %}
+        <button type="submit" style="margin-top:0.5rem; padding:0.6rem 1.2rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save Departments</button>
+    </form>
+</div>
+{% else %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <form method="GET" style="display:flex; gap:0.6rem;">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search name or code" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <select name="status" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="" {{ 'selected' if not status }}>All statuses</option>
+            <option value="active" {{ 'selected' if status == 'active' }}>Active</option>
+            <option value="archived" {{ 'selected' if status == 'archived' }}>Archived</option>
+        </select>
+        <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary); color:white; cursor:pointer;">Filter</button>
+    </form>
+    <a href="{{ url_for('admin_programme_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Programme</a>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.8rem;">Name</th>
+                <th style="padding:0.8rem;">Code</th>
+                <th style="padding:0.8rem;">Type</th>
+                <th style="padding:0.8rem;">Status</th>
+                <th style="padding:0.8rem;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prog in result['items'] %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.8rem;"><a href="{{ url_for('admin_programme_detail', programme_id=prog.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ prog.name }}</a></td>
+                <td style="padding:0.8rem; font-family:monospace;">{{ prog.code }}</td>
+                <td style="padding:0.8rem; text-transform:capitalize;">{{ prog.program_type }}</td>
+                <td style="padding:0.8rem; text-transform:capitalize;">{{ prog.status }}</td>
+                <td style="padding:0.8rem; text-align:right;">
+                    <a href="{{ url_for('admin_programme_edit', programme_id=prog.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
+                    {% if prog.status != 'active' %}
+                    <form method="POST" action="{{ url_for('admin_programme_activate', programme_id=prog.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer;">Activate</button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('admin_programme_archive', programme_id=prog.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ prog.name }}?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer;">Archive</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="padding:2rem; text-align:center; color: var(--text-muted);">No programmes found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% set total_pages = ((result['total'] - 1) // result['per_page']) + 1 if result['total'] else 1 %}
+{% if total_pages > 1 %}
+<div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
+    {% for p in range(1, total_pages + 1) %}
+    <a href="{{ url_for('admin_programmes', search=search, status=status, page=p) }}"
+       style="padding:0.4rem 0.8rem; border-radius:0.4rem; text-decoration:none; {{ 'background: var(--primary); color:white;' if p == result['page'] else 'background: var(--card-bg); color: var(--text-main); border:1px solid var(--border-color);' }}">{{ p }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

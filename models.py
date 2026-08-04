@@ -362,6 +362,22 @@ class Programme(db.Model):
     description = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='active')
     created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+    uses_semesters = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
+    uses_terms = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    duration = db.Column(db.String(50), nullable=True)
+
+
+class ProgrammeDepartment(db.Model):
+    __tablename__ = 'programme_departments'
+    id = db.Column(db.Integer, primary_key=True)
+    programme_id = db.Column(db.Integer, db.ForeignKey('programmes.id'), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('programme_id', 'department_id'),)
+
+    programme = db.relationship('Programme', backref='programme_departments')
+    department = db.relationship('Department', backref='programme_departments')
 
 
 class CoursePrerequisite(db.Model):

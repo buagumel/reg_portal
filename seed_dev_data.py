@@ -10,7 +10,7 @@ from models import (
     db, User, now_lagos,
     AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course,
     Notification, PaymentCategory, Payment,
-    AdminRole, Permission, AdminUser, Programme,
+    AdminRole, Permission, AdminUser, Programme, ProgrammeDepartment,
 )
 
 DEFAULT_PASSWORD = "Default@123"
@@ -75,6 +75,7 @@ def seed():
         seed_admin_rbac()
         seed_admin_users()
         seed_programmes()
+        seed_programme_departments()
         print(f"\nDone. {created} student(s) created. Default password for first_login=True accounts: {DEFAULT_PASSWORD}")
 
 
@@ -361,6 +362,7 @@ def seed_admin_rbac():
         ('reports.view', 'View and generate reports'),
         ('departments.manage', 'Create, edit, and manage departments'),
         ('onboarding.override', 'Manually mark a student\'s onboarding as complete, bypassing the onboarding wizard'),
+        ('programmes.manage', 'Create, edit, and manage programmes'),
     ]
     perm_objs = {}
     for code, description in permissions:
@@ -377,11 +379,11 @@ def seed_admin_rbac():
     roles = {
         'Super Administrator': (
             'Complete system access',
-            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view', 'departments.manage', 'onboarding.override'],
+            ['dashboard.view', 'sessions.manage', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'reports.view', 'departments.manage', 'onboarding.override', 'programmes.manage'],
         ),
         'Academic Administrator': (
             'Course management, registration oversight, and announcements',
-            ['dashboard.view', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'departments.manage'],
+            ['dashboard.view', 'students.manage', 'courses.manage', 'registration.manage', 'announcements.manage', 'departments.manage', 'programmes.manage'],
         ),
     }
     for name, (description, codes) in roles.items():
@@ -415,6 +417,26 @@ def seed_programmes():
         db.session.add(Programme(name=name, code=code, program_type=program_type, description=description))
         db.session.commit()
         print(f'Seeded programme: {name} ({code})')
+
+
+def seed_programme_departments():
+    """Best-effort backfill: for every User with both department_id and
+    programme_id set, ensure the corresponding ProgrammeDepartment link
+    exists. Not exhaustive — most historical data predates the FK
+    dual-write — admins complete the rest via the Programme Management UI."""
+    pairs = db.session.query(User.programme_id, User.department_id).filter(
+        User.programme_id.isnot(None), User.department_id.isnot(None)
+    ).distinct().all()
+    created = 0
+    for programme_id, department_id in pairs:
+        exists = ProgrammeDepartment.query.filter_by(
+            programme_id=programme_id, department_id=department_id
+        ).first()
+        if not exists:
+            db.session.add(ProgrammeDepartment(programme_id=programme_id, department_id=department_id))
+            created += 1
+    db.session.commit()
+    print(f'Seeded {created} programme_department link(s) from existing student data.')
 
 
 def seed_admin_users():
