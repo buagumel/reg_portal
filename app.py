@@ -52,7 +52,12 @@ from services.admin_department import (
     list_departments, get_department, get_department_detail,
     create_department, update_department, set_department_status,
 )
-from services.admin_validation import is_department_code_unique, validate_credit_range, valid_levels_for_programme
+from services.admin_programme import (
+    list_programmes, get_programme, get_programme_detail,
+    create_programme, update_programme, set_programme_status,
+    get_programme_department_ids, set_programme_departments,
+)
+from services.admin_validation import is_department_code_unique, is_programme_code_unique, validate_credit_range, valid_levels_for_programme
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
     list_semesters, list_periods, get_period, create_period, update_period, activate_period,
@@ -1236,6 +1241,118 @@ def admin_department_archive(department_id):
                       details='status=archived', ip_address=request.remote_addr)
     flash('Department archived.')
     return redirect(url_for('admin_departments'))
+
+
+@app.route('/admin/programmes')
+@permission_required('programmes.manage')
+def admin_programmes():
+    search = request.args.get('search', '').strip() or None
+    status = request.args.get('status', '').strip() or None
+    page = request.args.get('page', 1, type=int)
+    result = list_programmes(search=search, status=status, page=page)
+    return render_template(
+        'admin/programmes.html', result=result, search=search or '', status=status or '',
+    )
+
+
+@app.route('/admin/programmes/new', methods=['GET', 'POST'])
+@permission_required('programmes.manage')
+def admin_programme_new():
+    if request.method == 'GET':
+        return render_template('admin/programme_form.html', programme=None)
+
+    name = request.form.get('name', '').strip()
+    code = request.form.get('code', '').strip().upper()
+    program_type = request.form.get('program_type', '').strip()
+    description = request.form.get('description', '').strip()
+    uses_semesters = request.form.get('uses_semesters') == 'on'
+    uses_terms = request.form.get('uses_terms') == 'on'
+    duration = request.form.get('duration', '').strip()
+
+    if not name or not code or not program_type:
+        flash('Name, code, and programme type are required.')
+        return render_template('admin/programme_form.html', programme=None, form=request.form)
+    if not is_programme_code_unique(code):
+        flash(f'Programme code "{code}" is already in use.')
+        return render_template('admin/programme_form.html', programme=None, form=request.form)
+
+    programme = create_programme(name, code, program_type, description, uses_semesters, uses_terms, duration)
+    log_admin_action(current_user, 'programme_created', target_type='programme', target_id=programme.id,
+                      details=f'name={name} code={code}', ip_address=request.remote_addr)
+    flash(f'Programme "{name}" created.')
+    return redirect(url_for('admin_programmes'))
+
+
+@app.route('/admin/programmes/<int:programme_id>')
+@permission_required('programmes.manage')
+def admin_programme_detail(programme_id):
+    detail = get_programme_detail(programme_id)
+    all_departments = list_active_departments()
+    linked_ids = set(get_programme_department_ids(programme_id))
+    return render_template(
+        'admin/programmes.html', detail=detail, result=None,
+        all_departments=all_departments, linked_ids=linked_ids,
+    )
+
+
+@app.route('/admin/programmes/<int:programme_id>/edit', methods=['GET', 'POST'])
+@permission_required('programmes.manage')
+def admin_programme_edit(programme_id):
+    programme = get_programme(programme_id)
+    if request.method == 'GET':
+        return render_template('admin/programme_form.html', programme=programme)
+
+    name = request.form.get('name', '').strip()
+    code = request.form.get('code', '').strip().upper()
+    program_type = request.form.get('program_type', '').strip()
+    description = request.form.get('description', '').strip()
+    uses_semesters = request.form.get('uses_semesters') == 'on'
+    uses_terms = request.form.get('uses_terms') == 'on'
+    duration = request.form.get('duration', '').strip()
+
+    if not name or not code or not program_type:
+        flash('Name, code, and programme type are required.')
+        return render_template('admin/programme_form.html', programme=programme, form=request.form)
+    if not is_programme_code_unique(code, exclude_id=programme_id):
+        flash(f'Programme code "{code}" is already in use.')
+        return render_template('admin/programme_form.html', programme=programme, form=request.form)
+
+    update_programme(programme_id, name, code, program_type, description, uses_semesters, uses_terms, duration)
+    log_admin_action(current_user, 'programme_updated', target_type='programme', target_id=programme_id,
+                      details=f'name={name} code={code}', ip_address=request.remote_addr)
+    flash(f'Programme "{name}" updated.')
+    return redirect(url_for('admin_programmes'))
+
+
+@app.route('/admin/programmes/<int:programme_id>/departments', methods=['POST'])
+@permission_required('programmes.manage')
+def admin_programme_departments(programme_id):
+    department_ids = [int(v) for v in request.form.getlist('department_ids')]
+    set_programme_departments(programme_id, department_ids)
+    log_admin_action(current_user, 'programme_departments_updated', target_type='programme', target_id=programme_id,
+                      details=f'department_ids={department_ids}', ip_address=request.remote_addr)
+    flash('Programme departments updated.')
+    return redirect(url_for('admin_programme_detail', programme_id=programme_id))
+
+
+@app.route('/admin/programmes/<int:programme_id>/activate', methods=['POST'])
+@permission_required('programmes.manage')
+def admin_programme_activate(programme_id):
+    set_programme_status(programme_id, 'active')
+    log_admin_action(current_user, 'programme_status_changed', target_type='programme', target_id=programme_id,
+                      details='status=active', ip_address=request.remote_addr)
+    flash('Programme activated.')
+    return redirect(url_for('admin_programmes'))
+
+
+@app.route('/admin/programmes/<int:programme_id>/archive', methods=['POST'])
+@permission_required('programmes.manage')
+def admin_programme_archive(programme_id):
+    set_programme_status(programme_id, 'archived')
+    log_admin_action(current_user, 'programme_status_changed', target_type='programme', target_id=programme_id,
+                      details='status=archived', ip_address=request.remote_addr)
+    flash('Programme archived.')
+    return redirect(url_for('admin_programmes'))
 
 
 @app.route('/admin/sessions')
