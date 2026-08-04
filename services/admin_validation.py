@@ -54,6 +54,13 @@ def is_course_code_unique(code, academic_session_id, semester_id, exclude_id=Non
     return query.first() is None
 
 
+def is_course_catalog_code_unique(code, exclude_id=None):
+    query = Course.query.filter(Course.code == code)
+    if exclude_id is not None:
+        query = query.filter(Course.id != exclude_id)
+    return query.first() is None
+
+
 def resolve_department(name_or_code):
     """Look up a Department by exact name or code match (case-insensitive).
     Returns None if nothing matches — callers decide whether that's an error."""
