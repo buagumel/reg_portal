@@ -18,7 +18,7 @@
                 <option value="">— Shared / Legacy —</option>
                 {% set current_programme_id = form.get('programme_id', type=int) if form else (session.programme_id if session else none) %}
                 {% for prog in programmes %}
-                <option value="{{ prog.id }}" {{ 'selected' if current_programme_id == prog.id }}>{{ prog.name }} ({{ prog.code }})</option>
+                <option value="{{ prog.id }}" {{ 'selected' if current_programme_id == prog.id }}>{{ prog.name }} ({{ prog.code }}){{ ' — ' ~ prog.status if prog.status != 'active' }}</option>
                 {% endfor %}
             </select>
         </div>

@@ -1412,9 +1412,20 @@ def admin_sessions_new():
 @permission_required('sessions.manage')
 def admin_session_edit(session_id):
     session_obj = get_session(session_id)
+    # A session's programme_id can reference a Programme that has since been
+    # archived (list_active_programmes() only returns active ones). If we
+    # dropped it from the dropdown, an admin who edits the session without
+    # touching the Programme field would submit no matching <option>, and the
+    # browser would fall back to the blank "Shared / Legacy" choice — silently
+    # stripping the archived programme's link on an otherwise-unrelated edit.
+    # Union it back in (and label it non-active in the template) so a no-op
+    # resubmit round-trips correctly.
+    programmes = list_active_programmes()
+    if session_obj.programme_id and session_obj.programme_id not in {p.id for p in programmes}:
+        programmes = programmes + [session_obj.programme]
     if request.method == 'GET':
         return render_template(
-            'admin/session_form.html', session=session_obj, programmes=list_active_programmes(),
+            'admin/session_form.html', session=session_obj, programmes=programmes,
             periods=list_periods(session_id), holidays=list_holidays(session_id),
         )
 
@@ -1424,10 +1435,10 @@ def admin_session_edit(session_id):
     programme_id = request.form.get('programme_id', type=int) or None
     if not name:
         flash('Session name is required.')
-        return render_template('admin/session_form.html', session=session_obj, form=request.form, programmes=list_active_programmes())
+        return render_template('admin/session_form.html', session=session_obj, form=request.form, programmes=programmes)
     if not is_session_name_unique(name, programme_id, exclude_id=session_id):
         flash(f'A session named "{name}" already exists for this programme.')
-        return render_template('admin/session_form.html', session=session_obj, form=request.form, programmes=list_active_programmes())
+        return render_template('admin/session_form.html', session=session_obj, form=request.form, programmes=programmes)
 
     from datetime import date
     start_date = date.fromisoformat(start_date) if start_date else None
