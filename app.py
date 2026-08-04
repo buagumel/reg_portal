@@ -417,6 +417,7 @@ def dashboard():
         'dashboard.html',
         profile_display=get_profile_display(current_user),
         recent_payments=recent_payments,
+        status=get_registration_status_context(current_user),
     )
 
 

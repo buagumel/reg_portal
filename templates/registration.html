@@ -43,12 +43,26 @@
                         <span class="detail-item"><i class="fas fa-calendar-check"></i> Registered: {{ status.existing_registration.registered_at.strftime('%d %b %Y') }}</span>
                         <span class="detail-item"><i class="fas fa-money-bill-wave"></i> Payment: {{ status.existing_registration.payment_status|capitalize }}</span>
                     </div>
-                    <p class="course-selection-note"><i class="fas fa-info-circle"></i> Course selection will open separately once available.</p>
+                    {% if status.existing_registration.payment_status == 'paid' and status.existing_registration.courses_submitted %}
+                    <p class="course-selection-note"><i class="fas fa-check-circle"></i> Course selection submitted.</p>
+                    {% elif status.existing_registration.payment_status != 'paid' %}
+                    <p class="course-selection-note"><i class="fas fa-info-circle"></i> Course selection will open once payment is complete.</p>
+                    {% elif status.existing_registration.is_locked %}
+                    <p class="course-selection-note"><i class="fas fa-lock"></i> Locked by administrator — contact the registry.</p>
+                    {% elif status.add_drop_window_status != 'open' %}
+                    <p class="course-selection-note"><i class="fas fa-info-circle"></i> Course selection is closed.</p>
+                    {% endif %}
                 </div>
                 {% if status.existing_registration.payment_status != 'paid' %}
                 <div class="ongoing-action">
                     <a class="btn-primary" href="{{ url_for('payment_registration_summary', registration_id=status.existing_registration.id) }}">
                         <i class="fas fa-credit-card"></i> Complete Payment
+                    </a>
+                </div>
+                {% elif not status.existing_registration.courses_submitted and status.add_drop_window_status == 'open' and not status.existing_registration.is_locked %}
+                <div class="ongoing-action">
+                    <a class="btn-primary" href="{{ url_for('add_drop') }}">
+                        <i class="fas fa-arrow-right"></i> Complete Registration
                     </a>
                 </div>
                 {% endif %}

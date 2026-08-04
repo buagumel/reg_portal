@@ -293,6 +293,62 @@
             align-self: flex-start;
         }
 
+        /* ----- Ongoing registration card ----- */
+        .reg-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 1rem;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .reg-status-pending {
+            background: #fff0d9;
+            color: var(--warning);
+        }
+        .reg-status-paid {
+            background: #e3f5ec;
+            color: var(--success);
+        }
+        .ongoing-reg-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .ongoing-reg-period {
+            font-size: 1.1rem;
+            font-weight: 650;
+            color: var(--primary-dark);
+            margin: 0;
+        }
+        .ongoing-reg-btn {
+            background: var(--primary);
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border-radius: 60px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        .ongoing-reg-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .ongoing-reg-note {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
         /* ----- BOTTOM SECTION: recent payment history table ----- */
         .payment-section {
             background: var(--card-bg);
