@@ -294,9 +294,6 @@
         }
 
         /* ----- Ongoing registration card ----- */
-        .ongoing-reg-card {
-            margin-bottom: 1.5rem;
-        }
         .reg-status-pill {
             display: inline-flex;
             align-items: center;
@@ -342,6 +339,14 @@
         }
         .ongoing-reg-btn:hover {
             background: var(--primary-dark);
+        }
+
+        .ongoing-reg-note {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         /* ----- BOTTOM SECTION: recent payment history table ----- */

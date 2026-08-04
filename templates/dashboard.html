@@ -75,7 +75,7 @@
                     <div class="payment-header">
                         <h3><i class="fas fa-hourglass-half" style="background: none; padding:0;"></i> Ongoing Registration</h3>
                         {% if status.existing_registration.payment_status == 'paid' %}
-                        <span class="reg-status-pill reg-status-paid"><i class="fas fa-check-circle"></i> Paid — Complete Registration</span>
+                        <span class="reg-status-pill reg-status-paid"><i class="fas fa-check-circle"></i> Paid</span>
                         {% else %}
                         <span class="reg-status-pill reg-status-pending"><i class="fas fa-clock"></i> Payment Pending</span>
                         {% endif %}
@@ -83,7 +83,13 @@
                     <div class="ongoing-reg-body">
                         <p class="ongoing-reg-period">{{ status.period.academic_session.name }} {{ status.period.semester.name }}</p>
                         {% if status.existing_registration.payment_status == 'paid' %}
-                        <a class="ongoing-reg-btn" href="{{ url_for('add_drop') }}"><i class="fas fa-arrow-right"></i> Complete Registration</a>
+                            {% if status.add_drop_window_status == 'open' and not status.existing_registration.is_locked %}
+                            <a class="ongoing-reg-btn" href="{{ url_for('add_drop') }}"><i class="fas fa-arrow-right"></i> Complete Registration</a>
+                            {% elif status.existing_registration.is_locked %}
+                            <span class="ongoing-reg-note"><i class="fas fa-lock"></i> Locked by administrator — contact the registry.</span>
+                            {% else %}
+                            <span class="ongoing-reg-note"><i class="fas fa-info-circle"></i> Course selection is closed.</span>
+                            {% endif %}
                         {% else %}
                         <a class="ongoing-reg-btn" href="{{ url_for('payment_registration_summary', registration_id=status.existing_registration.id) }}"><i class="fas fa-credit-card"></i> Complete Payment</a>
                         {% endif %}

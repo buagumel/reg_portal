@@ -108,6 +108,7 @@ def get_registration_status_context(user):
         return {
             'period': None,
             'window_status': None,
+            'add_drop_window_status': None,
             'min_credits': None,
             'max_credits': None,
             'registration_fee': None,
@@ -122,6 +123,7 @@ def get_registration_status_context(user):
     return {
         'period': period,
         'window_status': get_window_status(period, existing_registration),
+        'add_drop_window_status': get_add_drop_window_status(period, existing_registration),
         'min_credits': min_credits,
         'max_credits': max_credits,
         'registration_fee': registration_fee,
