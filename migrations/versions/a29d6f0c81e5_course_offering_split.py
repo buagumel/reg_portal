@@ -95,7 +95,7 @@ def upgrade():
         sa.UniqueConstraint('course_id', 'prerequisite_course_id'),
     )
     conn.execute(sa.text('''
-        INSERT INTO course_prerequisites_new (id, course_id, prerequisite_course_id)
+        INSERT OR IGNORE INTO course_prerequisites_new (id, course_id, prerequisite_course_id)
         SELECT cp.id, co1.course_id, co2.course_id
         FROM course_prerequisites cp
         JOIN course_offerings co1 ON co1.id = cp.course_id
@@ -114,7 +114,7 @@ def upgrade():
         sa.UniqueConstraint('course_id', 'corequisite_course_id'),
     )
     conn.execute(sa.text('''
-        INSERT INTO course_corequisites_new (id, course_id, corequisite_course_id)
+        INSERT OR IGNORE INTO course_corequisites_new (id, course_id, corequisite_course_id)
         SELECT cc.id, co1.course_id, co2.course_id
         FROM course_corequisites cc
         JOIN course_offerings co1 ON co1.id = cc.course_id
