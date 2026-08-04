@@ -189,6 +189,18 @@ class StudentRegistration(db.Model):
 class Course(db.Model):
     __tablename__ = 'courses'
     id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), unique=True, nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    credits = db.Column(db.Integer, nullable=False)
+    course_type = db.Column(db.String(20), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='active', server_default='active')
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+
+class CourseOffering(db.Model):
+    __tablename__ = 'course_offerings'
+    id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(20), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     credits = db.Column(db.Integer, nullable=False)
@@ -203,25 +215,27 @@ class Course(db.Model):
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     status = db.Column(db.String(20), nullable=False, default='active', server_default='active')
     max_capacity = db.Column(db.Integer, nullable=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
 
     __table_args__ = (db.UniqueConstraint('code', 'academic_session_id', 'semester_id'),)
 
     academic_session = db.relationship('AcademicSession')
     semester = db.relationship('Semester')
     department_ref = db.relationship('Department', foreign_keys=[department_id])
+    course = db.relationship('Course', backref='offerings')
 
 
 class RegisteredCourse(db.Model):
     __tablename__ = 'registered_courses'
     id = db.Column(db.Integer, primary_key=True)
     student_registration_id = db.Column(db.Integer, db.ForeignKey('student_registrations.id'), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course_offerings.id'), nullable=False)
     grade = db.Column(db.String(5), nullable=True)
     added_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
 
     __table_args__ = (db.UniqueConstraint('student_registration_id', 'course_id'),)
 
-    course = db.relationship('Course')
+    course = db.relationship('CourseOffering')
     student_registration = db.relationship('StudentRegistration', backref='registered_courses')
 
 
@@ -417,11 +431,11 @@ class CourseCorequisite(db.Model):
 class CourseAssessmentComponent(db.Model):
     __tablename__ = 'course_assessment_components'
     id = db.Column(db.Integer, primary_key=True)
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course_offerings.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     weight_percent = db.Column(db.Integer, nullable=False)
 
-    course = db.relationship('Course', backref='assessment_components')
+    course = db.relationship('CourseOffering', backref='assessment_components')
 
 
 class AcademicHoliday(db.Model):
@@ -472,6 +486,7 @@ class CourseImportJob(db.Model):
     skipped_count = db.Column(db.Integer, nullable=False, default=0)
     duplicate_count = db.Column(db.Integer, nullable=False, default=0)
     error_count = db.Column(db.Integer, nullable=False, default=0)
+    mismatched_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
     completed_at = db.Column(db.DateTime, nullable=True)
 
@@ -483,6 +498,7 @@ class CourseImportError(db.Model):
     row_number = db.Column(db.Integer, nullable=False)
     raw_row = db.Column(db.Text, nullable=False)
     reason = db.Column(db.String(300), nullable=False)
+    severity = db.Column(db.String(10), nullable=False, default='error', server_default='error')
 
     import_job = db.relationship('CourseImportJob', backref='errors')
 
