@@ -5,6 +5,7 @@
 {% block content %}
 <div style="max-width:560px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h2 style="margin-top:0;">{{ 'Edit Registration Period' if period else 'New Registration Period' }}</h2>
+    <p style="color: var(--text-muted); font-size:0.85rem; margin-top:-0.5rem; margin-bottom:1rem;">Programme: {{ session.programme.name if session.programme else 'Shared / Legacy (all programmes)' }}</p>
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div style="margin-bottom:1rem;">
