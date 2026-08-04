@@ -27,6 +27,13 @@ def is_department_code_unique(code, exclude_id=None):
     return query.first() is None
 
 
+def is_programme_code_unique(code, exclude_id=None):
+    query = Programme.query.filter(Programme.code == code)
+    if exclude_id is not None:
+        query = query.filter(Programme.id != exclude_id)
+    return query.first() is None
+
+
 def is_course_code_unique(code, academic_session_id, semester_id, exclude_id=None):
     query = Course.query.filter(
         Course.code == code,
