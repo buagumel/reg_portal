@@ -1,4 +1,4 @@
-from models import Department, Programme, Course, Semester, AcademicSession
+from models import Department, Programme, Course, CourseOffering, Semester, AcademicSession
 
 
 LEVELS_BY_PROGRAM_TYPE = {
@@ -44,13 +44,13 @@ def is_session_name_unique(name, programme_id, exclude_id=None):
 
 
 def is_course_code_unique(code, academic_session_id, semester_id, exclude_id=None):
-    query = Course.query.filter(
-        Course.code == code,
-        Course.academic_session_id == academic_session_id,
-        Course.semester_id == semester_id,
+    query = CourseOffering.query.filter(
+        CourseOffering.code == code,
+        CourseOffering.academic_session_id == academic_session_id,
+        CourseOffering.semester_id == semester_id,
     )
     if exclude_id is not None:
-        query = query.filter(Course.id != exclude_id)
+        query = query.filter(CourseOffering.id != exclude_id)
     return query.first() is None
 
 
