@@ -67,7 +67,7 @@ from services.admin_session import (
     list_semesters, list_semesters_for_programme, list_periods, get_period, create_period, update_period, activate_period,
     list_holidays, create_holiday, list_inactive_periods,
 )
-from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_assessment_components, get_enrollment_count
+from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, set_assessment_components, get_enrollment_count
 from services.admin_course_catalog import (
     list_master_courses, get_master_course, get_master_course_detail,
     create_master_course, update_master_course, set_master_course_status,
@@ -2249,6 +2249,13 @@ def admin_course_new():
     errors = []
     if not master_course_id or not department_id or not academic_session_id or not semester_id:
         errors.append('Master course, department, session, and semester are required.')
+    elif master_course_id not in {mc.id for mc in master_courses}:
+        # Backstop against a crafted/stale request posting a master_course_id
+        # outside what's actually offered — don't just trust whatever the
+        # client posts even if the template ever regresses. See the matching
+        # comment in admin_course_edit for the fuller rationale (that route
+        # additionally protects a pre-existing offering's link).
+        errors.append('Selected master course is not valid.')
     else:
         master = get_master_course(master_course_id)
         if not is_course_code_unique(master.code, academic_session_id, semester_id):
@@ -2272,9 +2279,8 @@ def admin_course_new():
 @permission_required('courses.manage')
 def admin_course_detail(course_id):
     detail = get_course_detail(course_id)
-    other_courses = list_courses_for_picker(exclude_id=course_id)
     enrolled = get_enrollment_count(course_id)
-    return render_template('admin/course_detail.html', other_courses=other_courses, enrolled=enrolled, **detail)
+    return render_template('admin/course_detail.html', enrolled=enrolled, **detail)
 
 
 @app.route('/admin/courses/<int:course_id>/assessment', methods=['POST'])
@@ -2309,7 +2315,16 @@ def admin_course_edit(course_id):
     departments = list_active_departments()
     sessions = list_sessions()
     semesters = list_semesters()
-    master_courses = list_master_courses_for_picker()
+    # The offering's currently-linked master Course can be archived at any
+    # time via the Course Catalog module, dropping it out of the plain
+    # active-only picker. If we didn't union it back in, an admin who edits
+    # this offering without touching the Master Course field would have the
+    # browser silently default to selecting the *first* option — silently
+    # re-linking (and re-mirroring code/title/credits/course_type/description
+    # from) an unrelated master on an otherwise-unrelated edit. Union it back
+    # in (labeled distinctly in the template) so a no-op resubmit round-trips
+    # correctly. Same pattern as the period-edit Semester-dropdown fix.
+    master_courses = list_master_courses_for_picker(include_id=offering.course_id)
     if request.method == 'GET':
         return render_template('admin/course_form.html', course=offering, departments=departments, sessions=sessions, semesters=semesters, master_courses=master_courses)
 
@@ -2325,6 +2340,13 @@ def admin_course_edit(course_id):
     errors = []
     if not master_course_id or not department_id or not academic_session_id or not semester_id:
         errors.append('Master course, department, session, and semester are required.')
+    elif master_course_id not in {mc.id for mc in master_courses}:
+        # Backstop against a crafted/stale request posting a master_course_id
+        # outside what's actually offered (the active set, plus the
+        # offering's own current master if it was unioned back in above) —
+        # don't just trust whatever the client posts even if the template
+        # ever regresses. Same shape as the period-edit Semester backstop.
+        errors.append('Selected master course is not valid.')
     else:
         master = get_master_course(master_course_id)
         if not is_course_code_unique(master.code, academic_session_id, semester_id, exclude_id=course_id):

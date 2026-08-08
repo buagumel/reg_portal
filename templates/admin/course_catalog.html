@@ -13,6 +13,10 @@
     <a href="{{ url_for('admin_course_catalog') }}" style="color: var(--text-muted);">Back to Course Catalog</a>
 </div>
 
+{% if detail.offerings %}
+<p style="color: var(--warning); font-size:0.85rem; margin: -0.5rem 0 1.5rem;">Editing this catalog course's code/title/credits/type/description does not retroactively update the {{ detail.offerings|length }} existing offering{{ 's' if detail.offerings|length != 1 }} linked below — each offering keeps the values it was created (or last re-linked) with. Update the affected offering(s) directly if they also need to change.</p>
+{% endif %}
+
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
     <h3 style="margin-top:0;">Offerings</h3>
     <table style="width:100%; border-collapse:collapse;">

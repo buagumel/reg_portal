@@ -1,5 +1,3 @@
-import json
-
 from models import db, Course, CourseOffering, CourseImportJob, CourseImportError
 from services.admin_import import parse_csv, create_import_job, record_import_error, finalize_import_job
 from services.admin_validation import resolve_department, resolve_semester
@@ -125,11 +123,11 @@ def import_courses_csv(file_storage, admin_user, academic_session_id):
                 or master.course_type != course_type or (master.description or '') != description
             )
             if mismatch:
-                db.session.add(CourseImportError(
-                    import_job_id=job.id, row_number=row_number, raw_row=json.dumps(row),
-                    reason=f'Row title/credits/course_type/description differs from existing master course "{code}" — master was not changed.',
+                record_import_error(
+                    CourseImportError, job, row_number, row,
+                    f'Row title/credits/course_type/description differs from existing master course "{code}" — master was not changed.',
                     severity='warning',
-                ))
+                )
                 mismatched += 1
 
         existing = CourseOffering.query.filter_by(

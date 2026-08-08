@@ -1,4 +1,4 @@
-from models import db, Programme, ProgrammeDepartment, Department, User, Course
+from models import db, Programme, ProgrammeDepartment, Department, User
 
 
 def list_programmes(search=None, status=None, page=1, per_page=20):

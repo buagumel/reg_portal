@@ -101,13 +101,6 @@ def get_course_detail(course_id):
     return {'course': offering, 'assessment_components': assessment_components}
 
 
-def list_courses_for_picker(exclude_id=None):
-    query = CourseOffering.query.filter(CourseOffering.status != 'archived')
-    if exclude_id:
-        query = query.filter(CourseOffering.id != exclude_id)
-    return query.order_by(CourseOffering.code).all()
-
-
 def set_assessment_components(course_id, components):
     """components: list of {'name': str, 'weight_percent': int}."""
     CourseAssessmentComponent.query.filter_by(course_id=course_id).delete()
