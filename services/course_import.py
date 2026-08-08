@@ -1,4 +1,4 @@
-from models import db, Course, CourseImportJob, CourseImportError
+from models import db, Course, CourseOffering, CourseImportJob, CourseImportError
 from services.admin_import import parse_csv, create_import_job, record_import_error, finalize_import_job
 from services.admin_validation import resolve_department, resolve_semester
 
@@ -94,7 +94,7 @@ def import_courses_csv(file_storage, admin_user, academic_session_id):
         db.session.commit()
         return job
 
-    created = updated = skipped = duplicates = errors = 0
+    created = updated = skipped = duplicates = errors = mismatched = 0
     seen_dedup_keys = set()
 
     for row_number, row in enumerate(rows, start=2):  # header is row 1
@@ -112,24 +112,37 @@ def import_courses_csv(file_storage, admin_user, academic_session_id):
         title, credits, level, course_type = fields['title'], fields['credits'], fields['level'], fields['course_type']
         description, instructor, schedule, max_capacity = fields['description'], fields['instructor'], fields['schedule'], fields['max_capacity']
 
-        existing = Course.query.filter_by(
+        master = Course.query.filter_by(code=code).first()
+        if master is None:
+            master = Course(code=code, title=title, credits=credits, course_type=course_type, description=description or None)
+            db.session.add(master)
+            db.session.flush()  # assigns master.id without committing yet
+        else:
+            mismatch = (
+                master.title != title or master.credits != credits
+                or master.course_type != course_type or (master.description or '') != description
+            )
+            if mismatch:
+                record_import_error(
+                    CourseImportError, job, row_number, row,
+                    f'Row title/credits/course_type/description differs from existing master course "{code}" — master was not changed.',
+                    severity='warning',
+                )
+                mismatched += 1
+
+        existing = CourseOffering.query.filter_by(
             code=code, academic_session_id=academic_session_id, semester_id=semester.id,
         ).first()
         if existing:
             changed = (
-                existing.title != title or existing.credits != credits or existing.department_id != department.id
-                or existing.level != (level or None) or existing.course_type != course_type
-                or existing.description != (description or None) or existing.instructor != (instructor or None)
-                or existing.schedule != (schedule or None) or existing.max_capacity != max_capacity
+                existing.department_id != department.id or existing.level != (level or None)
+                or existing.instructor != (instructor or None) or existing.schedule != (schedule or None)
+                or existing.max_capacity != max_capacity
             )
             if changed:
-                existing.title = title
-                existing.credits = credits
                 existing.department_id = department.id
                 existing.department = department.name
                 existing.level = level or None
-                existing.course_type = course_type
-                existing.description = description or None
                 existing.instructor = instructor or None
                 existing.schedule = schedule or None
                 existing.max_capacity = max_capacity
@@ -138,14 +151,18 @@ def import_courses_csv(file_storage, admin_user, academic_session_id):
                 skipped += 1
             continue
 
-        db.session.add(Course(
-            code=code, title=title, credits=credits, department=department.name, department_id=department.id,
-            level=level or None, course_type=course_type, academic_session_id=academic_session_id,
-            semester_id=semester.id, description=description or None, instructor=instructor or None,
+        db.session.add(CourseOffering(
+            code=master.code, title=master.title, credits=master.credits, course_type=master.course_type,
+            description=master.description, course_id=master.id,
+            department=department.name, department_id=department.id,
+            level=level or None, academic_session_id=academic_session_id,
+            semester_id=semester.id, instructor=instructor or None,
             schedule=schedule or None, max_capacity=max_capacity, status='active',
         ))
         created += 1
 
     db.session.commit()
     finalize_import_job(job, created, updated, skipped, duplicates, errors)
+    job.mismatched_count = mismatched
+    db.session.commit()
     return job

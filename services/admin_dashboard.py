@@ -1,5 +1,5 @@
 from models import (
-    db, User, StudentRegistration, RegistrationPeriod, Payment, Course,
+    db, User, StudentRegistration, RegistrationPeriod, Payment, CourseOffering,
     RegisteredCourse, AdminAuditLog, AuditLog, Notification, AdminUser,
 )
 
@@ -13,7 +13,7 @@ def get_dashboard_summary():
         current_semester_registrations = StudentRegistration.query.filter_by(
             registration_period_id=active_period.id
         ).count()
-        active_courses = Course.query.filter_by(
+        active_courses = CourseOffering.query.filter_by(
             academic_session_id=active_period.academic_session_id,
             semester_id=active_period.semester_id,
         ).count()

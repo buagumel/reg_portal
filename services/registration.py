@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, PaymentCategory
-from models import Course, RegisteredCourse
+from models import CourseOffering, RegisteredCourse
 from services.payment import create_payment
 from services.errors import RegistrationError, PaymentError
 from services.notification import create_notification
@@ -204,8 +204,8 @@ def _recompute_credits(student_registration):
     RegisteredCourse rows — always re-queried (not read from an in-memory
     relationship collection) so it's correct regardless of add/drop order."""
     total = (
-        db.session.query(db.func.coalesce(db.func.sum(Course.credits), 0))
-        .join(RegisteredCourse, RegisteredCourse.course_id == Course.id)
+        db.session.query(db.func.coalesce(db.func.sum(CourseOffering.credits), 0))
+        .join(RegisteredCourse, RegisteredCourse.course_id == CourseOffering.id)
         .filter(RegisteredCourse.student_registration_id == student_registration.id)
         .scalar()
     )
@@ -214,8 +214,8 @@ def _recompute_credits(student_registration):
 
 def get_course_enrollment_count(course_id):
     """Current number of students registered for this course (this exact
-    Course row, already scoped to one session/semester by its own unique
-    constraint)."""
+    CourseOffering row, already scoped to one session/semester by its own
+    unique constraint)."""
     return RegisteredCourse.query.filter_by(course_id=course_id).count()
 
 
@@ -224,7 +224,7 @@ def add_course(user, period, student_registration, course_id, admin_override=Fal
     RegistrationError on any business-rule violation. admin_override=True
     (only ever passed by the admin Registration Oversight action) bypasses
     the capacity check — every other check still applies."""
-    course = Course.query.get(course_id)
+    course = CourseOffering.query.get(course_id)
     if course is None:
         raise RegistrationError('Course not found.')
 

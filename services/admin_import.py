@@ -41,13 +41,22 @@ def create_import_job(job_model, admin_user, filename):
     return job
 
 
-def record_import_error(error_model, job, row_number, raw_row, reason):
-    error = error_model(
+def record_import_error(error_model, job, row_number, raw_row, reason, severity='error'):
+    """severity is optional and only forwarded to error_model when it
+    differs from the default — StudentImportError has no severity column,
+    so existing student-import call sites (which never pass severity) are
+    unaffected; CourseImportError's own column default ('error') covers
+    them too if it ever were forwarded. Course-import's mismatch-warning
+    path passes severity='warning' explicitly."""
+    kwargs = dict(
         import_job_id=job.id,
         row_number=row_number,
         raw_row=json.dumps(raw_row),
         reason=reason,
     )
+    if severity != 'error':
+        kwargs['severity'] = severity
+    error = error_model(**kwargs)
     db.session.add(error)
 
 

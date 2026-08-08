@@ -1,0 +1,140 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Course Catalog{% endblock %}
+
+{% block content %}
+{% if detail %}
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+    <h2 style="margin-top:0;">{{ detail.course.code }} — {{ detail.course.title }}</h2>
+    <p style="color: var(--text-muted);">{{ detail.course.credits }} credits &middot; <span style="text-transform:capitalize;">{{ detail.course.course_type }}</span> &middot; <span style="text-transform:capitalize;">{{ detail.course.status }}</span></p>
+    {% if detail.course.description %}<p style="margin-top:1rem;">{{ detail.course.description }}</p>{% endif %}
+    <a href="{{ url_for('admin_course_catalog_edit', course_id=detail.course.id) }}" style="color: var(--primary-dark); font-weight:600;">Edit</a>
+    &nbsp;&middot;&nbsp;
+    <a href="{{ url_for('admin_course_catalog') }}" style="color: var(--text-muted);">Back to Course Catalog</a>
+</div>
+
+{% if detail.offerings %}
+<p style="color: var(--warning); font-size:0.85rem; margin: -0.5rem 0 1.5rem;">Editing this catalog course's code/title/credits/type/description does not retroactively update the {{ detail.offerings|length }} existing offering{{ 's' if detail.offerings|length != 1 }} linked below — each offering keeps the values it was created (or last re-linked) with. Update the affected offering(s) directly if they also need to change.</p>
+{% endif %}
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-bottom:1.5rem;">
+    <h3 style="margin-top:0;">Offerings</h3>
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.6rem;">Session</th>
+                <th style="padding:0.6rem;">Semester</th>
+                <th style="padding:0.6rem;">Department</th>
+                <th style="padding:0.6rem;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in detail.offerings %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.6rem;"><a href="{{ url_for('admin_course_detail', course_id=o.id) }}" style="color: var(--text-main); text-decoration:none;">{{ o.academic_session.name }}</a></td>
+                <td style="padding:0.6rem;">{{ o.semester.name }}</td>
+                <td style="padding:0.6rem;">{{ o.department }}</td>
+                <td style="padding:0.6rem; text-transform:capitalize;">{{ o.status }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="padding:1.2rem; text-align:center; color: var(--text-muted);">No offerings yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Prerequisites</h3>
+        <form method="POST" action="{{ url_for('admin_course_catalog_prerequisites', course_id=detail.course.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="prerequisite_ids" multiple size="6" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.8rem;">
+                {% set prereq_ids = detail.prerequisites|map(attribute='id')|list %}
+                {% for c in other_courses %}
+                <option value="{{ c.id }}" {{ 'selected' if c.id in prereq_ids }}>{{ c.code }} — {{ c.title }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" style="padding:0.5rem 1rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; cursor:pointer;">Save</button>
+        </form>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+        <h3 style="margin-top:0;">Corequisites</h3>
+        <form method="POST" action="{{ url_for('admin_course_catalog_corequisites', course_id=detail.course.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="corequisite_ids" multiple size="6" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.8rem;">
+                {% set coreq_ids = detail.corequisites|map(attribute='id')|list %}
+                {% for c in other_courses %}
+                <option value="{{ c.id }}" {{ 'selected' if c.id in coreq_ids }}>{{ c.code }} — {{ c.title }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" style="padding:0.5rem 1rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; cursor:pointer;">Save</button>
+        </form>
+    </div>
+</div>
+{% else %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <form method="GET" style="display:flex; gap:0.6rem;">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search code or title" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+        <select name="status" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="" {{ 'selected' if not status }}>All statuses</option>
+            <option value="active" {{ 'selected' if status == 'active' }}>Active</option>
+            <option value="archived" {{ 'selected' if status == 'archived' }}>Archived</option>
+        </select>
+        <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary); color:white; cursor:pointer;">Filter</button>
+    </form>
+    <a href="{{ url_for('admin_course_catalog_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Catalog Course</a>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.8rem;">Code</th>
+                <th style="padding:0.8rem;">Title</th>
+                <th style="padding:0.8rem;">Credits</th>
+                <th style="padding:0.8rem;">Type</th>
+                <th style="padding:0.8rem;">Status</th>
+                <th style="padding:0.8rem;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in result['items'] %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.8rem; font-family:monospace;"><a href="{{ url_for('admin_course_catalog_detail', course_id=c.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ c.code }}</a></td>
+                <td style="padding:0.8rem;">{{ c.title }}</td>
+                <td style="padding:0.8rem;">{{ c.credits }}</td>
+                <td style="padding:0.8rem; text-transform:capitalize;">{{ c.course_type }}</td>
+                <td style="padding:0.8rem; text-transform:capitalize;">{{ c.status }}</td>
+                <td style="padding:0.8rem; text-align:right;">
+                    <a href="{{ url_for('admin_course_catalog_edit', course_id=c.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
+                    {% if c.status != 'active' %}
+                    <form method="POST" action="{{ url_for('admin_course_catalog_activate', course_id=c.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer;">Activate</button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('admin_course_catalog_archive', course_id=c.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ c.code }}?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer;">Archive</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="padding:2rem; text-align:center; color: var(--text-muted);">No catalog courses found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% set total_pages = ((result['total'] - 1) // result['per_page']) + 1 if result['total'] else 1 %}
+{% if total_pages > 1 %}
+<div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
+    {% for p in range(1, total_pages + 1) %}
+    <a href="{{ url_for('admin_course_catalog', search=search, status=status, page=p) }}"
+       style="padding:0.4rem 0.8rem; border-radius:0.4rem; text-decoration:none; {{ 'background: var(--primary); color:white;' if p == result['page'] else 'background: var(--card-bg); color: var(--text-main); border:1px solid var(--border-color);' }}">{{ p }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
