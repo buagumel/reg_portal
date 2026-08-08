@@ -67,7 +67,12 @@ from services.admin_session import (
     list_semesters, list_semesters_for_programme, list_periods, get_period, create_period, update_period, activate_period,
     list_holidays, create_holiday, list_inactive_periods,
 )
-from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_prerequisites, set_corequisites, set_assessment_components, get_enrollment_count
+from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, list_courses_for_picker, set_assessment_components, get_enrollment_count
+from services.admin_course_catalog import (
+    list_master_courses, get_master_course, get_master_course_detail,
+    create_master_course, update_master_course, set_master_course_status,
+    list_master_courses_for_picker, set_prerequisites, set_corequisites,
+)
 from services.admin_export import export_csv, export_excel, VALID_DATA_TYPES
 from services.admin_registration import (
     list_periods_for_selector, get_oversight_metrics, admin_add_course, admin_drop_course,
@@ -78,7 +83,7 @@ from services.admin_onboarding import (
 )
 from services.admin_permission import has_permission
 from services.admin_department import list_active_departments
-from services.admin_validation import is_course_code_unique
+from services.admin_validation import is_course_code_unique, is_course_catalog_code_unique
 from services.course_import import import_courses_csv, preview_courses_csv
 from models import CourseImportJob
 from services.admin_student import (
@@ -2061,6 +2066,127 @@ def admin_students_bulk_assign_programme():
     return jsonify({'success': True, 'message': f'{count} student(s) assigned.', 'count': count})
 
 
+@app.route('/admin/course-catalog')
+@permission_required('courses.manage')
+def admin_course_catalog():
+    search = request.args.get('search', '').strip() or None
+    status = request.args.get('status', '').strip() or None
+    page = request.args.get('page', 1, type=int)
+    result = list_master_courses(search=search, status=status, page=page)
+    return render_template(
+        'admin/course_catalog.html', result=result, search=search or '', status=status or '',
+    )
+
+
+@app.route('/admin/course-catalog/new', methods=['GET', 'POST'])
+@permission_required('courses.manage')
+def admin_course_catalog_new():
+    if request.method == 'GET':
+        return render_template('admin/course_catalog_form.html', course=None)
+
+    code = request.form.get('code', '').strip().upper()
+    title = request.form.get('title', '').strip()
+    credits = request.form.get('credits', type=int)
+    course_type = request.form.get('course_type', '').strip()
+    description = request.form.get('description', '').strip()
+
+    errors = []
+    if not code or not title or not credits or not course_type:
+        errors.append('Code, title, credits, and course type are required.')
+    elif not is_course_catalog_code_unique(code):
+        errors.append(f'Course code "{code}" already exists in the catalog.')
+    if errors:
+        for e in errors:
+            flash(e)
+        return render_template('admin/course_catalog_form.html', course=None, form=request.form)
+
+    course = create_master_course(code, title, credits, course_type, description=description)
+    log_admin_action(current_user, 'course_catalog_created', target_type='course', target_id=course.id,
+                      details=f'code={code}', ip_address=request.remote_addr)
+    flash(f'Course "{code}" added to the catalog.')
+    return redirect(url_for('admin_course_catalog_detail', course_id=course.id))
+
+
+@app.route('/admin/course-catalog/<int:course_id>')
+@permission_required('courses.manage')
+def admin_course_catalog_detail(course_id):
+    detail = get_master_course_detail(course_id)
+    other_courses = list_master_courses_for_picker(exclude_id=course_id)
+    return render_template('admin/course_catalog.html', detail=detail, result=None, other_courses=other_courses)
+
+
+@app.route('/admin/course-catalog/<int:course_id>/edit', methods=['GET', 'POST'])
+@permission_required('courses.manage')
+def admin_course_catalog_edit(course_id):
+    course = get_master_course(course_id)
+    if request.method == 'GET':
+        return render_template('admin/course_catalog_form.html', course=course)
+
+    code = request.form.get('code', '').strip().upper()
+    title = request.form.get('title', '').strip()
+    credits = request.form.get('credits', type=int)
+    course_type = request.form.get('course_type', '').strip()
+    description = request.form.get('description', '').strip()
+
+    errors = []
+    if not code or not title or not credits or not course_type:
+        errors.append('Code, title, credits, and course type are required.')
+    elif not is_course_catalog_code_unique(code, exclude_id=course_id):
+        errors.append(f'Course code "{code}" already exists in the catalog.')
+    if errors:
+        for e in errors:
+            flash(e)
+        return render_template('admin/course_catalog_form.html', course=course, form=request.form)
+
+    update_master_course(course_id, code, title, credits, course_type, description=description)
+    log_admin_action(current_user, 'course_catalog_updated', target_type='course', target_id=course_id,
+                      details=f'code={code}', ip_address=request.remote_addr)
+    flash(f'Course "{code}" updated.')
+    return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
+
+
+@app.route('/admin/course-catalog/<int:course_id>/prerequisites', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_catalog_prerequisites(course_id):
+    prereq_ids = request.form.getlist('prerequisite_ids', type=int)
+    set_prerequisites(course_id, prereq_ids)
+    log_admin_action(current_user, 'course_catalog_prerequisites_updated', target_type='course', target_id=course_id,
+                      details=f'count={len(prereq_ids)}', ip_address=request.remote_addr)
+    flash('Prerequisites updated.')
+    return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
+
+
+@app.route('/admin/course-catalog/<int:course_id>/corequisites', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_catalog_corequisites(course_id):
+    coreq_ids = request.form.getlist('corequisite_ids', type=int)
+    set_corequisites(course_id, coreq_ids)
+    log_admin_action(current_user, 'course_catalog_corequisites_updated', target_type='course', target_id=course_id,
+                      details=f'count={len(coreq_ids)}', ip_address=request.remote_addr)
+    flash('Corequisites updated.')
+    return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
+
+
+@app.route('/admin/course-catalog/<int:course_id>/activate', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_catalog_activate(course_id):
+    set_master_course_status(course_id, 'active')
+    log_admin_action(current_user, 'course_catalog_status_changed', target_type='course', target_id=course_id,
+                      details='status=active', ip_address=request.remote_addr)
+    flash('Course activated.')
+    return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
+
+
+@app.route('/admin/course-catalog/<int:course_id>/archive', methods=['POST'])
+@permission_required('courses.manage')
+def admin_course_catalog_archive(course_id):
+    set_master_course_status(course_id, 'archived')
+    log_admin_action(current_user, 'course_catalog_status_changed', target_type='course', target_id=course_id,
+                      details='status=archived', ip_address=request.remote_addr)
+    flash('Course archived.')
+    return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
+
+
 @app.route('/admin/courses')
 @permission_required('courses.manage')
 def admin_courses():
@@ -2107,40 +2233,39 @@ def admin_course_new():
     departments = list_active_departments()
     sessions = list_sessions()
     semesters = list_semesters()
+    master_courses = list_master_courses_for_picker()
     if request.method == 'GET':
-        return render_template('admin/course_form.html', course=None, departments=departments, sessions=sessions, semesters=semesters)
+        return render_template('admin/course_form.html', course=None, departments=departments, sessions=sessions, semesters=semesters, master_courses=master_courses)
 
-    code = request.form.get('code', '').strip().upper()
-    title = request.form.get('title', '').strip()
-    description = request.form.get('description', '').strip()
+    master_course_id = request.form.get('master_course_id', type=int)
     department_id = request.form.get('department_id', type=int)
-    credits = request.form.get('credits', type=int)
     max_capacity = request.form.get('max_capacity', type=int)
     level = request.form.get('level', '').strip()
-    course_type = request.form.get('course_type', '').strip()
     academic_session_id = request.form.get('academic_session_id', type=int)
     semester_id = request.form.get('semester_id', type=int)
     instructor = request.form.get('instructor', '').strip()
     schedule = request.form.get('schedule', '').strip()
 
     errors = []
-    if not code or not title or not department_id or not credits or not course_type or not academic_session_id or not semester_id:
-        errors.append('Code, title, department, credits, course type, session, and semester are required.')
-    elif not is_course_code_unique(code, academic_session_id, semester_id):
-        errors.append(f'Course code "{code}" already exists for that session/semester.')
+    if not master_course_id or not department_id or not academic_session_id or not semester_id:
+        errors.append('Master course, department, session, and semester are required.')
+    else:
+        master = get_master_course(master_course_id)
+        if not is_course_code_unique(master.code, academic_session_id, semester_id):
+            errors.append(f'"{master.code}" already has an offering for that session/semester.')
     if errors:
         for e in errors:
             flash(e)
-        return render_template('admin/course_form.html', course=None, departments=departments, sessions=sessions, semesters=semesters, form=request.form)
+        return render_template('admin/course_form.html', course=None, departments=departments, sessions=sessions, semesters=semesters, master_courses=master_courses, form=request.form)
 
-    course = create_course(
-        code, title, credits, department_id, level, course_type, academic_session_id, semester_id,
-        description=description, instructor=instructor, schedule=schedule, max_capacity=max_capacity,
+    offering = create_course(
+        master_course_id, department_id, level, academic_session_id, semester_id,
+        instructor=instructor, schedule=schedule, max_capacity=max_capacity,
     )
-    log_admin_action(current_user, 'course_created', target_type='course', target_id=course.id,
-                      details=f'code={code}', ip_address=request.remote_addr)
-    flash(f'Course "{code}" created.')
-    return redirect(url_for('admin_course_detail', course_id=course.id))
+    log_admin_action(current_user, 'course_created', target_type='course', target_id=offering.id,
+                      details=f'code={offering.code} master_course_id={master_course_id}', ip_address=request.remote_addr)
+    flash(f'Course offering "{offering.code}" created.')
+    return redirect(url_for('admin_course_detail', course_id=offering.id))
 
 
 @app.route('/admin/courses/<int:course_id>')
@@ -2150,28 +2275,6 @@ def admin_course_detail(course_id):
     other_courses = list_courses_for_picker(exclude_id=course_id)
     enrolled = get_enrollment_count(course_id)
     return render_template('admin/course_detail.html', other_courses=other_courses, enrolled=enrolled, **detail)
-
-
-@app.route('/admin/courses/<int:course_id>/prerequisites', methods=['POST'])
-@permission_required('courses.manage')
-def admin_course_prerequisites(course_id):
-    prereq_ids = request.form.getlist('prerequisite_ids', type=int)
-    set_prerequisites(course_id, prereq_ids)
-    log_admin_action(current_user, 'course_prerequisites_updated', target_type='course', target_id=course_id,
-                      details=f'count={len(prereq_ids)}', ip_address=request.remote_addr)
-    flash('Prerequisites updated.')
-    return redirect(url_for('admin_course_detail', course_id=course_id))
-
-
-@app.route('/admin/courses/<int:course_id>/corequisites', methods=['POST'])
-@permission_required('courses.manage')
-def admin_course_corequisites(course_id):
-    coreq_ids = request.form.getlist('corequisite_ids', type=int)
-    set_corequisites(course_id, coreq_ids)
-    log_admin_action(current_user, 'course_corequisites_updated', target_type='course', target_id=course_id,
-                      details=f'count={len(coreq_ids)}', ip_address=request.remote_addr)
-    flash('Corequisites updated.')
-    return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
 @app.route('/admin/courses/<int:course_id>/assessment', methods=['POST'])
@@ -2202,45 +2305,43 @@ def admin_course_assessment(course_id):
 @app.route('/admin/courses/<int:course_id>/edit', methods=['GET', 'POST'])
 @permission_required('courses.manage')
 def admin_course_edit(course_id):
-    course = get_course(course_id)
+    offering = get_course(course_id)
     departments = list_active_departments()
     sessions = list_sessions()
     semesters = list_semesters()
+    master_courses = list_master_courses_for_picker()
     if request.method == 'GET':
-        return render_template('admin/course_form.html', course=course, departments=departments, sessions=sessions, semesters=semesters)
+        return render_template('admin/course_form.html', course=offering, departments=departments, sessions=sessions, semesters=semesters, master_courses=master_courses)
 
-    code = request.form.get('code', '').strip().upper()
-    title = request.form.get('title', '').strip()
-    description = request.form.get('description', '').strip()
+    master_course_id = request.form.get('master_course_id', type=int)
     department_id = request.form.get('department_id', type=int)
-    credits = request.form.get('credits', type=int)
     max_capacity = request.form.get('max_capacity', type=int)
     level = request.form.get('level', '').strip()
-    course_type = request.form.get('course_type', '').strip()
     academic_session_id = request.form.get('academic_session_id', type=int)
     semester_id = request.form.get('semester_id', type=int)
     instructor = request.form.get('instructor', '').strip()
     schedule = request.form.get('schedule', '').strip()
 
     errors = []
-    if not code or not title or not department_id or not credits or not course_type or not academic_session_id or not semester_id:
-        errors.append('Code, title, department, credits, course type, session, and semester are required.')
-    elif not is_course_code_unique(code, academic_session_id, semester_id, exclude_id=course_id):
-        errors.append(f'Course code "{code}" already exists for that session/semester.')
+    if not master_course_id or not department_id or not academic_session_id or not semester_id:
+        errors.append('Master course, department, session, and semester are required.')
+    else:
+        master = get_master_course(master_course_id)
+        if not is_course_code_unique(master.code, academic_session_id, semester_id, exclude_id=course_id):
+            errors.append(f'"{master.code}" already has an offering for that session/semester.')
     if errors:
         for e in errors:
             flash(e)
-        return render_template('admin/course_form.html', course=course, departments=departments, sessions=sessions, semesters=semesters, form=request.form)
+        return render_template('admin/course_form.html', course=offering, departments=departments, sessions=sessions, semesters=semesters, master_courses=master_courses, form=request.form)
 
     update_course(
-        course_id, code=code, title=title, description=description or None, department_id=department_id,
-        credits=credits, max_capacity=max_capacity, level=level or None, course_type=course_type,
-        academic_session_id=academic_session_id, semester_id=semester_id,
-        instructor=instructor or None, schedule=schedule or None,
+        course_id, master_course_id=master_course_id, department_id=department_id,
+        level=level or None, academic_session_id=academic_session_id, semester_id=semester_id,
+        instructor=instructor or None, schedule=schedule or None, max_capacity=max_capacity,
     )
     log_admin_action(current_user, 'course_updated', target_type='course', target_id=course_id,
-                      details=f'code={code}', ip_address=request.remote_addr)
-    flash(f'Course "{code}" updated.')
+                      details=f'master_course_id={master_course_id}', ip_address=request.remote_addr)
+    flash('Course offering updated.')
     return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
