@@ -3,10 +3,10 @@ from services.errors import RegistrationError
 
 
 def validate_course_eligible(course, user, period):
-    """Raise RegistrationError unless the course matches the student's own
-    department/level and belongs to the active registration period's
-    session/semester. A course with level=None is level-agnostic and
-    matches any student's level."""
+    """Raise RegistrationError unless the course offering matches the
+    student's own department/level and belongs to the active registration
+    period's session/semester. A course offering with level=None is
+    level-agnostic and matches any student's level."""
     if course.department != user.department:
         raise RegistrationError('This course is not offered in your department.')
     if course.level is not None and course.level != user.level:
