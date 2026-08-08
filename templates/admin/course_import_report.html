@@ -11,10 +11,11 @@
         <div><div style="font-size:1.4rem; font-weight:700; color: var(--text-muted);">{{ job.skipped_count }}</div><div style="color: var(--text-muted); font-size:0.8rem;">Skipped</div></div>
         <div><div style="font-size:1.4rem; font-weight:700; color: var(--warning);">{{ job.duplicate_count }}</div><div style="color: var(--text-muted); font-size:0.8rem;">Duplicates</div></div>
         <div><div style="font-size:1.4rem; font-weight:700; color: var(--danger);">{{ job.error_count }}</div><div style="color: var(--text-muted); font-size:0.8rem;">Errors</div></div>
+        <div><div style="font-size:1.4rem; font-weight:700; color: var(--warning);">{{ job.mismatched_count }}</div><div style="color: var(--text-muted); font-size:0.8rem;">Catalog Mismatches</div></div>
     </div>
 </div>
 
-{% if job.errors %}
+{% if job.errors|selectattr('severity', 'equalto', 'error')|list %}
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h3 style="margin-top:0;">Row Errors</h3>
     <table style="width:100%; border-collapse:collapse;">
@@ -26,10 +27,35 @@
             </tr>
         </thead>
         <tbody>
-            {% for err in job.errors %}
+            {% for err in job.errors|selectattr('severity', 'equalto', 'error') %}
             <tr style="border-bottom: 1px solid var(--border-color);">
                 <td style="padding:0.6rem;">{{ err.row_number }}</td>
                 <td style="padding:0.6rem; color: var(--danger);">{{ err.reason }}</td>
+                <td style="padding:0.6rem; font-family:monospace; font-size:0.75rem;">{{ err.raw_row }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% set warning_rows = job.errors|selectattr('severity', 'equalto', 'warning')|list %}
+{% if warning_rows %}
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-top:1.5rem;">
+    <h3 style="margin-top:0;">Catalog Mismatches (row still imported)</h3>
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.6rem;">Row</th>
+                <th style="padding:0.6rem;">Reason</th>
+                <th style="padding:0.6rem;">Raw Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for err in warning_rows %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.6rem;">{{ err.row_number }}</td>
+                <td style="padding:0.6rem; color: var(--warning);">{{ err.reason }}</td>
                 <td style="padding:0.6rem; font-family:monospace; font-size:0.75rem;">{{ err.raw_row }}</td>
             </tr>
             {% endfor %}

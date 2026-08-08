@@ -7,21 +7,15 @@
     <h2 style="margin-top:0;">{{ 'Edit Course' if course else 'New Course' }}</h2>
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
-            <div style="flex:1;">
-                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Course Code</label>
-                <input type="text" name="code" required value="{{ form.code if form else (course.code if course else '') }}"
-                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box; text-transform:uppercase;">
-            </div>
-            <div style="flex:2;">
-                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Title</label>
-                <input type="text" name="title" required value="{{ form.title if form else (course.title if course else '') }}"
-                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
-            </div>
-        </div>
         <div style="margin-bottom:1rem;">
-            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Description</label>
-            <textarea name="description" rows="3" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">{{ form.description if form else (course.description if course and course.description else '') }}</textarea>
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Master Course</label>
+            <select name="master_course_id" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                {% set current_master_id = form.master_course_id if form else (course.course_id if course else none) %}
+                {% for mc in master_courses %}
+                <option value="{{ mc.id }}" {{ 'selected' if current_master_id and current_master_id|int == mc.id }}>{{ mc.code }} — {{ mc.title }} ({{ mc.credits }} credits)</option>
+                {% endfor %}
+            </select>
+            <p style="color: var(--text-muted); font-size:0.8rem; margin-top:0.3rem;">Don't see the course you need? <a href="{{ url_for('admin_course_catalog_new') }}" style="color: var(--primary-dark);">Add it to the Course Catalog</a> first.</p>
         </div>
         <div style="display:flex; gap:1rem; margin-bottom:1rem;">
             <div style="flex:1;">
@@ -33,30 +27,15 @@
                 </select>
             </div>
             <div style="flex:1;">
-                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Credits</label>
-                <input type="number" name="credits" required value="{{ form.credits if form else (course.credits if course else '') }}"
-                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
-            </div>
-            <div style="flex:1;">
                 <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Max Capacity</label>
                 <input type="number" name="max_capacity" value="{{ form.max_capacity if form else (course.max_capacity if course and course.max_capacity else '') }}"
                        style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
             </div>
         </div>
-        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
-            <div style="flex:1;">
-                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Level</label>
-                <input type="text" name="level" placeholder="e.g. ND1, Year 1" value="{{ form.level if form else (course.level if course and course.level else '') }}"
-                       style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
-            </div>
-            <div style="flex:1;">
-                <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Course Type</label>
-                <select name="course_type" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
-                    {% for value, label in [('core', 'Core'), ('elective', 'Elective'), ('lab', 'Lab')] %}
-                    <option value="{{ value }}" {{ 'selected' if course and course.course_type == value }}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Level</label>
+            <input type="text" name="level" placeholder="e.g. ND1, Year 1" value="{{ form.level if form else (course.level if course and course.level else '') }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
         </div>
         <div style="display:flex; gap:1rem; margin-bottom:1rem;">
             <div style="flex:1;">

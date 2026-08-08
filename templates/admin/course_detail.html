@@ -38,34 +38,7 @@
     <p style="color: var(--text-muted); font-size:0.85rem;">Instructor: {{ course.instructor or 'Not assigned' }} &middot; Schedule: {{ course.schedule or 'Not set' }}</p>
 </div>
 
-<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
-    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
-        <h3 style="margin-top:0;">Prerequisites</h3>
-        <form method="POST" action="{{ url_for('admin_course_prerequisites', course_id=course.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <select name="prerequisite_ids" multiple size="6" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.8rem;">
-                {% set prereq_ids = prerequisites|map(attribute='id')|list %}
-                {% for c in other_courses %}
-                <option value="{{ c.id }}" {{ 'selected' if c.id in prereq_ids }}>{{ c.code }} — {{ c.title }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" style="padding:0.5rem 1rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; cursor:pointer;">Save</button>
-        </form>
-    </div>
-    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
-        <h3 style="margin-top:0;">Corequisites</h3>
-        <form method="POST" action="{{ url_for('admin_course_corequisites', course_id=course.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <select name="corequisite_ids" multiple size="6" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.8rem;">
-                {% set coreq_ids = corequisites|map(attribute='id')|list %}
-                {% for c in other_courses %}
-                <option value="{{ c.id }}" {{ 'selected' if c.id in coreq_ids }}>{{ c.code }} — {{ c.title }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" style="padding:0.5rem 1rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; cursor:pointer;">Save</button>
-        </form>
-    </div>
-</div>
+<p style="margin-bottom:1.5rem;"><a href="{{ url_for('admin_course_catalog_detail', course_id=course.course_id) }}" style="color: var(--primary-dark); font-weight:600;"><i class="fas fa-book-open"></i> View in Course Catalog</a> — manage prerequisites, corequisites, and catalog details there.</p>
 
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h3 style="margin-top:0;">Assessment Structure</h3>
