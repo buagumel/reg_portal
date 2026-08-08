@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from app import app
 from models import (
     db, User, now_lagos,
-    AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course,
+    AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course, CourseOffering,
     Notification, PaymentCategory, Payment,
     AdminRole, Permission, AdminUser, Programme, ProgrammeDepartment,
 )
@@ -176,6 +176,15 @@ def seed_registration_config():
 
 
 def seed_courses():
+    """Find-or-creates a master Course by code, then find-or-creates a
+    CourseOffering linked to it for 2025/2026 First Semester — mirroring the
+    same master+offering pattern services/course_import.py and
+    services/admin_course.py use at runtime (DDD refactor sub-project 3:
+    Course/CourseOffering split). Pre-split, this function constructed a
+    single flat Course row per entry; that shape no longer matches the
+    master Course model (which has no department/level/instructor/schedule/
+    academic_session_id/semester_id columns anymore) and would raise
+    TypeError if called against it directly."""
     academic_session = AcademicSession.query.filter_by(name='2025/2026').first()
     first_semester = Semester.query.filter_by(name='First Semester').first()
     if not academic_session or not first_semester:
@@ -207,21 +216,32 @@ def seed_courses():
 
     created = 0
     for data in courses_data:
-        existing = Course.query.filter_by(
+        master = Course.query.filter_by(code=data['code']).first()
+        if not master:
+            master = Course(
+                code=data['code'], title=data['title'], credits=data['credits'],
+                course_type=data['course_type'], description=f"{data['title']} — core curriculum course.",
+            )
+            db.session.add(master)
+            db.session.flush()  # assigns master.id without committing yet
+
+        existing_offering = CourseOffering.query.filter_by(
             code=data['code'], academic_session_id=academic_session.id, semester_id=first_semester.id
         ).first()
-        if existing:
+        if existing_offering:
             continue
-        course = Course(
-            academic_session_id=academic_session.id,
-            semester_id=first_semester.id,
-            description=f"{data['title']} — core curriculum course.",
-            **data,
+        offering = CourseOffering(
+            code=master.code, title=master.title, credits=master.credits, course_type=master.course_type,
+            description=master.description, course_id=master.id,
+            department=data['department'], level=data['level'],
+            instructor=data['instructor'], schedule=data['schedule'],
+            academic_session_id=academic_session.id, semester_id=first_semester.id,
+            status='active',
         )
-        db.session.add(course)
+        db.session.add(offering)
         created += 1
     db.session.commit()
-    print(f'Created {created} course(s).')
+    print(f'Created {created} course offering(s).')
 
 
 def seed_notifications():

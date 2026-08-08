@@ -1,4 +1,4 @@
-from models import db, Department, User, Course
+from models import db, Department, User, CourseOffering
 from services.admin_validation import is_department_code_unique
 
 
@@ -23,7 +23,7 @@ def get_department(department_id):
 def get_department_detail(department_id):
     department = get_department(department_id)
     student_count = User.query.filter_by(department_id=department_id).count()
-    course_count = Course.query.filter_by(department_id=department_id).count()
+    course_count = CourseOffering.query.filter_by(department_id=department_id).count()
     return {'department': department, 'student_count': student_count, 'course_count': course_count}
 
 

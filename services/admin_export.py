@@ -4,7 +4,7 @@ import io
 from flask import Response
 from openpyxl import Workbook
 
-from models import User, StudentRegistration, Course, Department, Payment
+from models import User, StudentRegistration, CourseOffering, Department, Payment
 
 VALID_DATA_TYPES = ('students', 'registrations', 'courses', 'departments', 'payments')
 
@@ -38,7 +38,7 @@ def _rows_for(data_type, student_ids=None):
         headers = ['code', 'title', 'department', 'level', 'semester', 'credits', 'status']
         rows = [
             [c.code, c.title, c.department, c.level or '', c.semester.name, c.credits, c.status]
-            for c in Course.query.order_by(Course.code).all()
+            for c in CourseOffering.query.order_by(CourseOffering.code).all()
         ]
     elif data_type == 'departments':
         headers = ['name', 'code', 'faculty', 'status']
