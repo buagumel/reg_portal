@@ -78,9 +78,23 @@ def get_payable_categories(user):
     /payment/create. A category with neither a default_amount nor a
     matching FeeStructure row (e.g. registration_fee, handled by
     DepartmentRegistrationRule instead) is excluded, exactly matching the
-    pre-existing `if category.default_amount is not None` filter."""
+    pre-existing `if category.default_amount is not None` filter.
+
+    registration_fee is additionally excluded unconditionally, even if a
+    FeeStructure row targeting it exists (the admin UI no longer allows
+    creating one, but this is a defensive backstop for any pre-existing
+    stray row or direct DB access). registration_fee is charged and
+    reconciled exclusively through register_student()/
+    DepartmentRegistrationRule (which links payment_status back to a
+    specific StudentRegistration via registration_id) — the general
+    /payment/create flow never sets registration_id, so a payment made
+    through it would charge real money without ever being able to mark a
+    registration as paid."""
     result = []
-    for category in PaymentCategory.query.filter_by(is_active=True).order_by(PaymentCategory.name).all():
+    categories = PaymentCategory.query.filter_by(is_active=True).filter(
+        PaymentCategory.code != 'registration_fee'
+    ).order_by(PaymentCategory.name).all()
+    for category in categories:
         amount = resolve_amount(user, category)
         if amount is not None:
             result.append((category, amount))

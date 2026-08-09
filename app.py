@@ -2608,7 +2608,16 @@ def admin_fee_structure_new():
     selected_session = get_session(session_id) if session_id else None
     semesters = list_semesters_for_programme(selected_session.programme) if selected_session else []
     departments = list_active_departments()
-    categories = PaymentCategory.query.filter_by(is_active=True).order_by(PaymentCategory.name).all()
+    # registration_fee is deliberately excluded here: it's charged and
+    # reconciled exclusively through register_student()/DepartmentRegistrationRule
+    # (registration_id-linked), never through the general /payment/create flow.
+    # A FeeStructure row targeting it would still resolve a real amount and
+    # surface as payable there, but paying it would never mark any
+    # StudentRegistration as paid — an unreconcilable charge. See
+    # get_payable_categories()'s matching defensive exclusion.
+    categories = PaymentCategory.query.filter_by(is_active=True).filter(
+        PaymentCategory.code != 'registration_fee'
+    ).order_by(PaymentCategory.name).all()
 
     if request.method == 'GET' or selected_session is None:
         return render_template(
@@ -2649,15 +2658,45 @@ def admin_fee_structure_new():
 @permission_required('sessions.manage')
 def admin_fee_structure_edit(fee_structure_id):
     row = get_fee_structure(fee_structure_id)
+    # A FeeStructure row's semester_id/department_id can reference a Semester
+    # that's no longer in this session's Programme-filtered calendar shape, or
+    # a Department that's since been deactivated. If we dropped it from the
+    # dropdown, an admin who edits the row without touching that one field
+    # (e.g. just changing the amount) would have the browser silently submit
+    # the blank "All semesters"/"All departments" option — silently widening
+    # the row's scope on an otherwise-unrelated edit. Union the row's current
+    # value back in (labeled distinctly in the template) so a no-op resubmit
+    # round-trips correctly, plus a server-side backstop rejecting any posted
+    # value not among the actually-offered options. Same pattern as
+    # admin_period_edit's Semester-dropdown fix.
     semesters = list_semesters_for_programme(row.academic_session.programme)
+    mismatched_semester_id = None
+    if row.semester_id is not None and row.semester_id not in {s.id for s in semesters}:
+        semesters = semesters + [row.semester]
+        mismatched_semester_id = row.semester_id
+
     departments = list_active_departments()
-    categories = PaymentCategory.query.filter_by(is_active=True).order_by(PaymentCategory.name).all()
+    mismatched_department_id = None
+    if row.department_id is not None and row.department_id not in {d.id for d in departments}:
+        departments = departments + [row.department]
+        mismatched_department_id = row.department_id
+
+    # registration_fee is deliberately excluded here: it's charged and
+    # reconciled exclusively through register_student()/DepartmentRegistrationRule
+    # (registration_id-linked), never through the general /payment/create flow.
+    # See the matching exclusion in admin_fee_structure_new and the defensive
+    # exclusion in get_payable_categories().
+    categories = PaymentCategory.query.filter_by(is_active=True).filter(
+        PaymentCategory.code != 'registration_fee'
+    ).order_by(PaymentCategory.name).all()
 
     if request.method == 'GET':
         return render_template(
             'admin/fee_structure_form.html', row=row, sessions=None,
             selected_session=row.academic_session, semesters=semesters,
             departments=departments, categories=categories,
+            mismatched_semester_id=mismatched_semester_id,
+            mismatched_department_id=mismatched_department_id,
         )
 
     semester_id = request.form.get('semester_id', type=int) or None
@@ -2671,6 +2710,30 @@ def admin_fee_structure_edit(fee_structure_id):
             'admin/fee_structure_form.html', row=row, sessions=None,
             selected_session=row.academic_session, semesters=semesters,
             departments=departments, categories=categories, form=request.form,
+            mismatched_semester_id=mismatched_semester_id,
+            mismatched_department_id=mismatched_department_id,
+        )
+    if semester_id is not None and semester_id not in {s.id for s in semesters}:
+        # Backstop against a crafted/stale request posting a semester_id
+        # outside what's actually offered (the Programme-filtered set, plus
+        # the row's own current semester if it was unioned back in above).
+        flash("Selected semester is not valid for this session's programme.")
+        return render_template(
+            'admin/fee_structure_form.html', row=row, sessions=None,
+            selected_session=row.academic_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+            mismatched_semester_id=mismatched_semester_id,
+            mismatched_department_id=mismatched_department_id,
+        )
+    if department_id is not None and department_id not in {d.id for d in departments}:
+        # Same backstop for department_id.
+        flash('Selected department is not valid.')
+        return render_template(
+            'admin/fee_structure_form.html', row=row, sessions=None,
+            selected_session=row.academic_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+            mismatched_semester_id=mismatched_semester_id,
+            mismatched_department_id=mismatched_department_id,
         )
     if not is_fee_structure_scope_unique(row.academic_session_id, semester_id, department_id, category_id, exclude_id=row.id):
         flash('A fee structure row for this exact session/semester/department/category combination already exists.')
@@ -2678,6 +2741,8 @@ def admin_fee_structure_edit(fee_structure_id):
             'admin/fee_structure_form.html', row=row, sessions=None,
             selected_session=row.academic_session, semesters=semesters,
             departments=departments, categories=categories, form=request.form,
+            mismatched_semester_id=mismatched_semester_id,
+            mismatched_department_id=mismatched_department_id,
         )
 
     update_fee_structure(fee_structure_id, semester_id, department_id, category_id, amount)
