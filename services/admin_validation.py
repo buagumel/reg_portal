@@ -1,4 +1,4 @@
-from models import Department, Programme, Course, CourseOffering, Semester, AcademicSession
+from models import Department, Programme, Course, CourseOffering, Semester, AcademicSession, FeeStructure
 
 
 LEVELS_BY_PROGRAM_TYPE = {
@@ -100,3 +100,15 @@ def validate_credit_range(min_credits, max_credits):
     if min_credits > max_credits:
         errors.append('Minimum credits cannot exceed maximum credits.')
     return errors
+
+
+def is_fee_structure_scope_unique(academic_session_id, semester_id, department_id, category_id, exclude_id=None):
+    query = FeeStructure.query.filter(
+        FeeStructure.academic_session_id == academic_session_id,
+        FeeStructure.semester_id == semester_id,
+        FeeStructure.department_id == department_id,
+        FeeStructure.category_id == category_id,
+    )
+    if exclude_id is not None:
+        query = query.filter(FeeStructure.id != exclude_id)
+    return query.first() is None
