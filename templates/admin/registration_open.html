@@ -5,11 +5,12 @@
 {% block content %}
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h2 style="margin-top:0;">Activate a Registration Period</h2>
-    <p style="color: var(--text-muted);">Activating a period deactivates every other period and makes its session the current one.</p>
+    <p style="color: var(--text-muted);">Activating a period deactivates every other period in the same Programme (or every other shared/legacy period, if this one isn't Programme-scoped) and makes its session the current one for that scope.</p>
     <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
         <thead>
             <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
                 <th style="padding:0.8rem;">Session</th>
+                <th style="padding:0.8rem;">Programme</th>
                 <th style="padding:0.8rem;">Semester</th>
                 <th style="padding:0.8rem;">Opens</th>
                 <th style="padding:0.8rem;">Closes</th>
@@ -20,18 +21,19 @@
             {% for period in periods %}
             <tr style="border-bottom: 1px solid var(--border-color);">
                 <td style="padding:0.8rem;">{{ period.academic_session.name }}</td>
+                <td style="padding:0.8rem;">{{ period.academic_session.programme.name if period.academic_session.programme else 'Shared / Legacy' }}</td>
                 <td style="padding:0.8rem;">{{ period.semester.name }}</td>
                 <td style="padding:0.8rem;">{{ period.opens_at.strftime('%d %b %Y') }}</td>
                 <td style="padding:0.8rem;">{{ period.closes_at.strftime('%d %b %Y') }}</td>
                 <td style="padding:0.8rem; text-align:right;">
-                    <form method="POST" action="{{ url_for('admin_period_activate', session_id=period.academic_session_id, period_id=period.id) }}" onsubmit="return confirm('Activate this period? Every other period will be deactivated.');">
+                    <form method="POST" action="{{ url_for('admin_period_activate', session_id=period.academic_session_id, period_id=period.id) }}" onsubmit="return confirm('Activate this period? Every other period in the same Programme scope will be deactivated.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="padding:0.4rem 0.9rem; background: var(--primary); color:white; border:none; border-radius:0.4rem; cursor:pointer;">Activate</button>
                     </form>
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="5" style="padding:2rem; text-align:center; color: var(--text-muted);">No inactive registration periods to open. Create one from a session first.</td></tr>
+            <tr><td colspan="6" style="padding:2rem; text-align:center; color: var(--text-muted);">No inactive registration periods to open. Create one from a session first.</td></tr>
             {% endfor %}
         </tbody>
     </table>

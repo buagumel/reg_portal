@@ -747,7 +747,7 @@ def registration():
 @app.route('/registration/register', methods=['POST'])
 @login_required
 def registration_register():
-    period = get_active_period()
+    period = get_active_period(current_user)
     if period is None:
         return jsonify({'success': False, 'message': 'No registration period is currently configured.'}), 400
 

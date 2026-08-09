@@ -4,11 +4,25 @@ from services.errors import RegistrationError
 
 def validate_course_eligible(course, user, period):
     """Raise RegistrationError unless the course offering matches the
-    student's own department/level and belongs to the active registration
-    period's session/semester. A course offering with level=None is
-    level-agnostic and matches any student's level."""
-    if course.department != user.department:
+    student's department/programme/level and belongs to the active
+    registration period's session/semester. Department and Programme use an
+    FK match when both sides have the FK set, falling back to the legacy
+    string comparison (department) or skipping the check (programme, which
+    has no legacy string equivalent) when either side is missing the FK —
+    incomplete FK backfill must never silently lock a student out of
+    eligible courses. A course with level=None is level-agnostic and
+    matches any student's level."""
+    if course.department_id is not None and user.department_id is not None:
+        if course.department_id != user.department_id:
+            raise RegistrationError('This course is not offered in your department.')
+    elif course.department != user.department:
         raise RegistrationError('This course is not offered in your department.')
+
+    course_programme = course.programme
+    if course_programme is not None and user.programme_id is not None:
+        if course_programme.id != user.programme_id:
+            raise RegistrationError('This course is not offered under your programme.')
+
     if course.level is not None and course.level != user.level:
         raise RegistrationError('This course is not offered at your level.')
     if course.academic_session_id != period.academic_session_id or course.semester_id != period.semester_id:

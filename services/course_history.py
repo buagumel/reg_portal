@@ -6,7 +6,7 @@ def get_courses_by_semester(user):
     """Return the student's RegisteredCourse rows grouped by
     (academic_session, semester), newest registration first. Each group:
     {academic_session, semester, is_current, courses_submitted, courses}."""
-    active_period = get_active_period()
+    active_period = get_active_period(user)
 
     registrations = (
         StudentRegistration.query
