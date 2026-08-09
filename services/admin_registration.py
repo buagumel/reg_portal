@@ -1,6 +1,7 @@
 from sqlalchemy.orm import joinedload
 
 from models import db, User, StudentRegistration, RegistrationPeriod, now_lagos
+from services.registration import get_active_period, add_course, drop_course
 
 
 def list_periods_for_selector():
@@ -59,11 +60,12 @@ def get_oversight_metrics(period, department_id=None, programme_id=None, level=N
 
 
 def get_student_registration_context(user, period=None):
-    """period defaults to the currently active RegistrationPeriod. Returns
-    {'period', 'student_registration'} — student_registration is None if
-    this student has no registration for that period yet."""
+    """period defaults to this student's Programme-aware active
+    RegistrationPeriod (see services.registration.get_active_period).
+    Returns {'period', 'student_registration'} — student_registration is
+    None if this student has no registration for that period yet."""
     if period is None:
-        period = RegistrationPeriod.query.filter_by(is_active=True).order_by(RegistrationPeriod.id.desc()).first()
+        period = get_active_period(user)
     if period is None:
         return {'period': None, 'student_registration': None}
     student_registration = StudentRegistration.query.filter_by(
@@ -87,16 +89,12 @@ def record_override(student_registration, admin_user, action, reason):
 
 
 def admin_add_course(user, period, student_registration, course_id, admin_user, reason, override_capacity=False):
-    from services.registration import add_course
-
     add_course(user, period, student_registration, course_id, admin_override=override_capacity)
     action = 'capacity_overridden' if override_capacity else 'course_added_by_admin'
     record_override(student_registration, admin_user, action, reason)
 
 
 def admin_drop_course(user, period, student_registration, course_id, admin_user, reason):
-    from services.registration import drop_course
-
     drop_course(user, period, student_registration, course_id)
     record_override(student_registration, admin_user, 'course_removed_by_admin', reason)
 
