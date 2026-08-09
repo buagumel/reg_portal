@@ -17,21 +17,21 @@
         <div></div>
     </div>
 
-    {% if not categories %}
+    {% if not payable %}
     <div class="empty-state-card">
         <i class="fas fa-inbox"></i>
         <p>No payable items are currently available.</p>
     </div>
     {% else %}
     <div class="category-grid" id="categoryGrid">
-        {% for category in categories %}
+        {% for category, amount in payable %}
         <label class="category-card">
-            <input type="checkbox" class="category-checkbox" data-id="{{ category.id }}" data-amount="{{ category.default_amount }}" data-name="{{ category.name }}">
+            <input type="checkbox" class="category-checkbox" data-id="{{ category.id }}" data-amount="{{ amount }}" data-name="{{ category.name }}">
             <div class="category-info">
                 <span class="category-name">{{ category.name }}</span>
                 {% if category.description %}<span class="category-desc">{{ category.description }}</span>{% endif %}
             </div>
-            <span class="category-amount">₦{{ '{:,.2f}'.format(category.default_amount) }}</span>
+            <span class="category-amount">₦{{ '{:,.2f}'.format(amount) }}</span>
         </label>
         {% endfor %}
     </div>

@@ -3,7 +3,7 @@ import string
 
 from flask import url_for
 
-from models import db, now_lagos, Payment, PaymentItem, PaymentCategory
+from models import db, now_lagos, Payment, PaymentItem
 from services.errors import PaymentError
 from services.payment_validation import validate_items_selected, validate_no_duplicate_pending
 from services.payment_gateway import GatewayError
@@ -14,10 +14,6 @@ from services.audit import log_action
 def _generate_reference():
     suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10))
     return f'PAY-{suffix}'
-
-
-def get_active_categories():
-    return PaymentCategory.query.filter_by(is_active=True).order_by(PaymentCategory.name).all()
 
 
 def create_payment(user, item_specs, idempotency_key, registration_id=None):

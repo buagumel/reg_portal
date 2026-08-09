@@ -37,7 +37,7 @@ from services.profile import (
     update_profile_picture, delete_profile_picture,
 )
 from services.payment import (
-    get_active_categories, create_payment, initiate_payment, verify_payment,
+    create_payment, initiate_payment, verify_payment,
     retry_verification, cancel_payment, get_payment_history,
     get_summary_counts as get_payment_summary_counts,
 )
@@ -688,9 +688,9 @@ def payment_resend_receipt(reference):
 @app.route('/payment/create', methods=['GET'])
 @login_required
 def payment_create_page():
-    categories = [c for c in get_active_categories() if c.default_amount is not None]
+    payable = get_payable_categories(current_user)
     idempotency_key = str(uuid.uuid4())
-    return render_template('payment_create.html', categories=categories, idempotency_key=idempotency_key)
+    return render_template('payment_create.html', payable=payable, idempotency_key=idempotency_key)
 
 
 @app.route('/payment/create', methods=['POST'])
@@ -712,14 +712,17 @@ def payment_create_submit():
         if not isinstance(sel, dict):
             continue
         category = PaymentCategory.query.filter_by(id=sel.get('category_id'), is_active=True).first()
-        if category is None or category.default_amount is None:
+        if category is None:
+            continue
+        amount = resolve_amount(current_user, category)
+        if amount is None:
             continue
         try:
             quantity = int(sel.get('quantity', 1))
         except (TypeError, ValueError):
             quantity = 1
         quantity = max(1, min(quantity, 10))
-        item_specs.append((category, quantity, category.default_amount))
+        item_specs.append((category, quantity, amount))
 
     try:
         payment = create_payment(current_user, item_specs, idempotency_key)
