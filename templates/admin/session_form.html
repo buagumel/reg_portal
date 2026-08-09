@@ -85,7 +85,7 @@
                 <td style="padding:0.6rem; text-align:right;">
                     <a href="{{ url_for('admin_period_edit', session_id=session.id, period_id=period.id) }}" style="color: var(--primary-dark); margin-right:0.6rem;">Edit</a>
                     {% if not period.is_active %}
-                    <form method="POST" action="{{ url_for('admin_period_activate', session_id=session.id, period_id=period.id) }}" style="display:inline;" onsubmit="return confirm('Activate this period?');">
+                    <form method="POST" action="{{ url_for('admin_period_activate', session_id=session.id, period_id=period.id) }}" style="display:inline;" onsubmit="return confirm('Activate this period? Every other period in the same Programme scope will be deactivated.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer;">Activate</button>
                     </form>
