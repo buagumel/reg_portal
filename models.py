@@ -308,6 +308,26 @@ class GatewayResponse(db.Model):
     received_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
 
 
+class FeeStructure(db.Model):
+    __tablename__ = 'fee_structures'
+    id = db.Column(db.Integer, primary_key=True)
+    academic_session_id = db.Column(db.Integer, db.ForeignKey('academic_sessions.id'), nullable=False)
+    semester_id = db.Column(db.Integer, db.ForeignKey('semesters.id'), nullable=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('payment_categories.id'), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    created_at = db.Column(db.DateTime, default=now_lagos, nullable=False)
+
+    academic_session = db.relationship('AcademicSession')
+    semester = db.relationship('Semester')
+    department = db.relationship('Department')
+    category = db.relationship('PaymentCategory')
+
+    @property
+    def programme(self):
+        return self.academic_session.programme if self.academic_session else None
+
+
 class Permission(db.Model):
     __tablename__ = 'permissions'
     id = db.Column(db.Integer, primary_key=True)
