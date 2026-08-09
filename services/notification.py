@@ -124,7 +124,7 @@ def notify_registration_window_events(user):
     it's a real navigable URL anyway and needs no separate tracking table."""
     from services.registration import get_active_period, get_window_status
 
-    period = get_active_period()
+    period = get_active_period(user)
     if period is None:
         return
 

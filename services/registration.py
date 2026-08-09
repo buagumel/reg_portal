@@ -1,6 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-from models import db, now_lagos, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, PaymentCategory
+from models import db, now_lagos, RegistrationPeriod, AcademicSession, DepartmentRegistrationRule, StudentRegistration, PaymentCategory
 from models import CourseOffering, RegisteredCourse
 from services.payment import create_payment
 from services.errors import RegistrationError, PaymentError
@@ -8,14 +8,25 @@ from services.notification import create_notification
 from services.validation import validate_course_eligible, validate_credit_ceiling, validate_not_duplicate, validate_can_submit
 
 
-def get_active_period():
-    """Return the RegistrationPeriod the admin has marked as current, or None
-    if none is configured. If more than one is ever marked active (shouldn't
-    happen, but nothing enforces it at the DB level), the most recently
-    created one wins."""
+def get_active_period(user=None):
+    """Return the RegistrationPeriod currently active for this user's
+    Programme, falling back to the shared/legacy active period if the user
+    has no programme_id or their Programme has no active period of its own.
+    With user=None, returns the shared/legacy active period only — the same
+    query this function always ran before Programme-scoped periods existed."""
+    if user is not None and user.programme_id is not None:
+        programme_period = (
+            RegistrationPeriod.query.join(AcademicSession)
+            .filter(RegistrationPeriod.is_active == True, AcademicSession.programme_id == user.programme_id)
+            .order_by(RegistrationPeriod.id.desc())
+            .first()
+        )
+        if programme_period is not None:
+            return programme_period
+
     return (
-        RegistrationPeriod.query
-        .filter_by(is_active=True)
+        RegistrationPeriod.query.join(AcademicSession)
+        .filter(RegistrationPeriod.is_active == True, AcademicSession.programme_id.is_(None))
         .order_by(RegistrationPeriod.id.desc())
         .first()
     )
@@ -103,7 +114,7 @@ def get_registration_status_context(user):
     student: the active period (or None), its window status, the student's
     resolved credit limits/fee, and their existing StudentRegistration for
     that period (or None)."""
-    period = get_active_period()
+    period = get_active_period(user)
     if period is None:
         return {
             'period': None,
@@ -315,7 +326,7 @@ def submit_registration(user, period, student_registration):
 def get_add_drop_context(user):
     """Assemble everything the Add/Drop page needs. period/student_registration
     are None if there's nothing eligible to add courses against."""
-    period = get_active_period()
+    period = get_active_period(user)
     if period is None:
         return {'period': None, 'student_registration': None, 'min_credits': None, 'max_credits': None}
 
