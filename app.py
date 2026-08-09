@@ -41,6 +41,11 @@ from services.payment import (
     retry_verification, cancel_payment, get_payment_history,
     get_summary_counts as get_payment_summary_counts,
 )
+from services.fee_structure import get_payable_categories, resolve_amount
+from services.admin_fee_structure import (
+    list_fee_structures, get_fee_structure, create_fee_structure,
+    update_fee_structure, delete_fee_structure,
+)
 from services.payment_gateway import get_gateway, GatewayError, build_checkout_url
 from services.errors import PaymentError
 from services.receipt import get_or_create_receipt, render_pdf, send_receipt_email
@@ -60,7 +65,7 @@ from services.admin_programme import (
 )
 from services.admin_validation import (
     is_department_code_unique, is_programme_code_unique, validate_credit_range, valid_levels_for_programme,
-    LEVELS_BY_PROGRAM_TYPE, is_session_name_unique,
+    LEVELS_BY_PROGRAM_TYPE, is_session_name_unique, is_fee_structure_scope_unique,
 )
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
@@ -2579,6 +2584,117 @@ def admin_holiday_new(session_id):
                       details=f'session_id={session_id} name={name}', ip_address=request.remote_addr)
     flash(f'Holiday "{name}" added.')
     return redirect(url_for('admin_session_edit', session_id=session_id))
+
+
+@app.route('/admin/fee-structure')
+@permission_required('sessions.manage')
+def admin_fee_structures():
+    session_id = request.args.get('session_id', type=int)
+    rows = list_fee_structures(session_id=session_id)
+    return render_template(
+        'admin/fee_structures.html', rows=rows,
+        sessions=list_sessions(), selected_session_id=session_id,
+    )
+
+
+@app.route('/admin/fee-structure/new', methods=['GET', 'POST'])
+@permission_required('sessions.manage')
+def admin_fee_structure_new():
+    sessions = list_sessions()
+    session_id = request.args.get('session_id', type=int) or request.form.get('academic_session_id', type=int)
+    selected_session = get_session(session_id) if session_id else None
+    semesters = list_semesters_for_programme(selected_session.programme) if selected_session else []
+    departments = list_active_departments()
+    categories = PaymentCategory.query.filter_by(is_active=True).order_by(PaymentCategory.name).all()
+
+    if request.method == 'GET' or selected_session is None:
+        return render_template(
+            'admin/fee_structure_form.html', row=None, sessions=sessions,
+            selected_session=selected_session, semesters=semesters,
+            departments=departments, categories=categories,
+        )
+
+    semester_id = request.form.get('semester_id', type=int) or None
+    department_id = request.form.get('department_id', type=int) or None
+    category_id = request.form.get('category_id', type=int)
+    amount = request.form.get('amount', type=float)
+
+    if not category_id or amount is None:
+        flash('Category and amount are required.')
+        return render_template(
+            'admin/fee_structure_form.html', row=None, sessions=sessions,
+            selected_session=selected_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+        )
+    if not is_fee_structure_scope_unique(selected_session.id, semester_id, department_id, category_id):
+        flash('A fee structure row for this exact session/semester/department/category combination already exists.')
+        return render_template(
+            'admin/fee_structure_form.html', row=None, sessions=sessions,
+            selected_session=selected_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+        )
+
+    row = create_fee_structure(selected_session.id, semester_id, department_id, category_id, amount)
+    log_admin_action(current_user, 'fee_structure_created', target_type='fee_structure', target_id=row.id,
+                      details=f'session_id={selected_session.id} semester_id={semester_id} department_id={department_id} category_id={category_id} amount={amount}',
+                      ip_address=request.remote_addr)
+    flash('Fee structure row created.')
+    return redirect(url_for('admin_fee_structures', session_id=selected_session.id))
+
+
+@app.route('/admin/fee-structure/<int:fee_structure_id>/edit', methods=['GET', 'POST'])
+@permission_required('sessions.manage')
+def admin_fee_structure_edit(fee_structure_id):
+    row = get_fee_structure(fee_structure_id)
+    semesters = list_semesters_for_programme(row.academic_session.programme)
+    departments = list_active_departments()
+    categories = PaymentCategory.query.filter_by(is_active=True).order_by(PaymentCategory.name).all()
+
+    if request.method == 'GET':
+        return render_template(
+            'admin/fee_structure_form.html', row=row, sessions=None,
+            selected_session=row.academic_session, semesters=semesters,
+            departments=departments, categories=categories,
+        )
+
+    semester_id = request.form.get('semester_id', type=int) or None
+    department_id = request.form.get('department_id', type=int) or None
+    category_id = request.form.get('category_id', type=int)
+    amount = request.form.get('amount', type=float)
+
+    if not category_id or amount is None:
+        flash('Category and amount are required.')
+        return render_template(
+            'admin/fee_structure_form.html', row=row, sessions=None,
+            selected_session=row.academic_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+        )
+    if not is_fee_structure_scope_unique(row.academic_session_id, semester_id, department_id, category_id, exclude_id=row.id):
+        flash('A fee structure row for this exact session/semester/department/category combination already exists.')
+        return render_template(
+            'admin/fee_structure_form.html', row=row, sessions=None,
+            selected_session=row.academic_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+        )
+
+    update_fee_structure(fee_structure_id, semester_id, department_id, category_id, amount)
+    log_admin_action(current_user, 'fee_structure_updated', target_type='fee_structure', target_id=fee_structure_id,
+                      details=f'semester_id={semester_id} department_id={department_id} category_id={category_id} amount={amount}',
+                      ip_address=request.remote_addr)
+    flash('Fee structure row updated.')
+    return redirect(url_for('admin_fee_structures', session_id=row.academic_session_id))
+
+
+@app.route('/admin/fee-structure/<int:fee_structure_id>/delete', methods=['POST'])
+@permission_required('sessions.manage')
+def admin_fee_structure_delete(fee_structure_id):
+    row = get_fee_structure(fee_structure_id)
+    session_id = row.academic_session_id
+    delete_fee_structure(fee_structure_id)
+    log_admin_action(current_user, 'fee_structure_deleted', target_type='fee_structure', target_id=fee_structure_id,
+                      details=f'session_id={session_id}', ip_address=request.remote_addr)
+    flash('Fee structure row deleted.')
+    return redirect(url_for('admin_fee_structures', session_id=session_id))
 
 
 @app.route('/admin/registration/open')

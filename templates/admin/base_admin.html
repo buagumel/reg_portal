@@ -25,6 +25,7 @@
                 <li><a href="{{ url_for('admin_courses') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_course') and not request.endpoint.startswith('admin_course_catalog') }}"><i class="fas fa-book"></i> Courses</a></li>
                 <li><a href="{{ url_for('admin_course_catalog') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_course_catalog') }}"><i class="fas fa-book-open"></i> Course Catalog</a></li>
                 <li><a href="{{ url_for('admin_registration_oversight') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_registration') }}"><i class="fas fa-door-open"></i> Registration</a></li>
+                <li><a href="{{ url_for('admin_fee_structures') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_fee_structure') }}"><i class="fas fa-money-bill-wave"></i> Fee Structure</a></li>
                 <li><a href="{{ url_for('admin_stub_announcements_new') }}"><i class="fas fa-bullhorn"></i> Announcements</a></li>
                 <li><a href="{{ url_for('admin_export_center') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin_export') }}"><i class="fas fa-file-export"></i> Export</a></li>
                 <li><a href="{{ url_for('admin_stub_reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>

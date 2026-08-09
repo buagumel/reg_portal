@@ -1,0 +1,52 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Fee Structure{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <form method="GET" style="display:flex; gap:0.6rem;">
+        <select name="session_id" onchange="this.form.submit()" style="padding:0.5rem 0.8rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+            <option value="">All Sessions</option>
+            {% for s in sessions %}
+            <option value="{{ s.id }}" {{ 'selected' if selected_session_id == s.id }}>{{ s.name }}{{ ' (' + s.programme.name + ')' if s.programme else ' (Shared / Legacy)' }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <a href="{{ url_for('admin_fee_structure_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Fee Structure Row</a>
+</div>
+
+<div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding:0.8rem;">Session</th>
+                <th style="padding:0.8rem;">Semester</th>
+                <th style="padding:0.8rem;">Department</th>
+                <th style="padding:0.8rem;">Category</th>
+                <th style="padding:0.8rem;">Amount</th>
+                <th style="padding:0.8rem;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding:0.8rem;">{{ row.academic_session.name }}{{ ' (' + row.programme.name + ')' if row.programme else '' }}</td>
+                <td style="padding:0.8rem;">{{ row.semester.name if row.semester else 'All semesters' }}</td>
+                <td style="padding:0.8rem;">{{ row.department.name if row.department else 'All departments' }}</td>
+                <td style="padding:0.8rem;">{{ row.category.name }}</td>
+                <td style="padding:0.8rem;">₦{{ '{:,.2f}'.format(row.amount) }}</td>
+                <td style="padding:0.8rem; text-align:right;">
+                    <a href="{{ url_for('admin_fee_structure_edit', fee_structure_id=row.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
+                    <form method="POST" action="{{ url_for('admin_fee_structure_delete', fee_structure_id=row.id) }}" style="display:inline;" onsubmit="return confirm('Delete this fee structure row?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="padding:2rem; text-align:center; color: var(--text-muted);">No fee structure overrides yet — every category falls back to its default amount for every student.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

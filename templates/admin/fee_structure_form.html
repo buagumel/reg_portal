@@ -1,0 +1,63 @@
+{% extends "admin/base_admin.html" %}
+
+{% block breadcrumbs %}Fee Structure / {{ 'Edit' if row else 'New' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:560px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+    <h2 style="margin-top:0;">{{ 'Edit Fee Structure Row' if row else 'New Fee Structure Row' }}</h2>
+
+    {% if not selected_session %}
+    <form method="GET">
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Session</label>
+            <select name="session_id" required onchange="this.form.submit()" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                <option value="">Select a session…</option>
+                {% for s in sessions %}
+                <option value="{{ s.id }}">{{ s.name }}{{ ' (' + s.programme.name + ')' if s.programme else ' (Shared / Legacy)' }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+    {% else %}
+    <p style="color: var(--text-muted); font-size:0.85rem; margin-top:-0.5rem; margin-bottom:1rem;">Session: {{ selected_session.name }}{{ ' — ' + selected_session.programme.name if selected_session.programme else ' — Shared / Legacy' }}</p>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="academic_session_id" value="{{ selected_session.id }}">
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Semester</label>
+            <select name="semester_id" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                <option value="">All semesters</option>
+                {% for sem in semesters %}
+                <option value="{{ sem.id }}" {{ 'selected' if row and row.semester_id == sem.id }}>{{ sem.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Department</label>
+            <select name="department_id" style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                <option value="">All departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}" {{ 'selected' if row and row.department_id == dept.id }}>{{ dept.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Category</label>
+            <select name="category_id" required style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main);">
+                <option value="">Select a category…</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {{ 'selected' if row and row.category_id == cat.id }}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; margin-bottom:0.3rem; font-weight:600;">Amount (₦)</label>
+            <input type="number" step="0.01" name="amount" required value="{{ row.amount if row else '' }}"
+                   style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
+        </div>
+        <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">{{ 'Save Changes' if row else 'Create' }}</button>
+        <a href="{{ url_for('admin_fee_structures', session_id=selected_session.id) }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
