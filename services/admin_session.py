@@ -138,20 +138,46 @@ def update_period(period_id, **fields):
 
 
 def activate_period(period_id):
-    """The single-active-session-and-semester enforcement point. Deactivates
-    every other RegistrationPeriod, marks this period's session as current
-    and 'open', and closes any other session that was previously current."""
+    """The single-active-period-per-Programme-scope-group enforcement point.
+    A scope group is a Programme, or None for the shared/legacy group.
+    Deactivates every other RegistrationPeriod in the same scope group,
+    marks this period's session current/open, and closes any other
+    currently-current session in the same scope group. Periods/sessions in
+    a DIFFERENT scope group are untouched — this is what lets different
+    Programmes run independent registration schedules. Since every period
+    today is unscoped (programme_id=None on its session), this preserves
+    the exact pre-existing institution-wide behavior for anything not yet
+    Programme-scoped."""
     period = get_period(period_id)
+    programme_id = period.academic_session.programme_id
 
-    RegistrationPeriod.query.filter(RegistrationPeriod.id != period_id).update(
-        {'is_active': False}, synchronize_session=False
+    # Resolve the scope group's session IDs first, then filter by
+    # academic_session_id.in_(...) rather than joining AcademicSession
+    # directly into the RegistrationPeriod bulk .update() query — SQLAlchemy's
+    # Query.update() does not reliably support joined multi-table updates.
+    scope_session_ids_query = db.session.query(AcademicSession.id)
+    scope_session_ids_query = (
+        scope_session_ids_query.filter(AcademicSession.programme_id == programme_id)
+        if programme_id is not None
+        else scope_session_ids_query.filter(AcademicSession.programme_id.is_(None))
     )
+
+    RegistrationPeriod.query.filter(
+        RegistrationPeriod.id != period_id,
+        RegistrationPeriod.academic_session_id.in_(scope_session_ids_query),
+    ).update({'is_active': False}, synchronize_session=False)
     period.is_active = True
 
-    AcademicSession.query.filter(
+    same_scope_sessions = AcademicSession.query.filter(
         AcademicSession.id != period.academic_session_id,
         AcademicSession.is_current == True,
-    ).update({'is_current': False, 'status': 'closed'}, synchronize_session=False)
+    )
+    same_scope_sessions = (
+        same_scope_sessions.filter(AcademicSession.programme_id == programme_id)
+        if programme_id is not None
+        else same_scope_sessions.filter(AcademicSession.programme_id.is_(None))
+    )
+    same_scope_sessions.update({'is_current': False, 'status': 'closed'}, synchronize_session=False)
 
     session_obj = get_session(period.academic_session_id)
     session_obj.is_current = True

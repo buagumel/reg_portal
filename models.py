@@ -224,6 +224,10 @@ class CourseOffering(db.Model):
     department_ref = db.relationship('Department', foreign_keys=[department_id])
     course = db.relationship('Course', backref='offerings')
 
+    @property
+    def programme(self):
+        return self.academic_session.programme if self.academic_session else None
+
 
 class RegisteredCourse(db.Model):
     __tablename__ = 'registered_courses'
