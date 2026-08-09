@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, abort
 from flask_login import login_user, LoginManager, current_user, logout_user, login_required
+import math
 import os
 import time
 import uuid
@@ -41,7 +42,7 @@ from services.payment import (
     retry_verification, cancel_payment, get_payment_history,
     get_summary_counts as get_payment_summary_counts,
 )
-from services.fee_structure import get_payable_categories, resolve_amount
+from services.fee_structure import get_payable_categories, resolve_amount, list_general_flow_categories, NON_GENERAL_FLOW_CATEGORY_CODES
 from services.admin_fee_structure import (
     list_fee_structures, get_fee_structure, create_fee_structure,
     update_fee_structure, delete_fee_structure,
@@ -688,6 +689,16 @@ def payment_resend_receipt(reference):
 @app.route('/payment/create', methods=['GET'])
 @login_required
 def payment_create_page():
+    # Student-only: fee resolution reads user.programme_id/department_id,
+    # which AdminUser doesn't have. Nothing currently links here for an
+    # admin session, but enforce_onboarding_gate's before_request hook
+    # explicitly exempts AdminUser from its gate, so this route is
+    # reachable by one in principle (the shared LoginManager resolves both
+    # User and AdminUser sessions) — guard explicitly rather than rely on
+    # that never happening. Same isinstance(current_user, AdminUser)
+    # pattern used elsewhere in this file (e.g. enforce_onboarding_gate).
+    if isinstance(current_user, AdminUser):
+        return redirect(url_for('admin_dashboard'))
     payable = get_payable_categories(current_user)
     idempotency_key = str(uuid.uuid4())
     return render_template('payment_create.html', payable=payable, idempotency_key=idempotency_key)
@@ -696,6 +707,8 @@ def payment_create_page():
 @app.route('/payment/create', methods=['POST'])
 @login_required
 def payment_create_submit():
+    if isinstance(current_user, AdminUser):
+        return jsonify({'success': False, 'message': 'Not available for admin sessions.'}), 403
     data = request.get_json() or {}
     idempotency_key = data.get('idempotency_key', '')
     selections = data.get('items', [])
@@ -711,7 +724,11 @@ def payment_create_submit():
     for sel in selections:
         if not isinstance(sel, dict):
             continue
-        category = PaymentCategory.query.filter_by(id=sel.get('category_id'), is_active=True).first()
+        category = PaymentCategory.query.filter(
+            PaymentCategory.id == sel.get('category_id'),
+            PaymentCategory.is_active == True,
+            PaymentCategory.code.notin_(NON_GENERAL_FLOW_CATEGORY_CODES),
+        ).first()
         if category is None:
             continue
         amount = resolve_amount(current_user, category)
@@ -2608,16 +2625,15 @@ def admin_fee_structure_new():
     selected_session = get_session(session_id) if session_id else None
     semesters = list_semesters_for_programme(selected_session.programme) if selected_session else []
     departments = list_active_departments()
-    # registration_fee is deliberately excluded here: it's charged and
-    # reconciled exclusively through register_student()/DepartmentRegistrationRule
-    # (registration_id-linked), never through the general /payment/create flow.
-    # A FeeStructure row targeting it would still resolve a real amount and
-    # surface as payable there, but paying it would never mark any
-    # StudentRegistration as paid — an unreconcilable charge. See
-    # get_payable_categories()'s matching defensive exclusion.
-    categories = PaymentCategory.query.filter_by(is_active=True).filter(
-        PaymentCategory.code != 'registration_fee'
-    ).order_by(PaymentCategory.name).all()
+    # registration_fee is excluded from this list — see
+    # NON_GENERAL_FLOW_CATEGORY_CODES in services/fee_structure.py: it's
+    # charged and reconciled exclusively through register_student()/
+    # DepartmentRegistrationRule (registration_id-linked), never through the
+    # general /payment/create flow. A FeeStructure row targeting it would
+    # still resolve a real amount and surface as payable there, but paying
+    # it would never mark any StudentRegistration as paid — an
+    # unreconcilable charge.
+    categories = list_general_flow_categories()
 
     if request.method == 'GET' or selected_session is None:
         return render_template(
@@ -2631,8 +2647,38 @@ def admin_fee_structure_new():
     category_id = request.form.get('category_id', type=int)
     amount = request.form.get('amount', type=float)
 
-    if not category_id or amount is None:
-        flash('Category and amount are required.')
+    if not category_id or amount is None or not math.isfinite(amount) or amount <= 0:
+        flash('Category and a positive amount are required.')
+        return render_template(
+            'admin/fee_structure_form.html', row=None, sessions=sessions,
+            selected_session=selected_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+        )
+    if semester_id is not None and semester_id not in {s.id for s in semesters}:
+        # Backstop against a crafted/stale request posting a semester_id
+        # outside what's actually offered (the Programme-filtered set) —
+        # same pattern as admin_fee_structure_edit and admin_period_new.
+        flash("Selected semester is not valid for this session's programme.")
+        return render_template(
+            'admin/fee_structure_form.html', row=None, sessions=sessions,
+            selected_session=selected_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+        )
+    if department_id is not None and department_id not in {d.id for d in departments}:
+        # Same backstop for department_id.
+        flash('Selected department is not valid.')
+        return render_template(
+            'admin/fee_structure_form.html', row=None, sessions=sessions,
+            selected_session=selected_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+        )
+    if category_id not in {c.id for c in categories}:
+        # Backstop against a crafted request posting a category_id outside
+        # the offered (active, general-flow-payable) set — e.g.
+        # registration_fee's id. This is what actually prevents such a row
+        # from being creatable; payment_create_submit's matching exclusion
+        # is only the second line of defense.
+        flash('Selected category is not valid.')
         return render_template(
             'admin/fee_structure_form.html', row=None, sessions=sessions,
             selected_session=selected_session, semesters=semesters,
@@ -2681,14 +2727,10 @@ def admin_fee_structure_edit(fee_structure_id):
         departments = departments + [row.department]
         mismatched_department_id = row.department_id
 
-    # registration_fee is deliberately excluded here: it's charged and
-    # reconciled exclusively through register_student()/DepartmentRegistrationRule
-    # (registration_id-linked), never through the general /payment/create flow.
-    # See the matching exclusion in admin_fee_structure_new and the defensive
-    # exclusion in get_payable_categories().
-    categories = PaymentCategory.query.filter_by(is_active=True).filter(
-        PaymentCategory.code != 'registration_fee'
-    ).order_by(PaymentCategory.name).all()
+    # registration_fee is excluded from this list — see
+    # NON_GENERAL_FLOW_CATEGORY_CODES in services/fee_structure.py, and the
+    # matching exclusion in admin_fee_structure_new.
+    categories = list_general_flow_categories()
 
     if request.method == 'GET':
         return render_template(
@@ -2704,8 +2746,8 @@ def admin_fee_structure_edit(fee_structure_id):
     category_id = request.form.get('category_id', type=int)
     amount = request.form.get('amount', type=float)
 
-    if not category_id or amount is None:
-        flash('Category and amount are required.')
+    if not category_id or amount is None or not math.isfinite(amount) or amount <= 0:
+        flash('Category and a positive amount are required.')
         return render_template(
             'admin/fee_structure_form.html', row=row, sessions=None,
             selected_session=row.academic_session, semesters=semesters,
@@ -2735,6 +2777,18 @@ def admin_fee_structure_edit(fee_structure_id):
             mismatched_semester_id=mismatched_semester_id,
             mismatched_department_id=mismatched_department_id,
         )
+    if category_id not in {c.id for c in categories}:
+        # Backstop against a crafted request posting a category_id outside
+        # the offered (active, general-flow-payable) set — e.g.
+        # registration_fee's id. Same reasoning as admin_fee_structure_new.
+        flash('Selected category is not valid.')
+        return render_template(
+            'admin/fee_structure_form.html', row=row, sessions=None,
+            selected_session=row.academic_session, semesters=semesters,
+            departments=departments, categories=categories, form=request.form,
+            mismatched_semester_id=mismatched_semester_id,
+            mismatched_department_id=mismatched_department_id,
+        )
     if not is_fee_structure_scope_unique(row.academic_session_id, semester_id, department_id, category_id, exclude_id=row.id):
         flash('A fee structure row for this exact session/semester/department/category combination already exists.')
         return render_template(
@@ -2757,10 +2811,16 @@ def admin_fee_structure_edit(fee_structure_id):
 @permission_required('sessions.manage')
 def admin_fee_structure_delete(fee_structure_id):
     row = get_fee_structure(fee_structure_id)
+    # Capture the full scope/amount before delete_fee_structure() destroys
+    # the row — otherwise the audit trail can never reconstruct what
+    # override existed before this deletion (unlike the create/update log
+    # entries, which capture all of it).
     session_id = row.academic_session_id
+    details = (f'session_id={session_id} semester_id={row.semester_id} '
+               f'department_id={row.department_id} category_id={row.category_id} amount={row.amount}')
     delete_fee_structure(fee_structure_id)
     log_admin_action(current_user, 'fee_structure_deleted', target_type='fee_structure', target_id=fee_structure_id,
-                      details=f'session_id={session_id}', ip_address=request.remote_addr)
+                      details=details, ip_address=request.remote_addr)
     flash('Fee structure row deleted.')
     return redirect(url_for('admin_fee_structures', session_id=session_id))
 

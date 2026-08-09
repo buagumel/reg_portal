@@ -6,7 +6,8 @@ def list_fee_structures(session_id=None):
     if session_id is not None:
         query = query.filter(FeeStructure.academic_session_id == session_id)
     return query.join(AcademicSession).order_by(
-        AcademicSession.start_date.desc().nullslast(), FeeStructure.category_id
+        AcademicSession.start_date.desc().nullslast(), FeeStructure.category_id,
+        FeeStructure.id,
     ).all()
 
 

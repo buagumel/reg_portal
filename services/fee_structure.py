@@ -1,6 +1,27 @@
 from models import db, AcademicSession, PaymentCategory, FeeStructure
 from services.registration import get_active_period
 
+# Categories that are never payable through the general /payment/create flow.
+# registration_fee is charged and reconciled exclusively through
+# register_student()/DepartmentRegistrationRule (which links payment_status
+# back to a specific StudentRegistration via registration_id) — the general
+# /payment/create flow never sets registration_id, so a payment made through
+# it would charge real money without ever being able to mark a registration
+# as paid. This is the single shared source of that exclusion: every place
+# that lists payable/selectable categories (the admin Fee Structure
+# new/edit forms, get_payable_categories, and payment_create_submit's own
+# category lookup) filters through it, so a future call site can't omit the
+# guard by copy-pasting an inline filter and missing one.
+NON_GENERAL_FLOW_CATEGORY_CODES = {'registration_fee'}
+
+
+def list_general_flow_categories():
+    """Active PaymentCategory rows payable through the general
+    /payment/create flow. See NON_GENERAL_FLOW_CATEGORY_CODES."""
+    return PaymentCategory.query.filter_by(is_active=True).filter(
+        PaymentCategory.code.notin_(NON_GENERAL_FLOW_CATEGORY_CODES)
+    ).order_by(PaymentCategory.name).all()
+
 
 def get_current_session(user=None):
     """AcademicSession-level analog of get_active_period(): returns the
@@ -9,8 +30,11 @@ def get_current_session(user=None):
     programme_id or their Programme has no current session of its own.
     user=None (or a user whose scope group and the legacy group both lack
     a current session) returns the shared/legacy current session, or None
-    if even that doesn't exist."""
-    if user is not None and user.programme_id is not None:
+    if even that doesn't exist. Uses getattr for programme_id since this is
+    also reachable with an AdminUser (no role-specific guard on
+    /payment/create — Flask-Login resolves both User and AdminUser through
+    the same session), which has no programme_id column."""
+    if user is not None and getattr(user, 'programme_id', None) is not None:
         programme_session = AcademicSession.query.filter(
             AcademicSession.is_current == True,
             AcademicSession.programme_id == user.programme_id,
@@ -49,10 +73,12 @@ def resolve_amount(user, category):
     category.default_amount when no row matches (or the user has no
     resolvable current session at all). A user with no department_id can
     only match NULL-department rows — never silently charged a
-    department-specific amount without a resolved department."""
+    department-specific amount without a resolved department. Uses getattr
+    for department_id for the same AdminUser-reachability reason as
+    get_current_session."""
     session, semester_id = resolve_fee_context(user)
     if session is not None:
-        department_id = user.department_id
+        department_id = getattr(user, 'department_id', None)
         candidates = [(semester_id, department_id), (semester_id, None)]
         if department_id is not None:
             candidates.append((None, department_id))
@@ -80,20 +106,13 @@ def get_payable_categories(user):
     DepartmentRegistrationRule instead) is excluded, exactly matching the
     pre-existing `if category.default_amount is not None` filter.
 
-    registration_fee is additionally excluded unconditionally, even if a
-    FeeStructure row targeting it exists (the admin UI no longer allows
-    creating one, but this is a defensive backstop for any pre-existing
-    stray row or direct DB access). registration_fee is charged and
-    reconciled exclusively through register_student()/
-    DepartmentRegistrationRule (which links payment_status back to a
-    specific StudentRegistration via registration_id) — the general
-    /payment/create flow never sets registration_id, so a payment made
-    through it would charge real money without ever being able to mark a
-    registration as paid."""
+    Uses list_general_flow_categories(), so registration_fee is excluded
+    unconditionally, even if a FeeStructure row targeting it exists (the
+    admin UI no longer allows creating one — see NON_GENERAL_FLOW_CATEGORY_CODES
+    — but this is a defensive backstop for any pre-existing stray row or
+    direct DB access)."""
     result = []
-    categories = PaymentCategory.query.filter_by(is_active=True).filter(
-        PaymentCategory.code != 'registration_fee'
-    ).order_by(PaymentCategory.name).all()
+    categories = list_general_flow_categories()
     for category in categories:
         amount = resolve_amount(user, category)
         if amount is not None:
