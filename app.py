@@ -11,9 +11,7 @@ from models import (
     db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos, Programme,
     RegistrationPeriod,
 )
-from constants_file import (
-    SECRET_KEY, MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD
-)
+from config import Config
 from auth_helpers import get_gate_redirect, validate_password_strength, is_valid_email
 from onboarding_helpers import (
     start_otp_session, register_failed_otp_attempt, otp_attempts_exceeded,
@@ -101,15 +99,7 @@ from services.student_import import import_students_csv, preview_students_csv
 from models import StudentImportJob
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = SECRET_KEY
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['PAYMENT_GATEWAY_MODE'] = 'remita'
-app.config['MAIL_SERVER'] = MAIL_SERVER 
-app.config['MAIL_PORT'] = 587                           
-app.config['MAIL_USE_TLS'] = True                      
-app.config['MAIL_USERNAME'] = MAIL_USERNAME   
-app.config['MAIL_PASSWORD'] =  MAIL_PASSWORD       
-app.config['MAIL_DEFAULT_SENDER'] = ("JSPICT, Kazaure", app.config['MAIL_USERNAME'])
+app.config.from_object(Config)
 
 ADMIN_SESSION_TIMEOUT_SECONDS = 15 * 60
 

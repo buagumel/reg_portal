@@ -2,12 +2,9 @@ import hashlib
 import json
 
 import requests
+from flask import current_app
 
 from models import db, GatewayResponse
-from constants_file import (
-    REMITA_MERCHANT_ID, REMITA_API_KEY, REMITA_SERVICE_TYPE_ID,
-    REMITA_BASE_URL, REMITA_CHECKOUT_BASE_URL,
-)
 
 
 class GatewayError(Exception):
@@ -31,7 +28,8 @@ def _log_response(payment, raw_payload):
 
 
 def build_checkout_url(rrr):
-    return f'{REMITA_CHECKOUT_BASE_URL}?rrr={rrr}&channel=CARD,USSD,ENAIRA,TRANSFER'
+    checkout_base_url = current_app.config['REMITA_CHECKOUT_BASE_URL']
+    return f'{checkout_base_url}?rrr={rrr}&channel=CARD,USSD,ENAIRA,TRANSFER'
 
 
 class RemitaGateway(PaymentGateway):
@@ -42,13 +40,18 @@ class RemitaGateway(PaymentGateway):
     so a mismatch is debuggable rather than silently swallowed."""
 
     def initiate(self, payment, payer):
+        merchant_id = current_app.config['REMITA_MERCHANT_ID']
+        api_key = current_app.config['REMITA_API_KEY']
+        service_type_id = current_app.config['REMITA_SERVICE_TYPE_ID']
+        base_url = current_app.config['REMITA_BASE_URL']
+
         order_id = payment.reference
         amount = str(payment.total_amount)
-        hash_input = f'{REMITA_MERCHANT_ID}{REMITA_SERVICE_TYPE_ID}{order_id}{amount}{REMITA_API_KEY}'
+        hash_input = f'{merchant_id}{service_type_id}{order_id}{amount}{api_key}'
         api_hash = hashlib.sha512(hash_input.encode('utf-8')).hexdigest()
 
         payload = {
-            'serviceTypeId': REMITA_SERVICE_TYPE_ID,
+            'serviceTypeId': service_type_id,
             'amount': amount,
             'orderId': order_id,
             'payerName': payer['name'],
@@ -60,12 +63,12 @@ class RemitaGateway(PaymentGateway):
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': f'remitaConsumerKey={REMITA_MERCHANT_ID},remitaConsumerToken={api_hash}',
+            'Authorization': f'remitaConsumerKey={merchant_id},remitaConsumerToken={api_hash}',
         }
 
         try:
             response = requests.post(
-                f'{REMITA_BASE_URL}/echannelsvc/merchant/api/paymentinit',
+                f'{base_url}/echannelsvc/merchant/api/paymentinit',
                 json=payload, headers=headers, timeout=10,
             )
             data = response.json()
@@ -82,9 +85,13 @@ class RemitaGateway(PaymentGateway):
         return {'rrr': rrr, 'checkout_url': build_checkout_url(rrr), 'raw': data}
 
     def verify(self, payment):
-        hash_input = f'{payment.rrr}{REMITA_API_KEY}{REMITA_MERCHANT_ID}'
+        merchant_id = current_app.config['REMITA_MERCHANT_ID']
+        api_key = current_app.config['REMITA_API_KEY']
+        base_url = current_app.config['REMITA_BASE_URL']
+
+        hash_input = f'{payment.rrr}{api_key}{merchant_id}'
         api_hash = hashlib.sha512(hash_input.encode('utf-8')).hexdigest()
-        url = f'{REMITA_BASE_URL}/echannelsvc/{REMITA_MERCHANT_ID}/{payment.rrr}/{api_hash}/status.reg'
+        url = f'{base_url}/echannelsvc/{merchant_id}/{payment.rrr}/{api_hash}/status.reg'
 
         try:
             response = requests.get(url, timeout=10)
