@@ -5,13 +5,15 @@ Usage: python seed_dev_data.py
 """
 from datetime import date, timedelta
 
-from app import app
+from app import create_app
 from models import (
     db, User, now_lagos,
     AcademicSession, Semester, RegistrationPeriod, DepartmentRegistrationRule, StudentRegistration, Course, CourseOffering,
     Notification, PaymentCategory, Payment,
     AdminRole, Permission, AdminUser, Programme, ProgrammeDepartment,
 )
+
+app = create_app()
 
 DEFAULT_PASSWORD = "Default@123"
 

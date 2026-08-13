@@ -17,7 +17,14 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from app import app as flask_app  # noqa: E402
+from app import create_app  # noqa: E402
+from conftest import TestConfig  # noqa: E402
+
+# A throwaway app just to read its route table at collection time. Must use
+# TestConfig (in-memory DB), not the default Config — create_app() always
+# runs db.create_all() against whatever SQLALCHEMY_DATABASE_URI is
+# configured, and this module is imported on every pytest run.
+flask_app = create_app(TestConfig)
 
 ALLOWED_STATUSES = {200, 302, 403}
 

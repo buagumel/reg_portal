@@ -1,14 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, abort
-from flask_login import login_user, LoginManager, current_user, logout_user, login_required
+from flask import Flask, current_app, render_template, request, redirect, url_for, flash, jsonify, session, Response, abort
+from flask_login import login_user, current_user, logout_user, login_required
 import math
 import os
 import time
 import uuid
-from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect, generate_csrf
-from extensions import mail, Message
+from extensions import db, migrate, csrf, mail, login_manager, Message
 from models import (
-    db, User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos, Programme,
+    User, RegisteredCourse, StudentRegistration, Payment, PaymentCategory, AdminUser, now_lagos, Programme,
     RegistrationPeriod,
 )
 from config import Config
@@ -98,23 +96,21 @@ from services.admin_student import (
 from services.student_import import import_students_csv, preview_students_csv
 from models import StudentImportJob
 
-app = Flask(__name__)
-app.config.from_object(Config)
-
 ADMIN_SESSION_TIMEOUT_SECONDS = 15 * 60
 
-mail.init_app(app)
-db.init_app(app)
+_deferred_routes = []
 
-with app.app_context():
-    db.create_all()
-
-migrate = Migrate(app, db) 
-csrf = CSRFProtect(app)
-
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'   # redirect to this view if not logged in
-login_manager.login_message = "Please log in to access this page."
+def route(rule, **options):
+    """Defers @app.route-style registration until create_app() builds the real
+    app. Endpoint defaults to view_func.__name__, identical to what @app.route
+    produces — so none of the existing url_for(...) call sites,
+    login_manager.login_view, or endpoint-keyed test code need to change. (A
+    real Blueprint can't do this: Flask unconditionally prefixes every
+    blueprint route's endpoint with the blueprint's name.)"""
+    def decorator(view_func):
+        _deferred_routes.append((rule, view_func, options))
+        return view_func
+    return decorator
 
 @login_manager.user_loader
 def load_user(idn):
@@ -135,7 +131,6 @@ def endpoint_name(request):
         return None
     return request.endpoint.rsplit('.', 1)[-1]
 
-@app.before_request
 def enforce_onboarding_gate():
     if not current_user.is_authenticated:
         return None
@@ -161,7 +156,6 @@ def enforce_onboarding_gate():
 
     return jsonify({'success': False, 'message': 'Please complete the required step before continuing.'}), 403
 
-@app.before_request
 def enforce_admin_session_timeout():
     if not current_user.is_authenticated or not isinstance(current_user, AdminUser):
         return None
@@ -184,13 +178,12 @@ def enforce_admin_session_timeout():
 
     return None
 
-@app.context_processor
 def inject_unread_notification_count():
     if current_user.is_authenticated:
         return {'unread_notification_count': get_summary_counts(current_user)['unread']}
     return {}
 
-@app.route('/update-profile', methods=['POST'])
+@route('/update-profile', methods=['POST'])
 @login_required
 def update_profile():
     data = request.get_json()
@@ -217,14 +210,14 @@ def update_profile():
         'email': current_user.email,
     })
 
-@app.route('/profile/picture', methods=['POST'])
+@route('/profile/picture', methods=['POST'])
 @login_required
 def profile_picture_upload():
     file_storage = request.files.get('profile_picture')
     if not file_storage:
         return jsonify({'success': False, 'message': 'No file provided.'}), 400
 
-    upload_folder = os.path.join(app.static_folder, 'uploads')
+    upload_folder = os.path.join(current_app.static_folder, 'uploads')
     try:
         update_profile_picture(current_user, file_storage, upload_folder)
     except ValueError as e:
@@ -237,18 +230,18 @@ def profile_picture_upload():
     })
 
 
-@app.route('/profile/picture/delete', methods=['POST'])
+@route('/profile/picture/delete', methods=['POST'])
 @login_required
 def profile_picture_delete():
     try:
-        delete_profile_picture(current_user, app.static_folder)
+        delete_profile_picture(current_user, current_app.static_folder)
     except ValueError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
 
     return jsonify({'success': True, 'message': 'Profile picture removed.'})
 
 
-@app.route('/change-password', methods=['POST'])
+@route('/change-password', methods=['POST'])
 @login_required
 def change_password():
     data = request.get_json()
@@ -266,7 +259,7 @@ def change_password():
 
     return jsonify({'success': True, 'message': 'Password changed successfully'})
 
-@app.route('/force-password-change', methods=['GET', 'POST'])
+@route('/force-password-change', methods=['GET', 'POST'])
 @login_required
 def force_password_change():
     if request.method == 'GET':
@@ -297,7 +290,7 @@ def force_password_change():
     redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
     return jsonify({'success': True, 'message': 'Password changed successfully.', 'redirect': url_for(redirect_endpoint)})
 
-@app.route('/onboarding')
+@route('/onboarding')
 @login_required
 def onboarding():
     target = get_gate_redirect(current_user)
@@ -305,7 +298,7 @@ def onboarding():
         return redirect(url_for(target or 'dashboard'))
     return render_template('onboarding.html')
 
-@app.route('/onboarding/save-info', methods=['POST'])
+@route('/onboarding/save-info', methods=['POST'])
 @login_required
 def onboarding_save_info():
     if get_gate_redirect(current_user) != 'onboarding':
@@ -333,7 +326,7 @@ def onboarding_save_info():
 
     picture_path, picture_error = save_profile_picture(
         picture, current_user.reg_no,
-        os.path.join(app.static_folder, 'uploads')
+        os.path.join(current_app.static_folder, 'uploads')
     )
     if picture_error:
         errors['profile_picture'] = picture_error
@@ -351,7 +344,7 @@ def onboarding_save_info():
 
     return jsonify({'success': True, 'message': 'Information saved.'})
 
-@app.route('/onboarding/complete', methods=['POST'])
+@route('/onboarding/complete', methods=['POST'])
 @login_required
 def onboarding_complete():
     if get_gate_redirect(current_user) != 'onboarding':
@@ -375,11 +368,11 @@ def onboarding_complete():
         msg.body = f'Hi {current_user.name},\n\nYour profile setup is complete. Welcome to the JSPICT Student Portal!'
         mail.send(msg)
     except Exception:
-        app.logger.warning('Failed to send welcome email to %s', current_user.email)
+        current_app.logger.warning('Failed to send welcome email to %s', current_user.email)
 
     return jsonify({'success': True, 'message': 'Onboarding complete!', 'redirect': url_for('dashboard')})
 
-@app.route('/login', methods=['GET', 'POST'])
+@route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
@@ -428,7 +421,7 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/')
+@route('/')
 @login_required
 def dashboard():
     notify_registration_window_events(current_user)
@@ -452,7 +445,7 @@ def dashboard():
 
 
 
-@app.route('/logout')
+@route('/logout')
 @login_required
 def logout():
     logout_user()
@@ -460,12 +453,12 @@ def logout():
 
 
 
-@app.route('/profile')
+@route('/profile')
 @login_required
 def profile():
     return render_template('profile.html', profile_display=get_profile_display(current_user))
 
-@app.route('/announcements')
+@route('/announcements')
 @login_required
 def announcements():
     return render_template(
@@ -475,7 +468,7 @@ def announcements():
     )
 
 
-@app.route('/notifications/data')
+@route('/notifications/data')
 @login_required
 def notifications_data():
     category = request.args.get('category') or None
@@ -507,7 +500,7 @@ def notifications_data():
     })
 
 
-@app.route('/notifications/<int:notification_id>/read', methods=['POST'])
+@route('/notifications/<int:notification_id>/read', methods=['POST'])
 @login_required
 def notification_mark_read(notification_id):
     notification = mark_read(current_user, notification_id)
@@ -516,7 +509,7 @@ def notification_mark_read(notification_id):
     return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
 
 
-@app.route('/notifications/<int:notification_id>/unread', methods=['POST'])
+@route('/notifications/<int:notification_id>/unread', methods=['POST'])
 @login_required
 def notification_mark_unread(notification_id):
     notification = mark_unread(current_user, notification_id)
@@ -525,7 +518,7 @@ def notification_mark_unread(notification_id):
     return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
 
 
-@app.route('/notifications/<int:notification_id>/archive', methods=['POST'])
+@route('/notifications/<int:notification_id>/archive', methods=['POST'])
 @login_required
 def notification_archive(notification_id):
     notification = archive_notification(current_user, notification_id)
@@ -534,7 +527,7 @@ def notification_archive(notification_id):
     return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
 
 
-@app.route('/notifications/<int:notification_id>/delete', methods=['POST'])
+@route('/notifications/<int:notification_id>/delete', methods=['POST'])
 @login_required
 def notification_delete(notification_id):
     notification = delete_notification(current_user, notification_id)
@@ -543,19 +536,19 @@ def notification_delete(notification_id):
     return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
 
 
-@app.route('/notifications/mark-all-read', methods=['POST'])
+@route('/notifications/mark-all-read', methods=['POST'])
 @login_required
 def notification_mark_all_read():
     mark_all_read(current_user)
     return jsonify({'success': True, 'summary': get_summary_counts(current_user)})
 
 
-@app.route('/courses')
+@route('/courses')
 def courses():
     return "This is the courses page.";
 
 
-@app.route('/payment/registration/<int:registration_id>')
+@route('/payment/registration/<int:registration_id>')
 @login_required
 def payment_registration_summary(registration_id):
     registration = StudentRegistration.query.filter_by(id=registration_id, user_id=current_user.id).first_or_404()
@@ -574,7 +567,7 @@ def payment_registration_summary(registration_id):
     return render_template('payment_summary.html', registration=registration, payment=payment)
 
 
-@app.route('/payment/<reference>/initiate', methods=['POST'])
+@route('/payment/<reference>/initiate', methods=['POST'])
 @login_required
 def payment_initiate(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
@@ -584,7 +577,7 @@ def payment_initiate(reference):
     if payment.rrr:
         return jsonify({'success': True, 'redirect': build_checkout_url(payment.rrr)})
 
-    gateway = get_gateway(app)
+    gateway = get_gateway(current_app)
     try:
         checkout_url = initiate_payment(gateway, payment, current_user)
     except GatewayError as e:
@@ -592,7 +585,7 @@ def payment_initiate(reference):
     return jsonify({'success': True, 'redirect': checkout_url})
 
 
-@app.route('/payment/callback')
+@route('/payment/callback')
 def payment_callback():
     # No @login_required: Remita's redirect may arrive in a context where
     # the session cookie isn't guaranteed, so this route is scoped instead
@@ -605,12 +598,12 @@ def payment_callback():
         flash('Could not identify the payment to verify.')
         return redirect(url_for('payments_history'))
 
-    gateway = get_gateway(app)
+    gateway = get_gateway(current_app)
     verify_payment(gateway, payment)
     return render_template('payment_callback.html', payment=payment)
 
 
-@app.route('/payment/<reference>/resume')
+@route('/payment/<reference>/resume')
 @login_required
 def payment_resume(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
@@ -621,7 +614,7 @@ def payment_resume(reference):
     if payment.rrr:
         return redirect(build_checkout_url(payment.rrr))
 
-    gateway = get_gateway(app)
+    gateway = get_gateway(current_app)
     try:
         checkout_url = initiate_payment(gateway, payment, current_user)
     except GatewayError:
@@ -630,7 +623,7 @@ def payment_resume(reference):
     return redirect(checkout_url)
 
 
-@app.route('/payment/<reference>/cancel', methods=['POST'])
+@route('/payment/<reference>/cancel', methods=['POST'])
 @login_required
 def payment_cancel(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
@@ -641,16 +634,16 @@ def payment_cancel(reference):
     return jsonify({'success': True, 'message': 'Payment cancelled.'})
 
 
-@app.route('/payment/<reference>/retry', methods=['POST'])
+@route('/payment/<reference>/retry', methods=['POST'])
 @login_required
 def payment_retry(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
-    gateway = get_gateway(app)
+    gateway = get_gateway(current_app)
     retry_verification(gateway, payment)
     return jsonify({'success': True, 'status': payment.status})
 
 
-@app.route('/payment/<reference>/receipt')
+@route('/payment/<reference>/receipt')
 @login_required
 def payment_receipt(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
@@ -661,7 +654,7 @@ def payment_receipt(reference):
     return render_template('payment_receipt.html', payment=payment, receipt=receipt)
 
 
-@app.route('/payment/<reference>/receipt.pdf')
+@route('/payment/<reference>/receipt.pdf')
 @login_required
 def payment_receipt_pdf(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
@@ -675,7 +668,7 @@ def payment_receipt_pdf(reference):
     })
 
 
-@app.route('/payment/<reference>/resend-receipt', methods=['POST'])
+@route('/payment/<reference>/resend-receipt', methods=['POST'])
 @login_required
 def payment_resend_receipt(reference):
     payment = Payment.query.filter_by(reference=reference, user_id=current_user.id).first_or_404()
@@ -686,7 +679,7 @@ def payment_resend_receipt(reference):
     return jsonify({'success': True, 'message': 'Receipt email sent.'})
 
 
-@app.route('/payment/create', methods=['GET'])
+@route('/payment/create', methods=['GET'])
 @login_required
 def payment_create_page():
     # Student-only: fee resolution reads user.programme_id/department_id,
@@ -704,7 +697,7 @@ def payment_create_page():
     return render_template('payment_create.html', payable=payable, idempotency_key=idempotency_key)
 
 
-@app.route('/payment/create', methods=['POST'])
+@route('/payment/create', methods=['POST'])
 @login_required
 def payment_create_submit():
     if isinstance(current_user, AdminUser):
@@ -749,7 +742,7 @@ def payment_create_submit():
     if payment.status != 'pending':
         return jsonify({'success': False, 'message': 'This payment has already been processed.'}), 400
 
-    gateway = get_gateway(app)
+    gateway = get_gateway(current_app)
     try:
         checkout_url = initiate_payment(gateway, payment, current_user)
     except GatewayError as e:
@@ -758,7 +751,7 @@ def payment_create_submit():
     return jsonify({'success': True, 'redirect': checkout_url})
 
 
-@app.route('/registration')
+@route('/registration')
 @login_required
 def registration():
     notify_registration_window_events(current_user)
@@ -769,7 +762,7 @@ def registration():
     )
 
 
-@app.route('/registration/register', methods=['POST'])
+@route('/registration/register', methods=['POST'])
 @login_required
 def registration_register():
     period = get_active_period(current_user)
@@ -788,7 +781,7 @@ def registration_register():
     })
 
 
-@app.route('/add_drop')
+@route('/add_drop')
 @login_required
 def add_drop():
     context = get_add_drop_context(current_user)
@@ -798,7 +791,7 @@ def add_drop():
     return render_template('add_drop.html')
 
 
-@app.route('/add_drop/data')
+@route('/add_drop/data')
 @login_required
 def add_drop_data():
     context = get_add_drop_context(current_user)
@@ -828,7 +821,7 @@ def add_drop_data():
     })
 
 
-@app.route('/add_drop/add', methods=['POST'])
+@route('/add_drop/add', methods=['POST'])
 @login_required
 def add_drop_add():
     data = request.get_json()
@@ -848,7 +841,7 @@ def add_drop_add():
     return jsonify({'success': True, 'credits_registered': student_registration.credits_registered})
 
 
-@app.route('/add_drop/drop', methods=['POST'])
+@route('/add_drop/drop', methods=['POST'])
 @login_required
 def add_drop_drop():
     data = request.get_json()
@@ -868,7 +861,7 @@ def add_drop_drop():
     return jsonify({'success': True, 'credits_registered': student_registration.credits_registered})
 
 
-@app.route('/add_drop/submit', methods=['POST'])
+@route('/add_drop/submit', methods=['POST'])
 @login_required
 def add_drop_submit():
     context = get_add_drop_context(current_user)
@@ -884,7 +877,7 @@ def add_drop_submit():
     return jsonify({'success': True, 'redirect': url_for('my_courses')})
 
 
-@app.route('/registration/slip')
+@route('/registration/slip')
 @login_required
 def registration_slip():
     student_registration = (
@@ -901,13 +894,13 @@ def registration_slip():
     return render_template('registration_slip.html', registration=student_registration, courses=courses)
 
 
-@app.route('/my_courses')
+@route('/my_courses')
 @login_required
 def my_courses():
     return render_template('my_courses.html', groups=get_courses_by_semester(current_user))
 
 
-@app.route('/courses/<int:course_id>/details')
+@route('/courses/<int:course_id>/details')
 @login_required
 def course_details(course_id):
     registered_course = RegisteredCourse.query.join(StudentRegistration).filter(
@@ -930,14 +923,14 @@ def course_details(course_id):
         'schedule': course.schedule or 'Not available',
     })
 
-@app.route('/payments_history')
+@route('/payments_history')
 @login_required
 def payments_history():
     summary = get_payment_summary_counts(current_user)
     return render_template('payments_history.html', summary=summary)
 
 
-@app.route('/payments_history/data')
+@route('/payments_history/data')
 @login_required
 def payments_history_data():
     status = request.args.get('status') or None
@@ -987,12 +980,12 @@ def payments_history_data():
         ],
     })
 
-@app.route('/admin')
+@route('/admin')
 def admin():
     return redirect(url_for('admin_login'))
 
 
-@app.route('/admin/login', methods=['GET', 'POST'])
+@route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if current_user.is_authenticated and isinstance(current_user, AdminUser):
         return redirect(url_for('admin_dashboard'))
@@ -1015,7 +1008,7 @@ def admin_login():
     return render_template('admin/admin_login.html')
 
 
-@app.route('/admin/forgot-password', methods=['GET', 'POST'])
+@route('/admin/forgot-password', methods=['GET', 'POST'])
 def admin_forgot_password():
     if request.method == 'GET':
         return render_template('admin/admin_forgot_password.html')
@@ -1038,7 +1031,7 @@ def admin_forgot_password():
             msg.body = f'Your password reset code is: {code}\nThis code expires in 5 minutes.'
             mail.send(msg)
         except Exception:
-            app.logger.warning('Failed to send admin password reset email to %s', email)
+            current_app.logger.warning('Failed to send admin password reset email to %s', email)
 
     # Pad the response to a fixed minimum duration so the presence/absence of
     # the network-bound mail.send() call above can't be inferred from response
@@ -1056,7 +1049,7 @@ def admin_forgot_password():
     return redirect(url_for('admin_verify_reset_code'))
 
 
-@app.route('/admin/verify-reset-code', methods=['GET', 'POST'])
+@route('/admin/verify-reset-code', methods=['GET', 'POST'])
 def admin_verify_reset_code():
     if 'email_verification_code' not in session:
         return redirect(url_for('admin_forgot_password'))
@@ -1085,7 +1078,7 @@ def admin_verify_reset_code():
     return jsonify({'success': True, 'redirect': url_for('admin_reset_password')})
 
 
-@app.route('/admin/reset-password', methods=['GET', 'POST'])
+@route('/admin/reset-password', methods=['GET', 'POST'])
 def admin_reset_password():
     if not session.get('admin_reset_verified') or 'admin_reset_admin_id' not in session:
         return redirect(url_for('admin_forgot_password'))
@@ -1119,7 +1112,7 @@ def admin_reset_password():
     })
 
 
-@app.route('/admin/logout')
+@route('/admin/logout')
 @admin_required
 def admin_logout():
     log_admin_action(current_user, 'logout', ip_address=request.remote_addr)
@@ -1128,7 +1121,7 @@ def admin_logout():
     return redirect(url_for('admin_login'))
 
 
-@app.route('/admin/force-password-change', methods=['GET', 'POST'])
+@route('/admin/force-password-change', methods=['GET', 'POST'])
 @admin_required
 def admin_force_password_change():
     if request.method == 'GET':
@@ -1165,7 +1158,7 @@ def admin_force_password_change():
     })
 
 
-@app.route('/admin/dashboard')
+@route('/admin/dashboard')
 @permission_required('dashboard.view')
 def admin_dashboard():
     summary = get_dashboard_summary()
@@ -1177,7 +1170,7 @@ def admin_dashboard():
     )
 
 
-@app.route('/admin/departments')
+@route('/admin/departments')
 @permission_required('departments.manage')
 def admin_departments():
     search = request.args.get('search', '').strip() or None
@@ -1189,7 +1182,7 @@ def admin_departments():
     )
 
 
-@app.route('/admin/departments/new', methods=['GET', 'POST'])
+@route('/admin/departments/new', methods=['GET', 'POST'])
 @permission_required('departments.manage')
 def admin_department_new():
     if request.method == 'GET':
@@ -1214,14 +1207,14 @@ def admin_department_new():
     return redirect(url_for('admin_departments'))
 
 
-@app.route('/admin/departments/<int:department_id>')
+@route('/admin/departments/<int:department_id>')
 @permission_required('departments.manage')
 def admin_department_detail(department_id):
     detail = get_department_detail(department_id)
     return render_template('admin/departments.html', detail=detail, result=None)
 
 
-@app.route('/admin/departments/<int:department_id>/edit', methods=['GET', 'POST'])
+@route('/admin/departments/<int:department_id>/edit', methods=['GET', 'POST'])
 @permission_required('departments.manage')
 def admin_department_edit(department_id):
     department = get_department(department_id)
@@ -1247,7 +1240,7 @@ def admin_department_edit(department_id):
     return redirect(url_for('admin_departments'))
 
 
-@app.route('/admin/departments/<int:department_id>/activate', methods=['POST'])
+@route('/admin/departments/<int:department_id>/activate', methods=['POST'])
 @permission_required('departments.manage')
 def admin_department_activate(department_id):
     set_department_status(department_id, 'active')
@@ -1257,7 +1250,7 @@ def admin_department_activate(department_id):
     return redirect(url_for('admin_departments'))
 
 
-@app.route('/admin/departments/<int:department_id>/deactivate', methods=['POST'])
+@route('/admin/departments/<int:department_id>/deactivate', methods=['POST'])
 @permission_required('departments.manage')
 def admin_department_deactivate(department_id):
     set_department_status(department_id, 'inactive')
@@ -1267,7 +1260,7 @@ def admin_department_deactivate(department_id):
     return redirect(url_for('admin_departments'))
 
 
-@app.route('/admin/departments/<int:department_id>/archive', methods=['POST'])
+@route('/admin/departments/<int:department_id>/archive', methods=['POST'])
 @permission_required('departments.manage')
 def admin_department_archive(department_id):
     set_department_status(department_id, 'archived')
@@ -1277,7 +1270,7 @@ def admin_department_archive(department_id):
     return redirect(url_for('admin_departments'))
 
 
-@app.route('/admin/programmes')
+@route('/admin/programmes')
 @permission_required('programmes.manage')
 def admin_programmes():
     search = request.args.get('search', '').strip() or None
@@ -1289,7 +1282,7 @@ def admin_programmes():
     )
 
 
-@app.route('/admin/programmes/new', methods=['GET', 'POST'])
+@route('/admin/programmes/new', methods=['GET', 'POST'])
 @permission_required('programmes.manage')
 def admin_programme_new():
     if request.method == 'GET':
@@ -1320,7 +1313,7 @@ def admin_programme_new():
     return redirect(url_for('admin_programmes'))
 
 
-@app.route('/admin/programmes/<int:programme_id>')
+@route('/admin/programmes/<int:programme_id>')
 @permission_required('programmes.manage')
 def admin_programme_detail(programme_id):
     detail = get_programme_detail(programme_id)
@@ -1332,7 +1325,7 @@ def admin_programme_detail(programme_id):
     )
 
 
-@app.route('/admin/programmes/<int:programme_id>/edit', methods=['GET', 'POST'])
+@route('/admin/programmes/<int:programme_id>/edit', methods=['GET', 'POST'])
 @permission_required('programmes.manage')
 def admin_programme_edit(programme_id):
     programme = get_programme(programme_id)
@@ -1364,7 +1357,7 @@ def admin_programme_edit(programme_id):
     return redirect(url_for('admin_programmes'))
 
 
-@app.route('/admin/programmes/<int:programme_id>/departments', methods=['POST'])
+@route('/admin/programmes/<int:programme_id>/departments', methods=['POST'])
 @permission_required('programmes.manage')
 def admin_programme_departments(programme_id):
     try:
@@ -1379,7 +1372,7 @@ def admin_programme_departments(programme_id):
     return redirect(url_for('admin_programme_detail', programme_id=programme_id))
 
 
-@app.route('/admin/programmes/<int:programme_id>/activate', methods=['POST'])
+@route('/admin/programmes/<int:programme_id>/activate', methods=['POST'])
 @permission_required('programmes.manage')
 def admin_programme_activate(programme_id):
     set_programme_status(programme_id, 'active')
@@ -1389,7 +1382,7 @@ def admin_programme_activate(programme_id):
     return redirect(url_for('admin_programmes'))
 
 
-@app.route('/admin/programmes/<int:programme_id>/archive', methods=['POST'])
+@route('/admin/programmes/<int:programme_id>/archive', methods=['POST'])
 @permission_required('programmes.manage')
 def admin_programme_archive(programme_id):
     set_programme_status(programme_id, 'archived')
@@ -1399,7 +1392,7 @@ def admin_programme_archive(programme_id):
     return redirect(url_for('admin_programmes'))
 
 
-@app.route('/admin/sessions')
+@route('/admin/sessions')
 @permission_required('sessions.manage')
 def admin_sessions():
     programme_id = request.args.get('programme_id', type=int)
@@ -1410,7 +1403,7 @@ def admin_sessions():
     )
 
 
-@app.route('/admin/sessions/new', methods=['GET', 'POST'])
+@route('/admin/sessions/new', methods=['GET', 'POST'])
 @permission_required('sessions.manage')
 def admin_sessions_new():
     if request.method == 'GET':
@@ -1438,7 +1431,7 @@ def admin_sessions_new():
     return redirect(url_for('admin_session_edit', session_id=session_obj.id))
 
 
-@app.route('/admin/sessions/<int:session_id>/edit', methods=['GET', 'POST'])
+@route('/admin/sessions/<int:session_id>/edit', methods=['GET', 'POST'])
 @permission_required('sessions.manage')
 def admin_session_edit(session_id):
     session_obj = get_session(session_id)
@@ -1481,7 +1474,7 @@ def admin_session_edit(session_id):
     return redirect(url_for('admin_sessions'))
 
 
-@app.route('/admin/sessions/<int:session_id>/archive', methods=['POST'])
+@route('/admin/sessions/<int:session_id>/archive', methods=['POST'])
 @permission_required('sessions.manage')
 def admin_session_archive(session_id):
     session_obj, error = archive_session(session_id)
@@ -1494,7 +1487,7 @@ def admin_session_archive(session_id):
     return redirect(url_for('admin_sessions'))
 
 
-@app.route('/admin/sessions/<int:session_id>/clone', methods=['POST'])
+@route('/admin/sessions/<int:session_id>/clone', methods=['POST'])
 @permission_required('sessions.manage')
 def admin_session_clone(session_id):
     source_session = get_session(session_id)
@@ -1519,7 +1512,7 @@ def admin_session_clone(session_id):
     return redirect(url_for('admin_session_edit', session_id=new_session.id))
 
 
-@app.route('/admin/students/import/preview', methods=['POST'])
+@route('/admin/students/import/preview', methods=['POST'])
 @permission_required('students.manage')
 def admin_students_import_preview():
     file_storage = request.files.get('file')
@@ -1529,7 +1522,7 @@ def admin_students_import_preview():
     return jsonify({'success': True, **summary})
 
 
-@app.route('/admin/students/import', methods=['GET', 'POST'])
+@route('/admin/students/import', methods=['GET', 'POST'])
 @permission_required('students.manage')
 def admin_students_import():
     if request.method == 'GET':
@@ -1546,20 +1539,20 @@ def admin_students_import():
     return redirect(url_for('admin_student_import_report', job_id=job.id))
 
 
-@app.route('/admin/students/import/<int:job_id>')
+@route('/admin/students/import/<int:job_id>')
 @permission_required('students.manage')
 def admin_student_import_report(job_id):
     job = StudentImportJob.query.get_or_404(job_id)
     return render_template('admin/student_import_report.html', job=job)
 
 
-@app.route('/admin/students/import/admission-portal')
+@route('/admin/students/import/admission-portal')
 @permission_required('students.manage')
 def admin_student_admission_portal():
     return render_template('admin/coming_soon.html', feature_name='Admission Portal Import')
 
 
-@app.route('/admin/students')
+@route('/admin/students')
 @permission_required('students.manage')
 def admin_students():
     return render_template(
@@ -1567,7 +1560,7 @@ def admin_students():
     )
 
 
-@app.route('/admin/students/data')
+@route('/admin/students/data')
 @permission_required('students.manage')
 def admin_students_data():
     search = request.args.get('search', '').strip() or None
@@ -1597,7 +1590,7 @@ def admin_students_data():
     })
 
 
-@app.route('/admin/students/<int:student_id>')
+@route('/admin/students/<int:student_id>')
 @permission_required('students.manage')
 def admin_student_profile(student_id):
     profile = get_student_profile(student_id)
@@ -1605,7 +1598,7 @@ def admin_student_profile(student_id):
     return render_template('admin/student_profile.html', can_override_onboarding=can_override_onboarding, **profile)
 
 
-@app.route('/admin/students/new', methods=['GET', 'POST'])
+@route('/admin/students/new', methods=['GET', 'POST'])
 @permission_required('students.manage')
 def admin_student_new():
     departments = list_active_departments()
@@ -1664,13 +1657,13 @@ def admin_student_new():
             )
             mail.send(msg)
         except Exception:
-            app.logger.warning('Failed to send onboarding email to %s', student.email)
+            current_app.logger.warning('Failed to send onboarding email to %s', student.email)
 
     flash(f'Student "{name}" ({reg_no}) created. Temporary password: {temp_password}')
     return redirect(url_for('admin_student_profile', student_id=student.id))
 
 
-@app.route('/admin/students/<int:student_id>/registration/add-course', methods=['POST'])
+@route('/admin/students/<int:student_id>/registration/add-course', methods=['POST'])
 @permission_required('registration.manage')
 def admin_student_registration_add_course(student_id):
     student = get_student(student_id)
@@ -1699,7 +1692,7 @@ def admin_student_registration_add_course(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/registration/drop-course', methods=['POST'])
+@route('/admin/students/<int:student_id>/registration/drop-course', methods=['POST'])
 @permission_required('registration.manage')
 def admin_student_registration_drop_course(student_id):
     student = get_student(student_id)
@@ -1727,7 +1720,7 @@ def admin_student_registration_drop_course(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/registration/lock', methods=['POST'])
+@route('/admin/students/<int:student_id>/registration/lock', methods=['POST'])
 @permission_required('registration.manage')
 def admin_student_registration_lock(student_id):
     context = get_student_profile(student_id)['registration_context']
@@ -1750,7 +1743,7 @@ def admin_student_registration_lock(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/registration/extend-deadline', methods=['POST'])
+@route('/admin/students/<int:student_id>/registration/extend-deadline', methods=['POST'])
 @permission_required('registration.manage')
 def admin_student_registration_extend_deadline(student_id):
     from datetime import datetime
@@ -1781,7 +1774,7 @@ def admin_student_registration_extend_deadline(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/registration/reopen', methods=['POST'])
+@route('/admin/students/<int:student_id>/registration/reopen', methods=['POST'])
 @permission_required('registration.manage')
 def admin_student_registration_reopen(student_id):
     context = get_student_profile(student_id)['registration_context']
@@ -1802,7 +1795,7 @@ def admin_student_registration_reopen(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/registration/approve-exception', methods=['POST'])
+@route('/admin/students/<int:student_id>/registration/approve-exception', methods=['POST'])
 @permission_required('registration.manage')
 def admin_student_registration_approve_exception(student_id):
     context = get_student_profile(student_id)['registration_context']
@@ -1823,7 +1816,7 @@ def admin_student_registration_approve_exception(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/onboarding/reset', methods=['POST'])
+@route('/admin/students/<int:student_id>/onboarding/reset', methods=['POST'])
 @permission_required('students.manage')
 def admin_student_onboarding_reset(student_id):
     student = get_student(student_id)
@@ -1839,7 +1832,7 @@ def admin_student_onboarding_reset(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/onboarding/verify-email', methods=['POST'])
+@route('/admin/students/<int:student_id>/onboarding/verify-email', methods=['POST'])
 @permission_required('students.manage')
 def admin_student_onboarding_verify_email(student_id):
     student = get_student(student_id)
@@ -1855,7 +1848,7 @@ def admin_student_onboarding_verify_email(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/onboarding/mark-complete', methods=['POST'])
+@route('/admin/students/<int:student_id>/onboarding/mark-complete', methods=['POST'])
 @permission_required('onboarding.override')
 def admin_student_onboarding_mark_complete(student_id):
     student = get_student(student_id)
@@ -1871,7 +1864,7 @@ def admin_student_onboarding_mark_complete(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/edit', methods=['GET', 'POST'])
+@route('/admin/students/<int:student_id>/edit', methods=['GET', 'POST'])
 @permission_required('students.manage')
 def admin_student_edit(student_id):
     student = get_student(student_id)
@@ -1917,7 +1910,7 @@ def admin_student_edit(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/activate', methods=['POST'])
+@route('/admin/students/<int:student_id>/activate', methods=['POST'])
 @permission_required('students.manage')
 def admin_student_activate(student_id):
     set_account_status(student_id, 'active')
@@ -1927,7 +1920,7 @@ def admin_student_activate(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/suspend', methods=['POST'])
+@route('/admin/students/<int:student_id>/suspend', methods=['POST'])
 @permission_required('students.manage')
 def admin_student_suspend(student_id):
     set_account_status(student_id, 'suspended')
@@ -1937,7 +1930,7 @@ def admin_student_suspend(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/deactivate', methods=['POST'])
+@route('/admin/students/<int:student_id>/deactivate', methods=['POST'])
 @permission_required('students.manage')
 def admin_student_deactivate(student_id):
     set_account_status(student_id, 'deactivated')
@@ -1947,7 +1940,7 @@ def admin_student_deactivate(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/reset-password', methods=['POST'])
+@route('/admin/students/<int:student_id>/reset-password', methods=['POST'])
 @permission_required('students.manage')
 def admin_student_reset_password(student_id):
     temp_password = reset_student_password(student_id)
@@ -1957,7 +1950,7 @@ def admin_student_reset_password(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/<int:student_id>/resend-verification', methods=['POST'])
+@route('/admin/students/<int:student_id>/resend-verification', methods=['POST'])
 @permission_required('students.manage')
 def admin_student_resend_verification(student_id):
     ok, error = resend_verification(student_id)
@@ -1976,7 +1969,7 @@ def admin_student_resend_verification(student_id):
         )
         mail.send(msg)
     except Exception:
-        app.logger.warning('Failed to send verification reminder to %s', student.email)
+        current_app.logger.warning('Failed to send verification reminder to %s', student.email)
 
     create_notification(
         student, 'Verify your email', 'Please log in and complete your onboarding to verify your email address.',
@@ -1988,7 +1981,7 @@ def admin_student_resend_verification(student_id):
     return redirect(url_for('admin_student_profile', student_id=student_id))
 
 
-@app.route('/admin/students/bulk-status', methods=['POST'])
+@route('/admin/students/bulk-status', methods=['POST'])
 @permission_required('students.manage')
 def admin_students_bulk_status():
     data = request.get_json()
@@ -2006,7 +1999,7 @@ def admin_students_bulk_status():
     return jsonify({'success': True, 'message': f'{count} student(s) updated to {status}.', 'count': count})
 
 
-@app.route('/admin/students/bulk-reset-password', methods=['POST'])
+@route('/admin/students/bulk-reset-password', methods=['POST'])
 @permission_required('students.manage')
 def admin_students_bulk_reset_password():
     data = request.get_json()
@@ -2020,7 +2013,7 @@ def admin_students_bulk_reset_password():
     return jsonify({'success': True, 'message': f'{len(results)} password(s) reset.', 'results': results})
 
 
-@app.route('/admin/students/bulk-resend-email', methods=['POST'])
+@route('/admin/students/bulk-resend-email', methods=['POST'])
 @permission_required('students.manage')
 def admin_students_bulk_resend_email():
     data = request.get_json()
@@ -2049,7 +2042,7 @@ def admin_students_bulk_resend_email():
             mail.send(msg)
             sent += 1
         except Exception:
-            app.logger.warning('Failed to send verification reminder to %s', student.email)
+            current_app.logger.warning('Failed to send verification reminder to %s', student.email)
             skipped += 1
         create_notification(
             student, 'Verify your email', 'Please log in and complete your onboarding to verify your email address.',
@@ -2061,7 +2054,7 @@ def admin_students_bulk_resend_email():
     return jsonify({'success': True, 'message': f'{sent} email(s) sent, {skipped} skipped (no email on file).'})
 
 
-@app.route('/admin/students/bulk-assign-department', methods=['POST'])
+@route('/admin/students/bulk-assign-department', methods=['POST'])
 @permission_required('students.manage')
 def admin_students_bulk_assign_department():
     data = request.get_json()
@@ -2076,7 +2069,7 @@ def admin_students_bulk_assign_department():
     return jsonify({'success': True, 'message': f'{count} student(s) assigned.', 'count': count})
 
 
-@app.route('/admin/students/bulk-assign-programme', methods=['POST'])
+@route('/admin/students/bulk-assign-programme', methods=['POST'])
 @permission_required('students.manage')
 def admin_students_bulk_assign_programme():
     data = request.get_json()
@@ -2091,7 +2084,7 @@ def admin_students_bulk_assign_programme():
     return jsonify({'success': True, 'message': f'{count} student(s) assigned.', 'count': count})
 
 
-@app.route('/admin/course-catalog')
+@route('/admin/course-catalog')
 @permission_required('courses.manage')
 def admin_course_catalog():
     search = request.args.get('search', '').strip() or None
@@ -2103,7 +2096,7 @@ def admin_course_catalog():
     )
 
 
-@app.route('/admin/course-catalog/new', methods=['GET', 'POST'])
+@route('/admin/course-catalog/new', methods=['GET', 'POST'])
 @permission_required('courses.manage')
 def admin_course_catalog_new():
     if request.method == 'GET':
@@ -2132,7 +2125,7 @@ def admin_course_catalog_new():
     return redirect(url_for('admin_course_catalog_detail', course_id=course.id))
 
 
-@app.route('/admin/course-catalog/<int:course_id>')
+@route('/admin/course-catalog/<int:course_id>')
 @permission_required('courses.manage')
 def admin_course_catalog_detail(course_id):
     detail = get_master_course_detail(course_id)
@@ -2140,7 +2133,7 @@ def admin_course_catalog_detail(course_id):
     return render_template('admin/course_catalog.html', detail=detail, result=None, other_courses=other_courses)
 
 
-@app.route('/admin/course-catalog/<int:course_id>/edit', methods=['GET', 'POST'])
+@route('/admin/course-catalog/<int:course_id>/edit', methods=['GET', 'POST'])
 @permission_required('courses.manage')
 def admin_course_catalog_edit(course_id):
     course = get_master_course(course_id)
@@ -2170,7 +2163,7 @@ def admin_course_catalog_edit(course_id):
     return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
 
 
-@app.route('/admin/course-catalog/<int:course_id>/prerequisites', methods=['POST'])
+@route('/admin/course-catalog/<int:course_id>/prerequisites', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_catalog_prerequisites(course_id):
     prereq_ids = request.form.getlist('prerequisite_ids', type=int)
@@ -2181,7 +2174,7 @@ def admin_course_catalog_prerequisites(course_id):
     return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
 
 
-@app.route('/admin/course-catalog/<int:course_id>/corequisites', methods=['POST'])
+@route('/admin/course-catalog/<int:course_id>/corequisites', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_catalog_corequisites(course_id):
     coreq_ids = request.form.getlist('corequisite_ids', type=int)
@@ -2192,7 +2185,7 @@ def admin_course_catalog_corequisites(course_id):
     return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
 
 
-@app.route('/admin/course-catalog/<int:course_id>/activate', methods=['POST'])
+@route('/admin/course-catalog/<int:course_id>/activate', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_catalog_activate(course_id):
     set_master_course_status(course_id, 'active')
@@ -2202,7 +2195,7 @@ def admin_course_catalog_activate(course_id):
     return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
 
 
-@app.route('/admin/course-catalog/<int:course_id>/archive', methods=['POST'])
+@route('/admin/course-catalog/<int:course_id>/archive', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_catalog_archive(course_id):
     set_master_course_status(course_id, 'archived')
@@ -2212,13 +2205,13 @@ def admin_course_catalog_archive(course_id):
     return redirect(url_for('admin_course_catalog_detail', course_id=course_id))
 
 
-@app.route('/admin/courses')
+@route('/admin/courses')
 @permission_required('courses.manage')
 def admin_courses():
     return render_template('admin/courses.html', departments=list_active_departments(), semesters=list_semesters())
 
 
-@app.route('/admin/courses/data')
+@route('/admin/courses/data')
 @permission_required('courses.manage')
 def admin_courses_data():
     search = request.args.get('search', '').strip() or None
@@ -2252,7 +2245,7 @@ def admin_courses_data():
     })
 
 
-@app.route('/admin/courses/new', methods=['GET', 'POST'])
+@route('/admin/courses/new', methods=['GET', 'POST'])
 @permission_required('courses.manage')
 def admin_course_new():
     departments = list_active_departments()
@@ -2300,7 +2293,7 @@ def admin_course_new():
     return redirect(url_for('admin_course_detail', course_id=offering.id))
 
 
-@app.route('/admin/courses/<int:course_id>')
+@route('/admin/courses/<int:course_id>')
 @permission_required('courses.manage')
 def admin_course_detail(course_id):
     detail = get_course_detail(course_id)
@@ -2308,7 +2301,7 @@ def admin_course_detail(course_id):
     return render_template('admin/course_detail.html', enrolled=enrolled, **detail)
 
 
-@app.route('/admin/courses/<int:course_id>/assessment', methods=['POST'])
+@route('/admin/courses/<int:course_id>/assessment', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_assessment(course_id):
     names = request.form.getlist('component_name')
@@ -2333,7 +2326,7 @@ def admin_course_assessment(course_id):
     return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
-@app.route('/admin/courses/<int:course_id>/edit', methods=['GET', 'POST'])
+@route('/admin/courses/<int:course_id>/edit', methods=['GET', 'POST'])
 @permission_required('courses.manage')
 def admin_course_edit(course_id):
     offering = get_course(course_id)
@@ -2392,7 +2385,7 @@ def admin_course_edit(course_id):
     return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
-@app.route('/admin/courses/<int:course_id>/activate', methods=['POST'])
+@route('/admin/courses/<int:course_id>/activate', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_activate(course_id):
     set_course_status(course_id, 'active')
@@ -2402,7 +2395,7 @@ def admin_course_activate(course_id):
     return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
-@app.route('/admin/courses/<int:course_id>/deactivate', methods=['POST'])
+@route('/admin/courses/<int:course_id>/deactivate', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_deactivate(course_id):
     set_course_status(course_id, 'inactive')
@@ -2412,7 +2405,7 @@ def admin_course_deactivate(course_id):
     return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
-@app.route('/admin/courses/<int:course_id>/archive', methods=['POST'])
+@route('/admin/courses/<int:course_id>/archive', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_archive(course_id):
     set_course_status(course_id, 'archived')
@@ -2422,7 +2415,7 @@ def admin_course_archive(course_id):
     return redirect(url_for('admin_course_detail', course_id=course_id))
 
 
-@app.route('/admin/courses/import/preview', methods=['POST'])
+@route('/admin/courses/import/preview', methods=['POST'])
 @permission_required('courses.manage')
 def admin_course_import_preview():
     file_storage = request.files.get('file')
@@ -2432,7 +2425,7 @@ def admin_course_import_preview():
     return jsonify({'success': True, **summary})
 
 
-@app.route('/admin/courses/import', methods=['GET', 'POST'])
+@route('/admin/courses/import', methods=['GET', 'POST'])
 @permission_required('courses.manage')
 def admin_course_import():
     if request.method == 'GET':
@@ -2454,14 +2447,14 @@ def admin_course_import():
     return redirect(url_for('admin_course_import_report', job_id=job.id))
 
 
-@app.route('/admin/courses/import/<int:job_id>')
+@route('/admin/courses/import/<int:job_id>')
 @permission_required('courses.manage')
 def admin_course_import_report(job_id):
     job = CourseImportJob.query.get_or_404(job_id)
     return render_template('admin/course_import_report.html', job=job)
 
 
-@app.route('/admin/sessions/<int:session_id>/periods/new', methods=['GET', 'POST'])
+@route('/admin/sessions/<int:session_id>/periods/new', methods=['GET', 'POST'])
 @permission_required('sessions.manage')
 def admin_period_new(session_id):
     session_obj = get_session(session_id)
@@ -2510,7 +2503,7 @@ def admin_period_new(session_id):
     return redirect(url_for('admin_session_edit', session_id=session_id))
 
 
-@app.route('/admin/sessions/<int:session_id>/periods/<int:period_id>/edit', methods=['GET', 'POST'])
+@route('/admin/sessions/<int:session_id>/periods/<int:period_id>/edit', methods=['GET', 'POST'])
 @permission_required('sessions.manage')
 def admin_period_edit(session_id, period_id):
     session_obj = get_session(session_id)
@@ -2577,7 +2570,7 @@ def admin_period_edit(session_id, period_id):
     return redirect(url_for('admin_session_edit', session_id=session_id))
 
 
-@app.route('/admin/sessions/<int:session_id>/periods/<int:period_id>/activate', methods=['POST'])
+@route('/admin/sessions/<int:session_id>/periods/<int:period_id>/activate', methods=['POST'])
 @permission_required('registration.manage')
 def admin_period_activate(session_id, period_id):
     activate_period(period_id)
@@ -2587,7 +2580,7 @@ def admin_period_activate(session_id, period_id):
     return redirect(request.referrer or url_for('admin_sessions'))
 
 
-@app.route('/admin/sessions/<int:session_id>/holidays', methods=['POST'])
+@route('/admin/sessions/<int:session_id>/holidays', methods=['POST'])
 @permission_required('sessions.manage')
 def admin_holiday_new(session_id):
     from datetime import date
@@ -2606,7 +2599,7 @@ def admin_holiday_new(session_id):
     return redirect(url_for('admin_session_edit', session_id=session_id))
 
 
-@app.route('/admin/fee-structure')
+@route('/admin/fee-structure')
 @permission_required('sessions.manage')
 def admin_fee_structures():
     session_id = request.args.get('session_id', type=int)
@@ -2617,7 +2610,7 @@ def admin_fee_structures():
     )
 
 
-@app.route('/admin/fee-structure/new', methods=['GET', 'POST'])
+@route('/admin/fee-structure/new', methods=['GET', 'POST'])
 @permission_required('sessions.manage')
 def admin_fee_structure_new():
     sessions = list_sessions()
@@ -2700,7 +2693,7 @@ def admin_fee_structure_new():
     return redirect(url_for('admin_fee_structures', session_id=selected_session.id))
 
 
-@app.route('/admin/fee-structure/<int:fee_structure_id>/edit', methods=['GET', 'POST'])
+@route('/admin/fee-structure/<int:fee_structure_id>/edit', methods=['GET', 'POST'])
 @permission_required('sessions.manage')
 def admin_fee_structure_edit(fee_structure_id):
     row = get_fee_structure(fee_structure_id)
@@ -2807,7 +2800,7 @@ def admin_fee_structure_edit(fee_structure_id):
     return redirect(url_for('admin_fee_structures', session_id=row.academic_session_id))
 
 
-@app.route('/admin/fee-structure/<int:fee_structure_id>/delete', methods=['POST'])
+@route('/admin/fee-structure/<int:fee_structure_id>/delete', methods=['POST'])
 @permission_required('sessions.manage')
 def admin_fee_structure_delete(fee_structure_id):
     row = get_fee_structure(fee_structure_id)
@@ -2825,14 +2818,14 @@ def admin_fee_structure_delete(fee_structure_id):
     return redirect(url_for('admin_fee_structures', session_id=session_id))
 
 
-@app.route('/admin/registration/open')
+@route('/admin/registration/open')
 @permission_required('registration.manage')
 def admin_registration_open():
     periods = list_inactive_periods()
     return render_template('admin/registration_open.html', periods=periods)
 
 
-@app.route('/admin/registration/oversight')
+@route('/admin/registration/oversight')
 @permission_required('registration.manage')
 def admin_registration_oversight():
     periods = list_periods_for_selector()
@@ -2842,7 +2835,7 @@ def admin_registration_oversight():
     )
 
 
-@app.route('/admin/registration/oversight/data')
+@route('/admin/registration/oversight/data')
 @permission_required('registration.manage')
 def admin_registration_oversight_data():
     period_id = request.args.get('period_id', type=int)
@@ -2865,7 +2858,7 @@ def admin_registration_oversight_data():
     })
 
 
-@app.route('/admin/onboarding')
+@route('/admin/onboarding')
 @permission_required('students.manage')
 def admin_onboarding_dashboard():
     return render_template(
@@ -2873,7 +2866,7 @@ def admin_onboarding_dashboard():
     )
 
 
-@app.route('/admin/onboarding/data')
+@route('/admin/onboarding/data')
 @permission_required('students.manage')
 def admin_onboarding_dashboard_data():
     department_id = request.args.get('department_id', type=int)
@@ -2885,19 +2878,19 @@ def admin_onboarding_dashboard_data():
     return jsonify({'success': True, **summary, 'analytics': analytics})
 
 
-@app.route('/admin/announcements/new')
+@route('/admin/announcements/new')
 @permission_required('announcements.manage')
 def admin_stub_announcements_new():
     return render_template('admin/coming_soon.html', feature_name='Create Announcement')
 
 
-@app.route('/admin/export')
+@route('/admin/export')
 @permission_required('reports.view')
 def admin_export_center():
     return render_template('admin/export_center.html')
 
 
-@app.route('/admin/export/<data_type>/<fmt>')
+@route('/admin/export/<data_type>/<fmt>')
 @permission_required('reports.view')
 def admin_export_download(data_type, fmt):
     if data_type not in VALID_DATA_TYPES:
@@ -2913,7 +2906,7 @@ def admin_export_download(data_type, fmt):
     return response
 
 
-@app.route('/admin/students/bulk-export', methods=['POST'])
+@route('/admin/students/bulk-export', methods=['POST'])
 @permission_required('reports.view')
 def admin_students_bulk_export():
     data = request.get_json()
@@ -2934,13 +2927,13 @@ def admin_students_bulk_export():
     return response
 
 
-@app.route('/admin/reports')
+@route('/admin/reports')
 @permission_required('reports.view')
 def admin_stub_reports():
     return render_template('admin/coming_soon.html', feature_name='Generate Reports')
 
 
-@app.route('/send-email-code', methods=['POST'])
+@route('/send-email-code', methods=['POST'])
 @login_required
 def send_email_code():
     data = request.get_json()
@@ -2969,7 +2962,7 @@ def send_email_code():
 
     return jsonify({'success': True, 'message': 'Verification code sent to your email.'})
 
-@app.route('/verify-email-code', methods=['POST'])
+@route('/verify-email-code', methods=['POST'])
 @login_required
 def verify_email_code():
     data = request.get_json()
@@ -3028,5 +3021,30 @@ def verify_email_code():
     })
 
 
+def create_app(config_class=Config):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+
+    db.init_app(app)
+    migrate.init_app(app, db)
+    csrf.init_app(app)
+    mail.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = 'login'   # redirect to this view if not logged in
+    login_manager.login_message = "Please log in to access this page."
+
+    with app.app_context():
+        db.create_all()
+
+    app.before_request(enforce_onboarding_gate)
+    app.before_request(enforce_admin_session_timeout)
+    app.context_processor(inject_unread_notification_count)
+
+    for rule, view_func, options in _deferred_routes:
+        app.add_url_rule(rule, view_func=view_func, **options)
+
+    return app
+
+
 if __name__ == '__main__':
-    app.run(debug=True, port=4050)
+    create_app().run(debug=True, port=4050)

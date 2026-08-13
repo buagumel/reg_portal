@@ -1,54 +1,37 @@
 """Shared pytest fixtures for the smoke-test safety net (migration-runbook
-Session 0). app.py is a module-level Flask app (no application factory
-yet — that's Session 3), so `app`, `db`, `login_manager` etc. are all
-singletons created once at import time. These fixtures reuse that same
-singleton (it owns all 138 registered routes) but repoint its database
-engine at an isolated in-memory SQLite database, so tests never touch the
-real database.db.
+Session 0), updated for the create_app() factory (Session 3). Each test gets
+its own fresh app + isolated in-memory SQLite database via create_app(TestConfig)
+— no more reaching into Flask-SQLAlchemy internals to repoint a shared engine.
 """
 import sys
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from app import app as flask_app  # noqa: E402
-from models import db, User, AdminUser, AdminRole  # noqa: E402
+from app import create_app  # noqa: E402
+from config import Config  # noqa: E402
+from extensions import db  # noqa: E402
+from models import User, AdminUser, AdminRole, Permission  # noqa: E402
 
 DEFAULT_PASSWORD = "Default@123"
 
-flask_app.config.update(
-    TESTING=True,
-    WTF_CSRF_ENABLED=False,
-)
 
-# db.init_app(flask_app) already ran once at import time, bound to the real
-# sqlite:///database.db (and Flask-SQLAlchemy refuses to init_app() twice on
-# the same app, and ignores config changes made after the first init_app
-# anyway). db.engines resolves the engine for the current app fresh out of
-# this dict on every access though (see
-# flask_sqlalchemy.extension.SQLAlchemy.engines), so swapping the entry
-# directly repoints every db.session query at the in-memory engine below
-# without needing a second init_app call.
-_test_engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-db._app_engines[flask_app][None] = _test_engine
+class TestConfig(Config):
+    TESTING = True
+    WTF_CSRF_ENABLED = False
+    SQLALCHEMY_DATABASE_URI = "sqlite://"
 
 
 @pytest.fixture()
 def app():
-    """The shared Flask app, with fresh tables for this test only."""
-    with flask_app.app_context():
-        db.create_all()
-        yield flask_app
+    """A fresh app for this test only, with its own in-memory database."""
+    application = create_app(TestConfig)
+    with application.app_context():
+        yield application
         db.session.remove()
         db.drop_all()
 
@@ -91,8 +74,6 @@ def _new_admin(**overrides):
         role = AdminRole(name="Test Super Administrator", description="Seeded for tests — every permission granted.")
         db.session.add(role)
         db.session.flush()
-        from services.admin_permission import has_permission  # noqa: F401  (sanity import)
-        from models import Permission
         codes = [
             "dashboard.view", "sessions.manage", "students.manage", "courses.manage",
             "registration.manage", "announcements.manage", "reports.view",

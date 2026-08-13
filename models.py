@@ -1,14 +1,11 @@
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, timezone
 import random
 import string
-from extensions import mail
+from extensions import db, mail
 from zoneinfo import ZoneInfo
 from werkzeug.security import generate_password_hash, check_password_hash
 from functions import ordinal
-
-db = SQLAlchemy()
 
 LAGOS_TZ = ZoneInfo("Africa/Lagos")
 
