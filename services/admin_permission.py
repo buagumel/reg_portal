@@ -25,9 +25,9 @@ def admin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not current_user.is_authenticated or not isinstance(current_user, AdminUser):
-            return redirect(url_for('admin_login'))
+            return redirect(url_for('admin.auth.admin_login'))
         if not current_user.is_active:
-            return redirect(url_for('admin_login'))
+            return redirect(url_for('admin.auth.admin_login'))
         return view(*args, **kwargs)
     return wrapped
 
@@ -37,9 +37,9 @@ def permission_required(code):
         @wraps(view)
         def wrapped(*args, **kwargs):
             if not current_user.is_authenticated or not isinstance(current_user, AdminUser):
-                return redirect(url_for('admin_login'))
+                return redirect(url_for('admin.auth.admin_login'))
             if not current_user.is_active:
-                return redirect(url_for('admin_login'))
+                return redirect(url_for('admin.auth.admin_login'))
             if not has_permission(current_user, code):
                 return render_template('admin/access_denied.html'), 403
             return view(*args, **kwargs)

@@ -39,7 +39,7 @@
             <input type="hidden" id="error-msg" value="" />
             {% endif %}
 
-            <form id="adminLoginForm" method="POST" action="{{ url_for('admin_login') }}">
+            <form id="adminLoginForm" method="POST" action="{{ url_for('admin.auth.admin_login') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
                 <div class="input-group">
@@ -68,7 +68,7 @@
                         </label>
                     </div>
                     <div class="forgot-link-wrap">
-                        <a href="{{ url_for('admin_forgot_password') }}" class="forgot-link">Forgot password?</a>
+                        <a href="{{ url_for('admin.auth.admin_forgot_password') }}" class="forgot-link">Forgot password?</a>
                     </div>
                 </div>
 
