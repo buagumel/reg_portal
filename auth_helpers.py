@@ -31,7 +31,7 @@ def get_gate_redirect(user):
     if user.first_login:
         return 'auth.force_password_change'
     if not user.onboarding_completed:
-        return 'onboarding'
+        return 'onboarding.onboarding'
     if not user.email_verified:
         return 'profile'
     return None
