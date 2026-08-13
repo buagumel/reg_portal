@@ -55,7 +55,7 @@
                 </div>
                 {% if status.existing_registration.payment_status != 'paid' %}
                 <div class="ongoing-action">
-                    <a class="btn-primary" href="{{ url_for('payment_registration_summary', registration_id=status.existing_registration.id) }}">
+                    <a class="btn-primary" href="{{ url_for('payments.payment_registration_summary', registration_id=status.existing_registration.id) }}">
                         <i class="fas fa-credit-card"></i> Complete Payment
                     </a>
                 </div>

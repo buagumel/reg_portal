@@ -57,7 +57,7 @@ def initiate_payment(gateway, payment, user):
         'email': user.email,
         'phone': user.phone or '00000000000',
         'description': ', '.join(item.description for item in payment.items) or 'Payment',
-        'response_url': url_for('payment_callback', _external=True),
+        'response_url': url_for('payments.payment_callback', _external=True),
     }
     try:
         result = gateway.initiate(payment, payer)

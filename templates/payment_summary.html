@@ -46,7 +46,7 @@
                 <i class="fas fa-credit-card"></i> Pay Now
             </button>
             {% else %}
-            <p style="text-align:center; color: var(--text-muted);">No pending payment found for this registration. It may already be paid — check <a href="{{ url_for('payments_history') }}">Payment History</a>.</p>
+            <p style="text-align:center; color: var(--text-muted);">No pending payment found for this registration. It may already be paid — check <a href="{{ url_for('payments.payments_history') }}">Payment History</a>.</p>
             {% endif %}
             <div class="secure-note">
                 <i class="fas fa-lock"></i> Secure payment via Remita

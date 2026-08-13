@@ -39,7 +39,7 @@ def registration_register():
     return jsonify({
         'success': True,
         'message': 'Registration created. Redirecting to payment...',
-        'redirect': url_for('payment_registration_summary', registration_id=reg.id),
+        'redirect': url_for('payments.payment_registration_summary', registration_id=reg.id),
     })
 
 

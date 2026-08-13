@@ -49,7 +49,7 @@
 
     <div class="receipt-actions">
         <button onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-        <a href="{{ url_for('payment_receipt_pdf', reference=payment.reference) }}"><i class="fas fa-file-pdf"></i> Download PDF</a>
+        <a href="{{ url_for('payments.payment_receipt_pdf', reference=payment.reference) }}"><i class="fas fa-file-pdf"></i> Download PDF</a>
         <button id="resendBtn" data-reference="{{ payment.reference }}"><i class="fas fa-envelope"></i> Resend Email</button>
     </div>
 </div>

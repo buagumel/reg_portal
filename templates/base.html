@@ -31,7 +31,7 @@
                 <a href="{{ url_for('registration.registration') }}"><i class="fas fa-edit"></i> Registrations</a>
                 <a href="{{ url_for('registration.my_courses') }}"><i class="fas fa-book-open"></i> My Courses</a>
                 <a href="{{ url_for('student.announcements') }}"><i class="fas fa-bell"></i> Notifications {% if unread_notification_count %}<span class="notif-badge">{{ unread_notification_count }}</span>{% endif %}</a>
-                <a href="{{ url_for('payments_history') }}"><i class="fas fa-credit-card"></i> Payments</a>
+                <a href="{{ url_for('payments.payments_history') }}"><i class="fas fa-credit-card"></i> Payments</a>
                 <a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a>
 
                 {% if not current_user.is_authenticated %}
