@@ -13,7 +13,7 @@
         <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
 
         <div class="page-header">
-            <a href="{{ url_for('dashboard') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            <a href="{{ url_for('student.dashboard') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
             <h1 class="page-title"><i class="fas fa-credit-card" style="margin-right: 0.5rem;"></i>Full Payment History</h1>
             <a href="{{ url_for('payment_create_page') }}" class="back-link"><i class="fas fa-plus-circle"></i> Create Payment</a>
         </div>

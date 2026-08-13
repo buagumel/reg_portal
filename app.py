@@ -1,7 +1,6 @@
 from flask import Flask, current_app, render_template, request, redirect, url_for, flash, jsonify, session, Response, abort
 from flask_login import login_user, current_user, logout_user, login_required
 import math
-import os
 import time
 import uuid
 from extensions import db, migrate, csrf, mail, login_manager, Message
@@ -13,12 +12,12 @@ from config import Config
 from blueprints.notifications import notifications_bp
 from blueprints.auth import auth_bp
 from blueprints.onboarding import onboarding_bp
+from blueprints.student import student_bp
 from auth_helpers import get_gate_redirect, validate_password_strength
 from onboarding_helpers import (
     start_otp_session, register_failed_otp_attempt, otp_attempts_exceeded,
     clear_otp_session,
 )
-from services.student_profile import get_profile_display
 from services.registration import (
     get_registration_status_context, register_student, get_registration_history,
     get_active_period, RegistrationError,
@@ -27,12 +26,8 @@ from services.registration import (
 from services.course import get_available_courses
 from services.course_history import get_courses_by_semester
 from services.notification import (
-    create_notification, get_notifications, get_summary_counts,
+    create_notification, get_summary_counts,
     notify_registration_window_events,
-)
-from services.profile import (
-    update_contact_info,
-    update_profile_picture, delete_profile_picture,
 )
 from services.payment import (
     create_payment, initiate_payment, verify_payment,
@@ -183,108 +178,6 @@ def inject_unread_notification_count():
     if current_user.is_authenticated:
         return {'unread_notification_count': get_summary_counts(current_user)['unread']}
     return {}
-
-@route('/update-profile', methods=['POST'])
-@login_required
-def update_profile():
-    data = request.get_json()
-    if not data:
-        return jsonify({'success': False, 'message': 'Invalid request'}), 400
-
-    phone = data.get('phone', '').strip()
-    if not phone:
-        return jsonify({'success': False, 'message': 'Phone number is required'}), 400
-
-    address = data.get('address', '').strip()
-    emergency_contact = data.get('emergency_contact', '').strip()
-    blood_group = data.get('blood_group', '').strip()
-
-    update_contact_info(
-        current_user, phone=phone, address=address,
-        emergency_contact=emergency_contact, blood_group=blood_group,
-    )
-
-    return jsonify({
-        'success': True,
-        'message': 'Profile updated successfully',
-        'phone': current_user.formatted_phone,
-        'email': current_user.email,
-    })
-
-@route('/profile/picture', methods=['POST'])
-@login_required
-def profile_picture_upload():
-    file_storage = request.files.get('profile_picture')
-    if not file_storage:
-        return jsonify({'success': False, 'message': 'No file provided.'}), 400
-
-    upload_folder = os.path.join(current_app.static_folder, 'uploads')
-    try:
-        update_profile_picture(current_user, file_storage, upload_folder)
-    except ValueError as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-    return jsonify({
-        'success': True,
-        'message': 'Profile picture updated.',
-        'profile_picture': url_for('static', filename=current_user.profile_picture),
-    })
-
-
-@route('/profile/picture/delete', methods=['POST'])
-@login_required
-def profile_picture_delete():
-    try:
-        delete_profile_picture(current_user, current_app.static_folder)
-    except ValueError as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-    return jsonify({'success': True, 'message': 'Profile picture removed.'})
-
-
-@route('/')
-@login_required
-def dashboard():
-    notify_registration_window_events(current_user)
-    recent_payments, _ = get_payment_history(current_user, page=1, per_page=5)
-    return render_template(
-        'dashboard.html',
-        profile_display=get_profile_display(current_user),
-        recent_payments=recent_payments,
-        status=get_registration_status_context(current_user),
-    )
-
-
-
-
-
-
-
-
-
-
-
-
-
-@route('/profile')
-@login_required
-def profile():
-    return render_template('profile.html', profile_display=get_profile_display(current_user))
-
-@route('/announcements')
-@login_required
-def announcements():
-    return render_template(
-        'announcements.html',
-        summary=get_summary_counts(current_user),
-        notifications=get_notifications(current_user),
-    )
-
-
-@route('/courses')
-def courses():
-    return "This is the courses page.";
-
 
 @route('/payment/registration/<int:registration_id>')
 @login_required
@@ -2693,6 +2586,7 @@ def create_app(config_class=Config):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(onboarding_bp)
+    app.register_blueprint(student_bp)
 
     for rule, view_func, options in _deferred_routes:
         app.add_url_rule(rule, view_func=view_func, **options)

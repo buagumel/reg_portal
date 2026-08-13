@@ -40,7 +40,7 @@ def change_password():
 def force_password_change():
     if request.method == 'GET':
         if not current_user.first_login:
-            return redirect(url_for(get_gate_redirect(current_user) or 'dashboard'))
+            return redirect(url_for(get_gate_redirect(current_user) or 'student.dashboard'))
         return render_template('force_password_change.html')
 
     data = request.get_json()
@@ -63,14 +63,14 @@ def force_password_change():
     current_user.first_login = False
     db.session.commit()
 
-    redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
+    redirect_endpoint = get_gate_redirect(current_user) or 'student.dashboard'
     return jsonify({'success': True, 'message': 'Password changed successfully.', 'redirect': url_for(redirect_endpoint)})
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
+        redirect_endpoint = get_gate_redirect(current_user) or 'student.dashboard'
         return redirect(url_for(redirect_endpoint))
 
     if request.method == 'POST':
@@ -101,7 +101,7 @@ def login():
             db.session.commit()
             login_user(user, remember=remember)
             next_page = request.args.get('next')
-            redirect_endpoint = get_gate_redirect(current_user) or 'dashboard'
+            redirect_endpoint = get_gate_redirect(current_user) or 'student.dashboard'
             return redirect(next_page or url_for(redirect_endpoint))
         else:
             # Render again with the submitted values

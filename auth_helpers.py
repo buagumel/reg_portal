@@ -33,5 +33,5 @@ def get_gate_redirect(user):
     if not user.onboarding_completed:
         return 'onboarding.onboarding'
     if not user.email_verified:
-        return 'profile'
+        return 'student.profile'
     return None

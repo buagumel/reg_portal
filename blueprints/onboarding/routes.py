@@ -16,7 +16,7 @@ from services.notification import create_notification
 def onboarding():
     target = get_gate_redirect(current_user)
     if target != 'onboarding.onboarding':
-        return redirect(url_for(target or 'dashboard'))
+        return redirect(url_for(target or 'student.dashboard'))
     return render_template('onboarding.html')
 
 
@@ -93,4 +93,4 @@ def onboarding_complete():
     except Exception:
         current_app.logger.warning('Failed to send welcome email to %s', current_user.email)
 
-    return jsonify({'success': True, 'message': 'Onboarding complete!', 'redirect': url_for('dashboard')})
+    return jsonify({'success': True, 'message': 'Onboarding complete!', 'redirect': url_for('student.dashboard')})
