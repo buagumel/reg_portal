@@ -9,8 +9,8 @@ QUICK_ACTIONS = [
     ('admin_sessions_new', 'sessions.manage', 'Create Session', 'fa-calendar-plus'),
     ('admin_students_import', 'students.manage', 'Upload Students', 'fa-file-import'),
     ('admin_courses', 'courses.manage', 'Manage Courses', 'fa-book'),
-    ('admin_registration_open', 'registration.manage', 'Open Registration', 'fa-door-open'),
-    ('admin_stub_announcements_new', 'announcements.manage', 'Create Announcement', 'fa-bullhorn'),
+    ('admin.core.admin_registration_open', 'registration.manage', 'Open Registration', 'fa-door-open'),
+    ('admin.core.admin_stub_announcements_new', 'announcements.manage', 'Create Announcement', 'fa-bullhorn'),
     ('admin_stub_reports', 'reports.view', 'Generate Reports', 'fa-chart-bar'),
 ]
 
@@ -30,6 +30,21 @@ def admin_required(view):
             return redirect(url_for('admin.auth.admin_login'))
         return view(*args, **kwargs)
     return wrapped
+
+
+def enforce_admin_required():
+    """before_request-compatible sibling of admin_required, for child
+    blueprints under admin/ where every route is uniformly admin-gated
+    (unlike admin.auth, which mixes public and admin-only routes and so
+    can't use a blanket before_request — see blueprints/admin/auth.py).
+    Register with `some_admin_child_bp.before_request(enforce_admin_required)`.
+    Same two checks as admin_required, just shaped as a before_request
+    (no view to wrap, returns None to continue or a redirect to stop)."""
+    if not current_user.is_authenticated or not isinstance(current_user, AdminUser):
+        return redirect(url_for('admin.auth.admin_login'))
+    if not current_user.is_active:
+        return redirect(url_for('admin.auth.admin_login'))
+    return None
 
 
 def permission_required(code):

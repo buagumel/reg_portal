@@ -41,11 +41,13 @@ KNOWN_FAILURES = {
         "bare 'add_drop_data' in Session 8, when this route moved into the "
         "registration blueprint.)"
     ),
-    "admin_registration_oversight_data-admin": (
+    "admin.core.admin_registration_oversight_data-admin": (
         "Route returns a deliberate 400 ('No registration period selected or "
         "active.') when there is no active RegistrationPeriod — the smoke "
         "fixtures seed no registration data. Not a crash; not in scope for "
-        "this safety net."
+        "this safety net. (Endpoint renamed from bare "
+        "'admin_registration_oversight_data' in Session 11, when this route "
+        "moved into the admin.core blueprint.)"
     ),
 }
 

@@ -5,7 +5,6 @@ import time
 from extensions import db, migrate, csrf, mail, login_manager, Message
 from models import (
     User, AdminUser, Programme,
-    RegistrationPeriod,
 )
 from config import Config
 from blueprints.notifications import notifications_bp
@@ -24,8 +23,7 @@ from services.admin_fee_structure import (
     update_fee_structure, delete_fee_structure,
 )
 from services.admin_audit import log_admin_action
-from services.admin_permission import permission_required, get_visible_quick_actions
-from services.admin_dashboard import get_dashboard_summary, get_activity_feed
+from services.admin_permission import permission_required
 from services.admin_department import (
     list_departments, get_department, get_department_detail,
     create_department, update_department, set_department_status,
@@ -43,7 +41,7 @@ from services.admin_validation import (
 from services.admin_session import (
     list_sessions, get_session, create_session, update_session, archive_session, clone_session,
     list_semesters, list_semesters_for_programme, list_periods, get_period, create_period, update_period, activate_period,
-    list_holidays, create_holiday, list_inactive_periods,
+    list_holidays, create_holiday,
 )
 from services.admin_course import list_courses, get_course, create_course, update_course, set_course_status, get_course_detail, set_assessment_components, get_enrollment_count
 from services.admin_course_catalog import (
@@ -53,11 +51,11 @@ from services.admin_course_catalog import (
 )
 from services.admin_export import export_csv, export_excel, VALID_DATA_TYPES
 from services.admin_registration import (
-    list_periods_for_selector, get_oversight_metrics, admin_add_course, admin_drop_course,
+    admin_add_course, admin_drop_course,
     set_registration_lock, extend_deadline, reopen_registration, approve_exception,
 )
 from services.admin_onboarding import (
-    get_onboarding_summary, get_onboarding_analytics, reset_onboarding, manually_verify_email, mark_onboarding_complete,
+    reset_onboarding, manually_verify_email, mark_onboarding_complete,
 )
 from services.admin_permission import has_permission
 from services.admin_department import list_active_departments
@@ -102,9 +100,15 @@ def endpoint_name(request):
     'blueprint.' prefix stripped. Once routes move into blueprints,
     request.endpoint becomes 'blueprint.function' instead of 'function' —
     comparing against this instead of request.endpoint directly keeps the
-    before_request gates working before and after each route's move."""
+    before_request gates (and, exposed as a Jinja global, template nav-
+    highlighting) working before and after each route's move.
+
+    Returns '' (not None) when request.endpoint itself is None (e.g. a 404) —
+    every caller only ever checks membership/equality/startswith against this,
+    and '' is falsy and matches nothing, same as None would, but doesn't
+    blow up a bare .startswith() call in a template."""
     if request.endpoint is None:
-        return None
+        return ''
     return request.endpoint.rsplit('.', 1)[-1]
 
 def enforce_onboarding_gate():
@@ -158,18 +162,6 @@ def inject_unread_notification_count():
     if current_user.is_authenticated:
         return {'unread_notification_count': get_summary_counts(current_user)['unread']}
     return {}
-
-
-@route('/admin/dashboard')
-@permission_required('dashboard.view')
-def admin_dashboard():
-    summary = get_dashboard_summary()
-    activity_feed = get_activity_feed(limit=20)
-    quick_actions = get_visible_quick_actions(current_user)
-    return render_template(
-        'admin/admin_dashboard.html',
-        summary=summary, activity_feed=activity_feed, quick_actions=quick_actions,
-    )
 
 
 @route('/admin/departments')
@@ -1820,72 +1812,6 @@ def admin_fee_structure_delete(fee_structure_id):
     return redirect(url_for('admin_fee_structures', session_id=session_id))
 
 
-@route('/admin/registration/open')
-@permission_required('registration.manage')
-def admin_registration_open():
-    periods = list_inactive_periods()
-    return render_template('admin/registration_open.html', periods=periods)
-
-
-@route('/admin/registration/oversight')
-@permission_required('registration.manage')
-def admin_registration_oversight():
-    periods = list_periods_for_selector()
-    return render_template(
-        'admin/registration_oversight.html', periods=periods,
-        departments=list_active_departments(), programmes=list_active_programmes(),
-    )
-
-
-@route('/admin/registration/oversight/data')
-@permission_required('registration.manage')
-def admin_registration_oversight_data():
-    period_id = request.args.get('period_id', type=int)
-    period = RegistrationPeriod.query.get(period_id) if period_id else (
-        RegistrationPeriod.query.filter_by(is_active=True).order_by(RegistrationPeriod.id.desc()).first()
-    )
-    if period is None:
-        return jsonify({'success': False, 'message': 'No registration period selected or active.'}), 400
-
-    department_id = request.args.get('department_id', type=int)
-    programme_id = request.args.get('programme_id', type=int)
-    level = request.args.get('level', '').strip() or None
-    status = request.args.get('status', '').strip() or None
-
-    metrics = get_oversight_metrics(period, department_id=department_id, programme_id=programme_id, level=level, status=status)
-    return jsonify({
-        'success': True, 'period_id': period.id,
-        'session_name': period.academic_session.name, 'semester_name': period.semester.name,
-        **metrics,
-    })
-
-
-@route('/admin/onboarding')
-@permission_required('students.manage')
-def admin_onboarding_dashboard():
-    return render_template(
-        'admin/onboarding_dashboard.html', departments=list_active_departments(), programmes=list_active_programmes(),
-    )
-
-
-@route('/admin/onboarding/data')
-@permission_required('students.manage')
-def admin_onboarding_dashboard_data():
-    department_id = request.args.get('department_id', type=int)
-    programme_id = request.args.get('programme_id', type=int)
-    session_value = request.args.get('session', '').strip() or None
-
-    summary = get_onboarding_summary(department_id=department_id, programme_id=programme_id, session=session_value)
-    analytics = get_onboarding_analytics()
-    return jsonify({'success': True, **summary, 'analytics': analytics})
-
-
-@route('/admin/announcements/new')
-@permission_required('announcements.manage')
-def admin_stub_announcements_new():
-    return render_template('admin/coming_soon.html', feature_name='Create Announcement')
-
-
 @route('/admin/export')
 @permission_required('reports.view')
 def admin_export_center():
@@ -1953,6 +1879,11 @@ def create_app(config_class=Config):
     app.before_request(enforce_onboarding_gate)
     app.before_request(enforce_admin_session_timeout)
     app.context_processor(inject_unread_notification_count)
+    # Templates (the admin sidebar nav in particular) compare request.endpoint
+    # against bare route names to highlight the current page — same problem
+    # endpoint_name() already solves for the Python-side gates (Session 1),
+    # exposed here so templates get the blueprint-prefix-proof version too.
+    app.jinja_env.globals['endpoint_name'] = endpoint_name
 
     app.register_blueprint(notifications_bp)
     app.register_blueprint(auth_bp)

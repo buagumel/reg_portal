@@ -24,7 +24,7 @@ def admin():
 @admin_auth_bp.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if current_user.is_authenticated and isinstance(current_user, AdminUser):
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin.core.admin_dashboard'))
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -37,7 +37,7 @@ def admin_login():
             session['admin_last_activity'] = time.time()
             if admin_user.first_login:
                 return redirect(url_for('admin.auth.admin_force_password_change'))
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin.core.admin_dashboard'))
 
         return render_template('admin/admin_login.html', error='Invalid email or password.', email=email, remember=remember)
 
@@ -162,7 +162,7 @@ def admin_logout():
 def admin_force_password_change():
     if request.method == 'GET':
         if not current_user.first_login:
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin.core.admin_dashboard'))
         return render_template('admin/admin_force_password_change.html')
 
     if not current_user.first_login:
@@ -190,7 +190,7 @@ def admin_force_password_change():
     return jsonify({
         'success': True,
         'message': 'Password changed successfully.',
-        'redirect': url_for('admin_dashboard'),
+        'redirect': url_for('admin.core.admin_dashboard'),
     })
 
 

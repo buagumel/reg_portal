@@ -159,7 +159,7 @@ def payment_create_page():
     # that never happening. Same isinstance(current_user, AdminUser)
     # pattern used elsewhere in this file (e.g. enforce_onboarding_gate).
     if isinstance(current_user, AdminUser):
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin.core.admin_dashboard'))
     payable = get_payable_categories(current_user)
     idempotency_key = str(uuid.uuid4())
     return render_template('payment_create.html', payable=payable, idempotency_key=idempotency_key)
