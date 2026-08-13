@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i 's/@app\\\\.route\\(/@route\\(/g' app.py)",
+      "Bash(sed -i 's/app\\\\.static_folder/current_app.static_folder/g' app.py)",
+      "Bash(sed -i 's/app\\\\.logger\\\\.warning\\(/current_app.logger.warning\\(/g' app.py)",
+      "Bash(sed -i 's/get_gateway\\(app\\)/get_gateway\\(current_app\\)/g' app.py)",
+      "Bash(venv/Scripts/python.exe -c ' *)",
+      "Bash(venv/Scripts/python.exe -m pytest -q)",
+      "Bash(FLASK_APP=app.py venv/Scripts/python.exe -m flask routes)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git fsck *)",
+      "Bash(python -c ' *)",
+      "Bash(awk -F: '$1 < 1320 && $1 > 1250')",
+      "Bash(awk -F: '$1 > 440')",
+      "Bash(mkdir -p \"c:\\\\Users\\\\buagu\\\\OneDrive\\\\Documents\\\\reg_portal\\\\blueprints\\\\admin\")",
+      "Bash(python3 -c \"print\\(open\\('requirements.py', 'rb'\\).read\\(\\)[:20]\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"print\\(open\\('requirements.py', 'rb'\\).read\\(\\)[:20]\\)\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\buagu\\OneDrive\\Documents\\reg_portal\\blueprints"
+    ]
+  }
+}
