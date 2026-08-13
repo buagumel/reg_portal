@@ -11,7 +11,7 @@ QUICK_ACTIONS = [
     ('admin.courses.admin_courses', 'courses.manage', 'Manage Courses', 'fa-book'),
     ('admin.core.admin_registration_open', 'registration.manage', 'Open Registration', 'fa-door-open'),
     ('admin.core.admin_stub_announcements_new', 'announcements.manage', 'Create Announcement', 'fa-bullhorn'),
-    ('admin_stub_reports', 'reports.view', 'Generate Reports', 'fa-chart-bar'),
+    ('admin.finance.admin_stub_reports', 'reports.view', 'Generate Reports', 'fa-chart-bar'),
 ]
 
 

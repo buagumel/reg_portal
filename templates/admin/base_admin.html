@@ -25,10 +25,10 @@
                 <li><a href="{{ url_for('admin.courses.admin_courses') }}" class="{{ 'active' if endpoint_name(request).startswith('admin_course') and not endpoint_name(request).startswith('admin_course_catalog') }}"><i class="fas fa-book"></i> Courses</a></li>
                 <li><a href="{{ url_for('admin.courses.admin_course_catalog') }}" class="{{ 'active' if endpoint_name(request).startswith('admin_course_catalog') }}"><i class="fas fa-book-open"></i> Course Catalog</a></li>
                 <li><a href="{{ url_for('admin.core.admin_registration_oversight') }}" class="{{ 'active' if endpoint_name(request).startswith('admin_registration') }}"><i class="fas fa-door-open"></i> Registration</a></li>
-                <li><a href="{{ url_for('admin_fee_structures') }}" class="{{ 'active' if endpoint_name(request).startswith('admin_fee_structure') }}"><i class="fas fa-money-bill-wave"></i> Fee Structure</a></li>
+                <li><a href="{{ url_for('admin.finance.admin_fee_structures') }}" class="{{ 'active' if endpoint_name(request).startswith('admin_fee_structure') }}"><i class="fas fa-money-bill-wave"></i> Fee Structure</a></li>
                 <li><a href="{{ url_for('admin.core.admin_stub_announcements_new') }}"><i class="fas fa-bullhorn"></i> Announcements</a></li>
-                <li><a href="{{ url_for('admin_export_center') }}" class="{{ 'active' if endpoint_name(request).startswith('admin_export') }}"><i class="fas fa-file-export"></i> Export</a></li>
-                <li><a href="{{ url_for('admin_stub_reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="{{ url_for('admin.finance.admin_export_center') }}" class="{{ 'active' if endpoint_name(request).startswith('admin_export') }}"><i class="fas fa-file-export"></i> Export</a></li>
+                <li><a href="{{ url_for('admin.finance.admin_stub_reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
                 <li><a href="{{ url_for('admin.auth.admin_logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>

@@ -12,7 +12,7 @@
             {% endfor %}
         </select>
     </form>
-    <a href="{{ url_for('admin_fee_structure_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Fee Structure Row</a>
+    <a href="{{ url_for('admin.finance.admin_fee_structure_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Fee Structure Row</a>
 </div>
 
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
@@ -36,8 +36,8 @@
                 <td style="padding:0.8rem;">{{ row.category.name }}</td>
                 <td style="padding:0.8rem;">₦{{ '{:,.2f}'.format(row.amount) }}</td>
                 <td style="padding:0.8rem; text-align:right;">
-                    <a href="{{ url_for('admin_fee_structure_edit', fee_structure_id=row.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
-                    <form method="POST" action="{{ url_for('admin_fee_structure_delete', fee_structure_id=row.id) }}" style="display:inline;" onsubmit="return confirm('Delete this fee structure row?');">
+                    <a href="{{ url_for('admin.finance.admin_fee_structure_edit', fee_structure_id=row.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
+                    <form method="POST" action="{{ url_for('admin.finance.admin_fee_structure_delete', fee_structure_id=row.id) }}" style="display:inline;" onsubmit="return confirm('Delete this fee structure row?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer;">Delete</button>
                     </form>

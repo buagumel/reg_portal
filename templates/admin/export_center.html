@@ -18,8 +18,8 @@
             <tr style="border-bottom: 1px solid var(--border-color);">
                 <td style="padding:0.6rem; font-weight:600;">{{ label }}</td>
                 <td style="padding:0.6rem;">
-                    <a href="{{ url_for('admin_export_download', data_type=key, fmt='csv') }}" style="margin-right:0.8rem; color: var(--primary-dark); font-weight:600;"><i class="fas fa-file-csv"></i> CSV</a>
-                    <a href="{{ url_for('admin_export_download', data_type=key, fmt='xlsx') }}" style="margin-right:0.8rem; color: var(--primary-dark); font-weight:600;"><i class="fas fa-file-excel"></i> Excel</a>
+                    <a href="{{ url_for('admin.finance.admin_export_download', data_type=key, fmt='csv') }}" style="margin-right:0.8rem; color: var(--primary-dark); font-weight:600;"><i class="fas fa-file-csv"></i> CSV</a>
+                    <a href="{{ url_for('admin.finance.admin_export_download', data_type=key, fmt='xlsx') }}" style="margin-right:0.8rem; color: var(--primary-dark); font-weight:600;"><i class="fas fa-file-excel"></i> Excel</a>
                     <span style="color: var(--text-muted); cursor:not-allowed;" title="Coming soon"><i class="fas fa-file-pdf"></i> PDF</span>
                 </td>
             </tr>
