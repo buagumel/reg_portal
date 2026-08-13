@@ -135,6 +135,16 @@ def load_user(idn):
             return None
     return db.get_or_404(User, idn)
 
+def endpoint_name(request):
+    """The bare view-function name from request.endpoint, with any
+    'blueprint.' prefix stripped. Once routes move into blueprints,
+    request.endpoint becomes 'blueprint.function' instead of 'function' —
+    comparing against this instead of request.endpoint directly keeps the
+    before_request gates working before and after each route's move."""
+    if request.endpoint is None:
+        return None
+    return request.endpoint.rsplit('.', 1)[-1]
+
 @app.before_request
 def enforce_onboarding_gate():
     if not current_user.is_authenticated:
@@ -149,7 +159,7 @@ def enforce_onboarding_gate():
         'send_email_code', 'verify_email_code',
         'profile',
     }
-    if request.endpoint in exempt_endpoints:
+    if endpoint_name(request) in exempt_endpoints:
         return None
 
     redirect_endpoint = get_gate_redirect(current_user)
@@ -165,7 +175,7 @@ def enforce_onboarding_gate():
 def enforce_admin_session_timeout():
     if not current_user.is_authenticated or not isinstance(current_user, AdminUser):
         return None
-    if request.endpoint in ('admin_login', 'static'):
+    if endpoint_name(request) in ('admin_login', 'static'):
         return None
 
     now_ts = time.time()
@@ -179,7 +189,7 @@ def enforce_admin_session_timeout():
     session['admin_last_activity'] = now_ts
 
     onboarding_exempt_endpoints = {'admin_force_password_change', 'admin_logout', 'static'}
-    if current_user.first_login and request.endpoint not in onboarding_exempt_endpoints:
+    if current_user.first_login and endpoint_name(request) not in onboarding_exempt_endpoints:
         return redirect(url_for('admin_force_password_change'))
 
     return None
