@@ -22,9 +22,14 @@ def is_valid_email(email):
 
 def get_gate_redirect(user):
     """Return the endpoint name the user must be redirected to before they can access
-    any other page, or None if they're fully cleared for normal access."""
+    any other page, or None if they're fully cleared for normal access.
+
+    These are fed straight into url_for(...) by the gates and by the login
+    view, so each one must stay in sync with wherever its route currently
+    lives — update it in the same session that moves that route into a
+    blueprint (the same rule login_manager.login_view follows)."""
     if user.first_login:
-        return 'force_password_change'
+        return 'auth.force_password_change'
     if not user.onboarding_completed:
         return 'onboarding'
     if not user.email_verified:
