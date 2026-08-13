@@ -124,7 +124,7 @@
             <input type="hidden" id="error-msg" value="" />
             {% endif %}
 
-            <form id="studentLoginForm" method="POST" action="{{ url_for('login') }}">
+            <form id="studentLoginForm" method="POST" action="{{ url_for('auth.login') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
                 <!-- Registration Number -->
