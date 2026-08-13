@@ -1,8 +1,8 @@
 SECRET_KEY = "8BYksdsdsmk93skcmi2EfBA6OsKR6b"
 MAIL_SERVER = "smtp.gmail.com"
-MAIL_USERNAME = "ksmartenglishonline@gmail.com"
-MAIL_PASSWORD = "gepvdhmaqmedxekx"
-
+MAIL_USERNAME = "baffausman247@gmail.com"
+MAIL_PASSWORD = "tqvgpglixoziudcu"
+#tqvg pgli xozi udcu
 # Remita test/demo sandbox — published sandbox values, not production secrets.
 REMITA_MERCHANT_ID = "2547916"
 REMITA_API_KEY = "1946"
