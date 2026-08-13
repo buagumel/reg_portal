@@ -61,7 +61,7 @@
                 </div>
                 {% elif not status.existing_registration.courses_submitted and status.add_drop_window_status == 'open' and not status.existing_registration.is_locked %}
                 <div class="ongoing-action">
-                    <a class="btn-primary" href="{{ url_for('add_drop') }}">
+                    <a class="btn-primary" href="{{ url_for('registration.add_drop') }}">
                         <i class="fas fa-arrow-right"></i> Complete Registration
                     </a>
                 </div>

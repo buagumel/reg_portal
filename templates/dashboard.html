@@ -84,7 +84,7 @@
                         <p class="ongoing-reg-period">{{ status.period.academic_session.name }} {{ status.period.semester.name }}</p>
                         {% if status.existing_registration.payment_status == 'paid' %}
                             {% if status.add_drop_window_status == 'open' and not status.existing_registration.is_locked %}
-                            <a class="ongoing-reg-btn" href="{{ url_for('add_drop') }}"><i class="fas fa-arrow-right"></i> Complete Registration</a>
+                            <a class="ongoing-reg-btn" href="{{ url_for('registration.add_drop') }}"><i class="fas fa-arrow-right"></i> Complete Registration</a>
                             {% elif status.existing_registration.is_locked %}
                             <span class="ongoing-reg-note"><i class="fas fa-lock"></i> Locked by administrator — contact the registry.</span>
                             {% else %}

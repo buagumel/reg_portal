@@ -34,10 +34,12 @@ ROLE_FIXTURES = {"anon": "client", "student": "student_client", "admin": "admin_
 # migration itself. Skipped now, on record, per the runbook: "Fix or
 # explicitly skip them now, before anything moves."
 KNOWN_FAILURES = {
-    "add_drop_data-student": (
+    "registration.add_drop_data-student": (
         "Route returns a deliberate 400 ('No active registration found.') when "
         "there is no active RegistrationPeriod — the fixture student has none. "
-        "Not a crash; not in scope for this safety net."
+        "Not a crash; not in scope for this safety net. (Endpoint renamed from "
+        "bare 'add_drop_data' in Session 8, when this route moved into the "
+        "registration blueprint.)"
     ),
     "admin_registration_oversight_data-admin": (
         "Route returns a deliberate 400 ('No registration period selected or "
