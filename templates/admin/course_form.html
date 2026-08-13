@@ -15,7 +15,7 @@
                 <option value="{{ mc.id }}" {{ 'selected' if current_master_id and current_master_id|int == mc.id }}>{{ mc.code }} — {{ mc.title }} ({{ mc.credits }} credits){{ ' — ' + mc.status if mc.status != 'active' }}</option>
                 {% endfor %}
             </select>
-            <p style="color: var(--text-muted); font-size:0.8rem; margin-top:0.3rem;">Don't see the course you need? <a href="{{ url_for('admin_course_catalog_new') }}" style="color: var(--primary-dark);">Add it to the Course Catalog</a> first.</p>
+            <p style="color: var(--text-muted); font-size:0.8rem; margin-top:0.3rem;">Don't see the course you need? <a href="{{ url_for('admin.courses.admin_course_catalog_new') }}" style="color: var(--primary-dark);">Add it to the Course Catalog</a> first.</p>
         </div>
         <div style="display:flex; gap:1rem; margin-bottom:1rem;">
             <div style="flex:1;">
@@ -68,7 +68,7 @@
             </div>
         </div>
         <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
-        <a href="{{ url_for('admin_courses') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+        <a href="{{ url_for('admin.courses.admin_courses') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
     </form>
 </div>
 {% endblock %}

@@ -14,20 +14,20 @@
             </p>
         </div>
         <div>
-            <a href="{{ url_for('admin_course_edit', course_id=course.id) }}" style="color: var(--primary-dark); font-weight:600; margin-right:1rem;">Edit</a>
+            <a href="{{ url_for('admin.courses.admin_course_edit', course_id=course.id) }}" style="color: var(--primary-dark); font-weight:600; margin-right:1rem;">Edit</a>
             {% if course.status != 'active' %}
-            <form method="POST" action="{{ url_for('admin_course_activate', course_id=course.id) }}" style="display:inline;">
+            <form method="POST" action="{{ url_for('admin.courses.admin_course_activate', course_id=course.id) }}" style="display:inline;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer; font-weight:600;">Activate</button>
             </form>
             {% else %}
-            <form method="POST" action="{{ url_for('admin_course_deactivate', course_id=course.id) }}" style="display:inline;" onsubmit="return confirm('Deactivate this course for the current offering?');">
+            <form method="POST" action="{{ url_for('admin.courses.admin_course_deactivate', course_id=course.id) }}" style="display:inline;" onsubmit="return confirm('Deactivate this course for the current offering?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" style="background:none; border:none; color: var(--warning); cursor:pointer; font-weight:600;">Deactivate</button>
             </form>
             {% endif %}
             {% if course.status != 'archived' %}
-            <form method="POST" action="{{ url_for('admin_course_archive', course_id=course.id) }}" style="display:inline; margin-left:0.8rem;" onsubmit="return confirm('Archive this course? This is meant to be permanent.');">
+            <form method="POST" action="{{ url_for('admin.courses.admin_course_archive', course_id=course.id) }}" style="display:inline; margin-left:0.8rem;" onsubmit="return confirm('Archive this course? This is meant to be permanent.');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer; font-weight:600;">Archive</button>
             </form>
@@ -39,7 +39,7 @@
 </div>
 
 {% if course.course_id %}
-<p style="margin-bottom:1.5rem;"><a href="{{ url_for('admin_course_catalog_detail', course_id=course.course_id) }}" style="color: var(--primary-dark); font-weight:600;"><i class="fas fa-book-open"></i> View in Course Catalog</a> — manage prerequisites, corequisites, and catalog details there.</p>
+<p style="margin-bottom:1.5rem;"><a href="{{ url_for('admin.courses.admin_course_catalog_detail', course_id=course.course_id) }}" style="color: var(--primary-dark); font-weight:600;"><i class="fas fa-book-open"></i> View in Course Catalog</a> — manage prerequisites, corequisites, and catalog details there.</p>
 {% else %}
 <p style="margin-bottom:1.5rem; color: var(--text-muted);">Not linked to a catalog course.</p>
 {% endif %}
@@ -47,7 +47,7 @@
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h3 style="margin-top:0;">Assessment Structure</h3>
     <p style="color: var(--text-muted); font-size:0.85rem;">Component weights should add up to 100%, but this isn't strictly enforced — you'll get a warning if they don't.</p>
-    <form method="POST" action="{{ url_for('admin_course_assessment', course_id=course.id) }}">
+    <form method="POST" action="{{ url_for('admin.courses.admin_course_assessment', course_id=course.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div id="assessmentRows">
             {% for comp in assessment_components %}

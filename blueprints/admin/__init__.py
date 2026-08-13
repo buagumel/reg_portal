@@ -7,3 +7,4 @@ admin_bp = Blueprint('admin', __name__)
 from . import auth  # noqa: E402,F401
 from . import core  # noqa: E402,F401
 from . import academic  # noqa: E402,F401
+from . import courses  # noqa: E402,F401
