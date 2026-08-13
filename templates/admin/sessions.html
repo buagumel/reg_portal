@@ -12,7 +12,7 @@
             {% endfor %}
         </select>
     </form>
-    <a href="{{ url_for('admin_sessions_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Session</a>
+    <a href="{{ url_for('admin.academic.admin_sessions_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Session</a>
 </div>
 
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
@@ -31,16 +31,16 @@
         <tbody>
             {% for s in sessions %}
             <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding:0.8rem;"><a href="{{ url_for('admin_session_edit', session_id=s.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ s.name }}</a></td>
+                <td style="padding:0.8rem;"><a href="{{ url_for('admin.academic.admin_session_edit', session_id=s.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ s.name }}</a></td>
                 <td style="padding:0.8rem;">{{ s.programme.name if s.programme else '—' }}</td>
                 <td style="padding:0.8rem;">{{ s.start_date.strftime('%d %b %Y') if s.start_date else '—' }}</td>
                 <td style="padding:0.8rem;">{{ s.end_date.strftime('%d %b %Y') if s.end_date else '—' }}</td>
                 <td style="padding:0.8rem; text-transform:capitalize;">{{ s.status }}</td>
                 <td style="padding:0.8rem;">{% if s.is_current %}<span style="color: var(--success); font-weight:600;"><i class="fas fa-check-circle"></i> Active</span>{% endif %}</td>
                 <td style="padding:0.8rem; text-align:right;">
-                    <a href="{{ url_for('admin_session_edit', session_id=s.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Manage</a>
+                    <a href="{{ url_for('admin.academic.admin_session_edit', session_id=s.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Manage</a>
                     {% if s.status != 'archived' and not s.is_current %}
-                    <form method="POST" action="{{ url_for('admin_session_archive', session_id=s.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ s.name }}?');">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_session_archive', session_id=s.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ s.name }}?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer;">Archive</button>
                     </form>

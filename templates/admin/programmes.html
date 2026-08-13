@@ -12,14 +12,14 @@
         <div><div style="font-size:1.6rem; font-weight:700; color: var(--primary-dark);">{{ detail.student_count }}</div><div style="color: var(--text-muted); font-size:0.85rem;">Students</div></div>
         <div><div style="font-size:1.6rem; font-weight:700; color: var(--primary-dark);">{{ detail.departments|length }}</div><div style="color: var(--text-muted); font-size:0.85rem;">Departments</div></div>
     </div>
-    <a href="{{ url_for('admin_programme_edit', programme_id=detail.programme.id) }}" style="color: var(--primary-dark); font-weight:600;">Edit</a>
+    <a href="{{ url_for('admin.academic.admin_programme_edit', programme_id=detail.programme.id) }}" style="color: var(--primary-dark); font-weight:600;">Edit</a>
     &nbsp;&middot;&nbsp;
-    <a href="{{ url_for('admin_programmes') }}" style="color: var(--text-muted);">Back to Programmes</a>
+    <a href="{{ url_for('admin.academic.admin_programmes') }}" style="color: var(--text-muted);">Back to Programmes</a>
 </div>
 
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h3 style="margin-top:0;">Assigned Departments</h3>
-    <form method="POST" action="{{ url_for('admin_programme_departments', programme_id=detail.programme.id) }}">
+    <form method="POST" action="{{ url_for('admin.academic.admin_programme_departments', programme_id=detail.programme.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% for dept in all_departments %}
         <label style="display:block; margin-bottom:0.5rem;">
@@ -43,7 +43,7 @@
         </select>
         <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary); color:white; cursor:pointer;">Filter</button>
     </form>
-    <a href="{{ url_for('admin_programme_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Programme</a>
+    <a href="{{ url_for('admin.academic.admin_programme_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Programme</a>
 </div>
 
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
@@ -60,19 +60,19 @@
         <tbody>
             {% for prog in result['items'] %}
             <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding:0.8rem;"><a href="{{ url_for('admin_programme_detail', programme_id=prog.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ prog.name }}</a></td>
+                <td style="padding:0.8rem;"><a href="{{ url_for('admin.academic.admin_programme_detail', programme_id=prog.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ prog.name }}</a></td>
                 <td style="padding:0.8rem; font-family:monospace;">{{ prog.code }}</td>
                 <td style="padding:0.8rem; text-transform:capitalize;">{{ prog.program_type }}</td>
                 <td style="padding:0.8rem; text-transform:capitalize;">{{ prog.status }}</td>
                 <td style="padding:0.8rem; text-align:right;">
-                    <a href="{{ url_for('admin_programme_edit', programme_id=prog.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
+                    <a href="{{ url_for('admin.academic.admin_programme_edit', programme_id=prog.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
                     {% if prog.status != 'active' %}
-                    <form method="POST" action="{{ url_for('admin_programme_activate', programme_id=prog.id) }}" style="display:inline;">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_programme_activate', programme_id=prog.id) }}" style="display:inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer;">Activate</button>
                     </form>
                     {% else %}
-                    <form method="POST" action="{{ url_for('admin_programme_archive', programme_id=prog.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ prog.name }}?');">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_programme_archive', programme_id=prog.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ prog.name }}?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer;">Archive</button>
                     </form>
@@ -90,7 +90,7 @@
 {% if total_pages > 1 %}
 <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
     {% for p in range(1, total_pages + 1) %}
-    <a href="{{ url_for('admin_programmes', search=search, status=status, page=p) }}"
+    <a href="{{ url_for('admin.academic.admin_programmes', search=search, status=status, page=p) }}"
        style="padding:0.4rem 0.8rem; border-radius:0.4rem; text-decoration:none; {{ 'background: var(--primary); color:white;' if p == result['page'] else 'background: var(--card-bg); color: var(--text-main); border:1px solid var(--border-color);' }}">{{ p }}</a>
     {% endfor %}
 </div>

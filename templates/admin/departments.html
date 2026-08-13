@@ -11,9 +11,9 @@
         <div><div style="font-size:1.6rem; font-weight:700; color: var(--primary-dark);">{{ detail.student_count }}</div><div style="color: var(--text-muted); font-size:0.85rem;">Students</div></div>
         <div><div style="font-size:1.6rem; font-weight:700; color: var(--primary-dark);">{{ detail.course_count }}</div><div style="color: var(--text-muted); font-size:0.85rem;">Courses</div></div>
     </div>
-    <a href="{{ url_for('admin_department_edit', department_id=detail.department.id) }}" style="color: var(--primary-dark); font-weight:600;">Edit</a>
+    <a href="{{ url_for('admin.academic.admin_department_edit', department_id=detail.department.id) }}" style="color: var(--primary-dark); font-weight:600;">Edit</a>
     &nbsp;&middot;&nbsp;
-    <a href="{{ url_for('admin_departments') }}" style="color: var(--text-muted);">Back to Departments</a>
+    <a href="{{ url_for('admin.academic.admin_departments') }}" style="color: var(--text-muted);">Back to Departments</a>
 </div>
 {% else %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
@@ -27,7 +27,7 @@
         </select>
         <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary); color:white; cursor:pointer;">Filter</button>
     </form>
-    <a href="{{ url_for('admin_department_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Department</a>
+    <a href="{{ url_for('admin.academic.admin_department_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Department</a>
 </div>
 
 <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; overflow:hidden;">
@@ -44,25 +44,25 @@
         <tbody>
             {% for dept in result['items'] %}
             <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding:0.8rem;"><a href="{{ url_for('admin_department_detail', department_id=dept.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ dept.name }}</a></td>
+                <td style="padding:0.8rem;"><a href="{{ url_for('admin.academic.admin_department_detail', department_id=dept.id) }}" style="color: var(--text-main); font-weight:600; text-decoration:none;">{{ dept.name }}</a></td>
                 <td style="padding:0.8rem; font-family:monospace;">{{ dept.code }}</td>
                 <td style="padding:0.8rem;">{{ dept.faculty or '—' }}</td>
                 <td style="padding:0.8rem; text-transform:capitalize;">{{ dept.status }}</td>
                 <td style="padding:0.8rem; text-align:right;">
-                    <a href="{{ url_for('admin_department_edit', department_id=dept.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
+                    <a href="{{ url_for('admin.academic.admin_department_edit', department_id=dept.id) }}" style="color: var(--primary-dark); margin-right:0.8rem;">Edit</a>
                     {% if dept.status != 'active' %}
-                    <form method="POST" action="{{ url_for('admin_department_activate', department_id=dept.id) }}" style="display:inline;">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_department_activate', department_id=dept.id) }}" style="display:inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer;">Activate</button>
                     </form>
                     {% else %}
-                    <form method="POST" action="{{ url_for('admin_department_deactivate', department_id=dept.id) }}" style="display:inline;" onsubmit="return confirm('Deactivate {{ dept.name }}?');">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_department_deactivate', department_id=dept.id) }}" style="display:inline;" onsubmit="return confirm('Deactivate {{ dept.name }}?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--warning); cursor:pointer;">Deactivate</button>
                     </form>
                     {% endif %}
                     {% if dept.status != 'archived' %}
-                    <form method="POST" action="{{ url_for('admin_department_archive', department_id=dept.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ dept.name }}? This is meant to be permanent.');">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_department_archive', department_id=dept.id) }}" style="display:inline;" onsubmit="return confirm('Archive {{ dept.name }}? This is meant to be permanent.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer;">Archive</button>
                     </form>
@@ -80,7 +80,7 @@
 {% if total_pages > 1 %}
 <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
     {% for p in range(1, total_pages + 1) %}
-    <a href="{{ url_for('admin_departments', search=search, status=status, page=p) }}"
+    <a href="{{ url_for('admin.academic.admin_departments', search=search, status=status, page=p) }}"
        style="padding:0.4rem 0.8rem; border-radius:0.4rem; text-decoration:none; {{ 'background: var(--primary); color:white;' if p == result['page'] else 'background: var(--card-bg); color: var(--text-main); border:1px solid var(--border-color);' }}">{{ p }}</a>
     {% endfor %}
 </div>

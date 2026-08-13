@@ -33,7 +33,7 @@
                    style="width:100%; padding:0.6rem; border:1px solid var(--border-color); border-radius:0.5rem; background: var(--bg-body); color: var(--text-main); box-sizing:border-box;">
         </div>
         <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
-        <a href="{{ url_for('admin_sessions') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+        <a href="{{ url_for('admin.academic.admin_sessions') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
     </form>
 </div>
 
@@ -41,7 +41,7 @@
 <div style="max-width:520px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
     <h3 style="margin-top:0;">Clone This Session</h3>
     <p style="color: var(--text-muted); font-size:0.9rem;">Copies this session's registration period configuration (credit limits, fees, department overrides) into a new draft session. Dates are not copied.</p>
-    <form method="POST" action="{{ url_for('admin_session_clone', session_id=session.id) }}">
+    <form method="POST" action="{{ url_for('admin.academic.admin_session_clone', session_id=session.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div style="margin-bottom:1rem;">
             <label style="display:block; margin-bottom:0.3rem; font-weight:600;">New Academic Year</label>
@@ -63,7 +63,7 @@
 <div style="max-width:720px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem; margin-top:1.5rem;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <h3 style="margin-top:0;">Registration Periods (Semesters)</h3>
-        <a href="{{ url_for('admin_period_new', session_id=session.id) }}" style="color: var(--primary-dark); font-weight:600;"><i class="fas fa-plus"></i> Add Period</a>
+        <a href="{{ url_for('admin.academic.admin_period_new', session_id=session.id) }}" style="color: var(--primary-dark); font-weight:600;"><i class="fas fa-plus"></i> Add Period</a>
     </div>
     <table style="width:100%; border-collapse:collapse; margin-top:0.8rem;">
         <thead>
@@ -83,9 +83,9 @@
                 <td style="padding:0.6rem;">{{ period.closes_at.strftime('%d %b %Y') }}</td>
                 <td style="padding:0.6rem;">{% if period.is_active %}<span style="color: var(--success);"><i class="fas fa-check-circle"></i></span>{% endif %}</td>
                 <td style="padding:0.6rem; text-align:right;">
-                    <a href="{{ url_for('admin_period_edit', session_id=session.id, period_id=period.id) }}" style="color: var(--primary-dark); margin-right:0.6rem;">Edit</a>
+                    <a href="{{ url_for('admin.academic.admin_period_edit', session_id=session.id, period_id=period.id) }}" style="color: var(--primary-dark); margin-right:0.6rem;">Edit</a>
                     {% if not period.is_active %}
-                    <form method="POST" action="{{ url_for('admin_period_activate', session_id=session.id, period_id=period.id) }}" style="display:inline;" onsubmit="return confirm('Activate this period? Every other period in the same Programme scope will be deactivated.');">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_period_activate', session_id=session.id, period_id=period.id) }}" style="display:inline;" onsubmit="return confirm('Activate this period? Every other period in the same Programme scope will be deactivated.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="background:none; border:none; color: var(--success); cursor:pointer;">Activate</button>
                     </form>
@@ -121,7 +121,7 @@
             {% endfor %}
         </tbody>
     </table>
-    <form method="POST" action="{{ url_for('admin_holiday_new', session_id=session.id) }}" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
+    <form method="POST" action="{{ url_for('admin.academic.admin_holiday_new', session_id=session.id) }}" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
             <label style="display:block; font-size:0.8rem; margin-bottom:0.2rem;">Name</label>

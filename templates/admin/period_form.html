@@ -95,7 +95,7 @@
             </div>
         </fieldset>
         <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
-        <a href="{{ url_for('admin_session_edit', session_id=session.id) }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+        <a href="{{ url_for('admin.academic.admin_session_edit', session_id=session.id) }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
     </form>
 </div>
 {% endblock %}

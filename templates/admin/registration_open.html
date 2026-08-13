@@ -26,7 +26,7 @@
                 <td style="padding:0.8rem;">{{ period.opens_at.strftime('%d %b %Y') }}</td>
                 <td style="padding:0.8rem;">{{ period.closes_at.strftime('%d %b %Y') }}</td>
                 <td style="padding:0.8rem; text-align:right;">
-                    <form method="POST" action="{{ url_for('admin_period_activate', session_id=period.academic_session_id, period_id=period.id) }}" onsubmit="return confirm('Activate this period? Every other period in the same Programme scope will be deactivated.');">
+                    <form method="POST" action="{{ url_for('admin.academic.admin_period_activate', session_id=period.academic_session_id, period_id=period.id) }}" onsubmit="return confirm('Activate this period? Every other period in the same Programme scope will be deactivated.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" style="padding:0.4rem 0.9rem; background: var(--primary); color:white; border:none; border-radius:0.4rem; cursor:pointer;">Activate</button>
                     </form>

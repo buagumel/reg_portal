@@ -6,7 +6,7 @@ from flask_login import current_user
 from models import AdminUser
 
 QUICK_ACTIONS = [
-    ('admin_sessions_new', 'sessions.manage', 'Create Session', 'fa-calendar-plus'),
+    ('admin.academic.admin_sessions_new', 'sessions.manage', 'Create Session', 'fa-calendar-plus'),
     ('admin_students_import', 'students.manage', 'Upload Students', 'fa-file-import'),
     ('admin_courses', 'courses.manage', 'Manage Courses', 'fa-book'),
     ('admin.core.admin_registration_open', 'registration.manage', 'Open Registration', 'fa-door-open'),
