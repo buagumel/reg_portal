@@ -9,3 +9,4 @@ from . import core  # noqa: E402,F401
 from . import academic  # noqa: E402,F401
 from . import courses  # noqa: E402,F401
 from . import finance  # noqa: E402,F401
+from . import students  # noqa: E402,F401

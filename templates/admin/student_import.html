@@ -14,11 +14,11 @@
         </div>
         <button type="button" id="previewBtn" style="padding:0.7rem 1.5rem; background: var(--primary-light); color: var(--primary-dark); border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;"><i class="fas fa-eye"></i> Preview</button>
         <button type="submit" id="confirmBtn" disabled style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer; opacity:0.5;"><i class="fas fa-upload"></i> Confirm Import</button>
-        <a href="{{ url_for('admin_students') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+        <a href="{{ url_for('admin.students.admin_students') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
     </form>
     <div id="previewResult" style="margin-top:1.5rem;"></div>
     <p style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
-        <a href="{{ url_for('admin_student_admission_portal') }}" style="color: var(--text-muted);"><i class="fas fa-plug"></i> Or fetch admitted students from the admission portal</a>
+        <a href="{{ url_for('admin.students.admin_student_admission_portal') }}" style="color: var(--text-muted);"><i class="fas fa-plug"></i> Or fetch admitted students from the admission portal</a>
     </p>
 </div>
 {% endblock %}

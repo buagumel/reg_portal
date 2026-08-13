@@ -121,7 +121,7 @@
     </p>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:1rem;">
-        <form method="POST" action="{{ url_for('admin_student_registration_add_course', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_registration_add_course', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Add Course</label>
             <select name="course_id" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem;">
@@ -134,7 +134,7 @@
             <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--success); color:white; cursor:pointer;">Add</button>
         </form>
 
-        <form method="POST" action="{{ url_for('admin_student_registration_drop_course', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_registration_drop_course', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Remove Course</label>
             <select name="course_id" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem;">
@@ -148,7 +148,7 @@
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:1rem;">
-        <form method="POST" action="{{ url_for('admin_student_registration_lock', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_registration_lock', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="locked" value="{{ 'false' if sr.is_locked else 'true' }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">{{ 'Unlock Registration' if sr.is_locked else 'Lock Registration' }}</label>
@@ -156,7 +156,7 @@
             <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: {{ 'var(--success)' if sr.is_locked else 'var(--warning)' }}; color:white; cursor:pointer;">{{ 'Unlock' if sr.is_locked else 'Lock' }}</button>
         </form>
 
-        <form method="POST" action="{{ url_for('admin_student_registration_extend_deadline', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_registration_extend_deadline', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Extend Deadline</label>
             <input type="datetime-local" name="new_deadline" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
@@ -166,14 +166,14 @@
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:1rem;">
-        <form method="POST" action="{{ url_for('admin_student_registration_reopen', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_registration_reopen', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Reopen Submitted Registration</label>
             <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
             <button type="submit" {{ 'disabled' if not sr.courses_submitted }} style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer; opacity:{{ '0.5' if not sr.courses_submitted else '1' }};">Reopen</button>
         </form>
 
-        <form method="POST" action="{{ url_for('admin_student_registration_approve_exception', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_registration_approve_exception', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Approve Registration Exception (general)</label>
             <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
@@ -207,21 +207,21 @@
     </p>
 
     <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:1rem; margin-top:1rem;">
-        <form method="POST" action="{{ url_for('admin_student_resend_verification', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_resend_verification', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Resend Verification Email</label>
             <p style="font-size:0.75rem; color: var(--text-muted); margin:0 0 0.4rem;">(Phase 2 action, no reason field — surfaced here alongside the other onboarding actions.)</p>
             <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--primary); color:white; cursor:pointer;">Resend</button>
         </form>
 
-        <form method="POST" action="{{ url_for('admin_student_onboarding_reset', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_onboarding_reset', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Reset Onboarding</label>
             <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
             <button type="submit" style="padding:0.4rem 0.8rem; border:none; border-radius:0.4rem; background: var(--warning); color:white; cursor:pointer;">Reset</button>
         </form>
 
-        <form method="POST" action="{{ url_for('admin_student_onboarding_verify_email', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_onboarding_verify_email', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Manually Verify Email</label>
             <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">
@@ -229,7 +229,7 @@
         </form>
 
         {% if can_override_onboarding %}
-        <form method="POST" action="{{ url_for('admin_student_onboarding_mark_complete', student_id=user.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_onboarding_mark_complete', student_id=user.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label style="display:block; font-size:0.85rem; margin-bottom:0.3rem;">Mark Onboarding Complete <span style="color: var(--text-muted); font-weight:400;">(Super Admin)</span></label>
             <input type="text" name="reason" placeholder="Reason (required)" required style="width:100%; padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main); margin-bottom:0.4rem; box-sizing:border-box;">

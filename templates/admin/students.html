@@ -32,8 +32,8 @@
         <label style="display:flex; align-items:center; gap:0.3rem; font-size:0.85rem; color: var(--text-muted);">To <input type="date" id="enrolledTo" style="padding:0.4rem; border:1px solid var(--border-color); border-radius:0.4rem; background: var(--bg-body); color: var(--text-main);"></label>
     </div>
     <div>
-        <a href="{{ url_for('admin_students_import') }}" style="padding:0.6rem 1.2rem; background: var(--primary-light); color: var(--primary-dark); border-radius:0.5rem; text-decoration:none; font-weight:600; margin-right:0.6rem;"><i class="fas fa-file-import"></i> Import CSV</a>
-        <a href="{{ url_for('admin_student_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Student</a>
+        <a href="{{ url_for('admin.students.admin_students_import') }}" style="padding:0.6rem 1.2rem; background: var(--primary-light); color: var(--primary-dark); border-radius:0.5rem; text-decoration:none; font-weight:600; margin-right:0.6rem;"><i class="fas fa-file-import"></i> Import CSV</a>
+        <a href="{{ url_for('admin.students.admin_student_new') }}" style="padding:0.6rem 1.2rem; background: var(--primary); color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"><i class="fas fa-plus"></i> New Student</a>
     </div>
 </div>
 

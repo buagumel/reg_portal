@@ -7,7 +7,7 @@ from models import AdminUser
 
 QUICK_ACTIONS = [
     ('admin.academic.admin_sessions_new', 'sessions.manage', 'Create Session', 'fa-calendar-plus'),
-    ('admin_students_import', 'students.manage', 'Upload Students', 'fa-file-import'),
+    ('admin.students.admin_students_import', 'students.manage', 'Upload Students', 'fa-file-import'),
     ('admin.courses.admin_courses', 'courses.manage', 'Manage Courses', 'fa-book'),
     ('admin.core.admin_registration_open', 'registration.manage', 'Open Registration', 'fa-door-open'),
     ('admin.core.admin_stub_announcements_new', 'announcements.manage', 'Create Announcement', 'fa-bullhorn'),

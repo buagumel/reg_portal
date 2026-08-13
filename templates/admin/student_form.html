@@ -94,7 +94,7 @@
             </div>
         </div>
         <button type="submit" style="padding:0.7rem 1.5rem; background: var(--primary); color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">Save</button>
-        <a href="{{ url_for('admin_students') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
+        <a href="{{ url_for('admin.students.admin_students') }}" style="margin-left:1rem; color: var(--text-muted);">Cancel</a>
     </form>
 </div>
 
@@ -103,28 +103,28 @@
     <h3 style="margin-top:0;">Account Management</h3>
     <div style="display:flex; gap:0.8rem; flex-wrap:wrap;">
         {% if student.account_status != 'active' %}
-        <form method="POST" action="{{ url_for('admin_student_activate', student_id=student.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_activate', student_id=student.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--success); color:white; cursor:pointer;">Activate</button>
         </form>
         {% endif %}
         {% if student.account_status != 'suspended' %}
-        <form method="POST" action="{{ url_for('admin_student_suspend', student_id=student.id) }}" onsubmit="return confirm('Suspend this account? The student will be unable to log in.');">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_suspend', student_id=student.id) }}" onsubmit="return confirm('Suspend this account? The student will be unable to log in.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--warning); color:white; cursor:pointer;">Suspend</button>
         </form>
         {% endif %}
         {% if student.account_status != 'deactivated' %}
-        <form method="POST" action="{{ url_for('admin_student_deactivate', student_id=student.id) }}" onsubmit="return confirm('Deactivate this account? The student will be unable to log in.');">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_deactivate', student_id=student.id) }}" onsubmit="return confirm('Deactivate this account? The student will be unable to log in.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--danger); color:white; cursor:pointer;">Deactivate</button>
         </form>
         {% endif %}
-        <form method="POST" action="{{ url_for('admin_student_reset_password', student_id=student.id) }}" onsubmit="return confirm('Reset this student\'s password to a new temporary one?');">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_reset_password', student_id=student.id) }}" onsubmit="return confirm('Reset this student\'s password to a new temporary one?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary-light); color: var(--primary-dark); cursor:pointer;">Reset Password</button>
         </form>
-        <form method="POST" action="{{ url_for('admin_student_resend_verification', student_id=student.id) }}">
+        <form method="POST" action="{{ url_for('admin.students.admin_student_resend_verification', student_id=student.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" style="padding:0.5rem 1rem; border:none; border-radius:0.5rem; background: var(--primary-light); color: var(--primary-dark); cursor:pointer;">Resend Verification</button>
         </form>
